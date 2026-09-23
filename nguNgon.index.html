@@ -1,0 +1,215 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Chúc Ngủ Ngon ✨</title>
+  <link href="https://fonts.googleapis.com/css2?family=Dancing+Script:wght@700&family=Quicksand:wght@500;700&display=swap" rel="stylesheet">
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    body {
+      background: radial-gradient(ellipse at bottom, #1b2735 0%, #090a0f 100%);
+      height: 100vh;
+      overflow: hidden;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      font-family: 'Quicksand', sans-serif;
+      position: relative;
+    }
+
+    /* Ánh trăng */
+    .moon {
+      position: absolute;
+      top: 10%;
+      right: 15%;
+      width: 80px;
+      height: 80px;
+      background: #fdfae7;
+      border-radius: 50%;
+      box-shadow: 0 0 40px 15px rgba(253, 250, 231, 0.45);
+      z-index: 1;
+    }
+
+    /* Sao đêm lấp lánh */
+    .star {
+      position: absolute;
+      background: white;
+      border-radius: 50%;
+      animation: twinkle var(--duration) infinite ease-in-out;
+      opacity: 0.8;
+      z-index: 0;
+    }
+
+    @keyframes twinkle {
+      0%, 100% { opacity: 0.2; transform: scale(0.8); }
+      50% { opacity: 1; transform: scale(1.2); }
+    }
+
+    /* Hiệu ứng cánh hoa bay */
+    .flower {
+      position: absolute;
+      top: -50px;
+      user-select: none;
+      pointer-events: none;
+      z-index: 2;
+      animation: fall linear forwards;
+    }
+
+    @keyframes fall {
+      0% {
+        top: -10%;
+        transform: translateX(0) rotate(0deg);
+        opacity: 0.9;
+      }
+      50% {
+        transform: translateX(var(--drift)) rotate(180deg);
+      }
+      100% {
+        top: 105%;
+        transform: translateX(calc(var(--drift) * -1)) rotate(360deg);
+        opacity: 0.2;
+      }
+    }
+
+    /* Hộp chữ trung tâm */
+    .message-box {
+      z-index: 10;
+      text-align: center;
+      color: #fff;
+      opacity: 0;
+      transform: scale(0.8);
+      animation: fadeInScale 2.5s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+      animation-delay: 1.5s;
+      padding: 30px 40px;
+      background: rgba(255, 255, 255, 0.05);
+      backdrop-filter: blur(10px);
+      border-radius: 28px;
+      border: 1px solid rgba(255, 255, 255, 0.12);
+      box-shadow: 0 15px 35px rgba(0, 0, 0, 0.5);
+    }
+
+    .message-title {
+      font-family: 'Dancing Script', cursive;
+      font-size: 4rem;
+      background: linear-gradient(135deg, #ffc0cb 0%, #ff69b4 50%, #dda0dd 100%);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      text-shadow: 0 0 25px rgba(255, 105, 180, 0.5);
+      margin-bottom: 12px;
+      animation: softGlow 3s ease-in-out infinite alternate;
+    }
+
+    .message-sub {
+      font-size: 1.15rem;
+      color: #e2e8f0;
+      letter-spacing: 1px;
+      line-height: 1.8;
+      font-weight: 500;
+    }
+
+    .heart-icon {
+      color: #ff69b4;
+      display: inline-block;
+      animation: heartbeat 1.5s infinite;
+    }
+
+    @keyframes fadeInScale {
+      to {
+        opacity: 1;
+        transform: scale(1);
+      }
+    }
+
+    @keyframes softGlow {
+      from { filter: drop-shadow(0 0 10px rgba(255, 105, 180, 0.4)); }
+      to { filter: drop-shadow(0 0 20px rgba(255, 105, 180, 0.8)); }
+    }
+
+    @keyframes heartbeat {
+      0%, 100% { transform: scale(1); }
+      50% { transform: scale(1.25); }
+    }
+
+    @media (max-width: 600px) {
+      .message-title { font-size: 3rem; }
+      .message-sub { font-size: 0.95rem; }
+      .message-box { padding: 25px 25px; margin: 0 20px; }
+      .moon { width: 55px; height: 55px; }
+    }
+  </style>
+</head>
+<body>
+
+  <!-- Trăng sáng -->
+  <div class="moon"></div>
+
+  <!-- Khung chữ chúc ngủ ngon -->
+  <div class="message-box">
+    <div class="message-title">Chúc Tuyết Trân ngụ ngon ✨</div>
+    <p class="message-sub">
+      Hôm nay mệt rồi, ngủ sớm để mai lại tươi tỉnh nhé!.<span class="heart-icon">🌸💨</span>
+    </p><br>Ngủ ngon nha bạn thân, mơ thấy điều mình thích.<span class="heart-icon">🥱</span>
+      <br>Chúc bạn ngủ thật sâu và mơ thật đẹp.<span class="heart-icon">🥱</span>💤<br>Hôm nay có thể khó, nhưng mai chắc chắn sẽ dễ hơn – ngủ ngon nhé.<span class="heart-icon">🌼</span>
+    </p>
+  </div>
+
+  <script>
+    // 1. Tạo bầu trời ngàn sao
+    const body = document.body;
+    for (let i = 0; i < 80; i++) {
+      const star = document.createElement('div');
+      star.className = 'star';
+      const size = Math.random() * 3 + 1;
+      star.style.width = `${size}px`;
+      star.style.height = `${size}px`;
+      star.style.left = `${Math.random() * 100}vw`;
+      star.style.top = `${Math.random() * 100}vh`;
+      star.style.setProperty('--duration', `${Math.random() * 3 + 2}s`);
+      body.appendChild(star);
+    }
+
+    // 2. Danh sách các biểu tượng hoa bay
+    const flowerIcons = ['🌸', '🌺', '🌹', '✨', '💐', '🌷'];
+
+    function createFlower() {
+      const flower = document.createElement('div');
+      flower.className = 'flower';
+      flower.innerText = flowerIcons[Math.floor(Math.random() * flowerIcons.length)];
+      
+      // Vị trí ngẫu nhiên chiều ngang
+      flower.style.left = `${Math.random() * 100}vw`;
+      
+      // Kích thước ngẫu nhiên
+      const size = Math.random() * 20 + 16;
+      flower.style.fontSize = `${size}px`;
+      
+      // Thời gian rơi và khoảng lắc lư
+      const duration = Math.random() * 5 + 6;
+      const drift = (Math.random() - 0.5) * 160;
+      flower.style.animationDuration = `${duration}s`;
+      flower.style.setProperty('--drift', `${drift}px`);
+
+      body.appendChild(flower);
+
+      // Tự động dọn dẹp sau khi rơi hết màn hình
+      setTimeout(() => {
+        flower.remove();
+      }, duration * 1000);
+    }
+
+    // Tạo hoa liên tục
+    setInterval(createFlower, 300);
+
+    // Tạo ngay đợt hoa đầu tiên
+    for (let i = 0; i < 15; i++) {
+      setTimeout(createFlower, i * 150);
+    }
+  </script>
+</body>
+</html>
