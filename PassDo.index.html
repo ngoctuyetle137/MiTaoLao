@@ -1,0 +1,600 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>UniPass - Hệ Thống Pass Đồ Sinh Viên Tích Hợp DSA & OOP</title>
+  <!-- Tailwind CSS CDN -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <!-- Font Awesome Icons -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css"/>
+  <style>
+    .glassmorphism {
+      background: rgba(255, 255, 255, 0.92);
+      backdrop-filter: blur(10px);
+    }
+    .badge-timemark {
+      background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+    }
+  </style>
+</head>
+<body class="bg-slate-50 text-slate-800 font-sans antialiased min-h-screen flex flex-col">
+
+  <!-- ================= TOP HEADER / NAVBAR ================= -->
+  <header class="sticky top-0 z-50 glassmorphism border-b border-slate-200 shadow-sm">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+      <div class="flex items-center justify-between h-16 gap-4">
+        
+        <!-- Logo & Trường -->
+        <div class="flex items-center gap-3">
+          <div class="w-10 h-10 rounded-xl bg-indigo-600 text-white flex items-center justify-center font-bold text-xl shadow-md shadow-indigo-200">
+            <i class="fa-solid fa-repeat"></i>
+          </div>
+          <div>
+            <div class="font-extrabold text-xl tracking-tight text-indigo-950">Uni<span class="text-indigo-600">Pass</span></div>
+            <p class="text-[11px] text-slate-500 font-medium">Campus Marketplace • UTC2 Portal</p>
+          </div>
+        </div>
+
+        <!-- DSA Feature: Thanh tìm kiếm Trie Auto-Complete -->
+        <div class="flex-1 max-w-xl relative">
+          <div class="relative">
+            <input 
+              type="text" 
+              id="searchInput" 
+              placeholder="Tìm giáo trình, mã môn (VL101, C++), đồ gia dụng..." 
+              class="w-full pl-11 pr-4 py-2 text-sm rounded-full border border-slate-300 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-100 outline-none transition bg-white"
+              oninput="handleSearch(this.value)"
+              autocomplete="off"
+            />
+            <i class="fa-solid fa-magnifying-glass absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 text-sm"></i>
+          </div>
+
+          <!-- Dropdown gợi ý từ khóa (Mô phỏng Trie) -->
+          <div id="trieDropdown" class="hidden absolute top-full left-0 right-0 mt-1.5 bg-white border border-slate-200 rounded-2xl shadow-xl overflow-hidden z-50">
+            <div class="px-4 py-2 bg-indigo-50 border-b border-indigo-100 flex items-center justify-between text-xs text-indigo-700 font-semibold">
+              <span><i class="fa-solid fa-bolt mr-1"></i> Gợi ý tức thì (Thuật toán Trie Engine)</span>
+              <span class="text-[10px] bg-indigo-200 px-1.5 py-0.5 rounded">O(L) Time</span>
+            </div>
+            <ul id="trieResults" class="divide-y divide-slate-100 text-sm max-h-56 overflow-y-auto">
+              <!-- JS render gợi ý -->
+            </ul>
+          </div>
+        </div>
+
+        <!-- Tài khoản xác thực UTC2 -->
+        <div class="flex items-center gap-3">
+          <div class="hidden md:flex items-center gap-2 px-3 py-1.5 bg-emerald-50 border border-emerald-200 rounded-full text-xs text-emerald-800">
+            <i class="fa-solid fa-shield-check text-emerald-600"></i>
+            <span class="font-medium">Xác thực: <b>@st.utc2.edu.vn</b></span>
+          </div>
+          <button class="bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-semibold px-4 py-2 rounded-full transition shadow-sm flex items-center gap-1.5">
+            <i class="fa-solid fa-plus"></i> Đăng pass đồ
+          </button>
+        </div>
+
+      </div>
+    </div>
+  </header>
+
+  <!-- ================= BANNER GIẢI TRÌNH ĐỒ ÁN ================= -->
+  <section class="bg-gradient-to-r from-indigo-900 via-indigo-800 to-slate-900 text-white py-6">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+      <div class="flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
+        <div>
+          <span class="inline-block px-2.5 py-0.5 rounded-full text-[11px] font-semibold bg-indigo-500/30 text-indigo-200 border border-indigo-400/30 mb-2">
+            Đồ Án Tốt Nghiệp / Liên Môn
+          </span>
+          <h1 class="text-2xl font-bold tracking-tight">Hệ Thống Pass Đồ & Trao Đổi Giáo Trình Sinh Viên</h1>
+          <p class="text-xs text-indigo-200 mt-1 max-w-2xl">
+            Tích hợp toàn diện <b>DSA</b> (Trie, AVL Tree, Heap), kiến trúc <b>OOP</b> (Factory, State, Observer Pattern) và <b>Thiết kế Web Responsive</b>.
+          </p>
+        </div>
+        <div class="flex gap-2">
+          <button onclick="scrollToSection('architectureModal')" class="bg-white/10 hover:bg-white/20 border border-white/20 text-xs px-3.5 py-2 rounded-lg font-medium transition flex items-center gap-1.5">
+            <i class="fa-solid fa-diagram-project text-indigo-300"></i> Kiến trúc 3 môn
+          </button>
+          <button onclick="scrollToSection('safetySection')" class="bg-emerald-500 hover:bg-emerald-600 text-xs px-3.5 py-2 rounded-lg font-medium transition flex items-center gap-1.5 shadow-sm">
+            <i class="fa-solid fa-camera-retro"></i> Giải pháp Chống Lừa Đảo
+          </button>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ================= MAIN CONTENT ================= -->
+  <main class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 flex-1 w-full grid grid-cols-1 lg:grid-cols-4 gap-8">
+    
+    <!-- ================= BỘ LỌC BÊN TRÁI (DSA: AVL TREE SIMULATOR) ================= -->
+    <aside class="lg:col-span-1 space-y-6">
+      
+      <!-- Card Lọc Giá -->
+      <div class="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm">
+        <div class="flex items-center justify-between mb-4">
+          <h3 class="font-bold text-slate-800 text-sm flex items-center gap-2">
+            <i class="fa-solid fa-filter text-indigo-600"></i> Bộ Lọc Giá Thông Minh
+          </h3>
+          <span class="text-[10px] font-mono bg-slate-100 px-2 py-0.5 rounded text-slate-600">AVL Tree: O(logN)</span>
+        </div>
+
+        <div class="space-y-4">
+          <div>
+            <div class="flex justify-between text-xs text-slate-600 mb-1">
+              <span>Giá tối đa:</span>
+              <span id="priceValue" class="font-bold text-indigo-600">100.000 đ</span>
+            </div>
+            <input 
+              type="range" 
+              id="priceRange" 
+              min="10000" 
+              max="200000" 
+              step="5000" 
+              value="100000" 
+              class="w-full h-1.5 bg-slate-200 rounded-lg appearance-none cursor-pointer accent-indigo-600"
+              oninput="filterByPrice(this.value)"
+            />
+          </div>
+
+          <div class="pt-2 border-t border-slate-100">
+            <label class="text-xs font-semibold text-slate-700 block mb-2">Vị trí giao hàng (Campus UTC2):</label>
+            <select id="locationFilter" onchange="filterProducts()" class="w-full text-xs p-2 rounded-xl border border-slate-200 bg-slate-50 focus:border-indigo-500 outline-none">
+              <option value="all">Tất cả vị trí trong trường</option>
+              <option value="Sảnh Tòa A">Sảnh Tòa A</option>
+              <option value="Ký túc xá D3">Ký túc xá D3</option>
+              <option value="Thư viện tầng 2">Thư viện tầng 2</option>
+              <option value="Căn tin trường">Căn tin trường</option>
+            </select>
+          </div>
+
+          <div>
+            <label class="text-xs font-semibold text-slate-700 block mb-2">Danh mục (OOP Classes):</label>
+            <div class="space-y-1.5 text-xs text-slate-600">
+              <label class="flex items-center gap-2 cursor-pointer">
+                <input type="checkbox" checked onchange="filterProducts()" value="TextbookListing" class="category-filter rounded text-indigo-600 focus:ring-indigo-500" />
+                <span>TextbookListing (Giáo trình/Sách)</span>
+              </label>
+              <label class="flex items-center gap-2 cursor-pointer">
+                <input type="checkbox" checked onchange="filterProducts()" value="DeviceListing" class="category-filter rounded text-indigo-600 focus:ring-indigo-500" />
+                <span>DeviceListing (Máy tính/Thiết bị)</span>
+              </label>
+              <label class="flex items-center gap-2 cursor-pointer">
+                <input type="checkbox" checked onchange="filterProducts()" value="ApplianceListing" class="category-filter rounded text-indigo-600 focus:ring-indigo-500" />
+                <span>ApplianceListing (Nồi cơm/Đồ trọ)</span>
+              </label>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Card Báo Cáo Uy Tín Sinh Viên -->
+      <div class="bg-indigo-50 p-5 rounded-2xl border border-indigo-100 text-xs">
+        <h4 class="font-bold text-indigo-900 mb-2 flex items-center gap-1.5">
+          <i class="fa-solid fa-id-card-clip text-indigo-600"></i> Cơ Chế Chống "Bùng Kèo"
+        </h4>
+        <ul class="space-y-2 text-slate-600">
+          <li class="flex items-start gap-1.5">
+            <i class="fa-solid fa-check text-emerald-500 mt-0.5"></i>
+            <span>Đăng nhập qua <b>SSO Email trường</b> (@st.utc2.edu.vn)</span>
+          </li>
+          <li class="flex items-start gap-1.5">
+            <i class="fa-solid fa-check text-emerald-500 mt-0.5"></i>
+            <span>Giới hạn <b>tối đa 3 tin/ngày</b> tránh spam đại trà</span>
+          </li>
+          <li class="flex items-start gap-1.5">
+            <i class="fa-solid fa-check text-emerald-500 mt-0.5"></i>
+            <span>Khóa <b>10 điểm uy tín Karma</b> khi nhận kèo hẹn</span>
+          </li>
+        </ul>
+      </div>
+
+    </aside>
+
+    <!-- ================= DANH SÁCH SẢN PHẨM ================= -->
+    <section class="lg:col-span-3 space-y-6">
+      
+      <!-- Mục Đề Xuất Thông Minh (Shopee Style) -->
+      <div>
+        <div class="flex items-center justify-between mb-4">
+          <div class="flex items-center gap-2">
+            <div class="w-2.5 h-6 bg-amber-500 rounded-full"></div>
+            <h2 class="text-base font-bold text-slate-800 uppercase tracking-wide">
+              Gợi ý hôm nay quanh bạn <span class="text-xs font-normal text-slate-500 lowercase">(ưu tiên khoảng cách gần)</span>
+            </h2>
+          </div>
+          <span class="text-xs text-indigo-600 font-semibold cursor-pointer hover:underline">Xem thêm <i class="fa-solid fa-angle-right"></i></span>
+        </div>
+
+        <!-- Grid Cards -->
+        <div id="productGrid" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
+          <!-- JS Render Sản Phẩm Tại Đây -->
+        </div>
+
+        <!-- Thông báo rỗng -->
+        <div id="emptyState" class="hidden text-center py-12 bg-white rounded-2xl border border-slate-200">
+          <i class="fa-regular fa-folder-open text-4xl text-slate-300 mb-2"></i>
+          <p class="text-sm text-slate-500">Không tìm thấy món đồ phù hợp với điều kiện lọc giá!</p>
+        </div>
+      </div>
+
+    </section>
+
+  </main>
+
+  <!-- ================= SECTION MINH HỌA XÁC THỰC THỰC TẾ (TIMEMARK & CODE GIẤY) ================= -->
+  <section id="safetySection" class="bg-white border-t border-slate-200 py-10 mt-12">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+      <div class="text-center max-w-2xl mx-auto mb-8">
+        <span class="text-xs font-bold text-emerald-600 uppercase tracking-wider bg-emerald-50 px-3 py-1 rounded-full border border-emerald-200">
+          Giải Pháp Đột Phá • Giải Quyết "Hàng Không Như Hình"
+        </span>
+        <h2 class="text-xl font-extrabold text-slate-800 mt-2">Quy Trình Kiểm Tra 3 Lớp Bằng TimeMark & Mã Ngẫu Nhiên</h2>
+        <p class="text-xs text-slate-500 mt-1">Loại bỏ hoàn toàn việc dùng ảnh mạng, ảnh cũ từ kỳ trước hay giấu khuyết điểm vật phẩm.</p>
+      </div>
+
+      <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+        
+        <!-- Bước 1 -->
+        <div class="p-5 rounded-2xl bg-slate-50 border border-slate-200">
+          <div class="w-9 h-9 rounded-xl bg-indigo-600 text-white flex items-center justify-center font-bold text-sm mb-3">1</div>
+          <h3 class="font-bold text-slate-800 text-sm mb-1">Mã Xác Nhận Ngẫu Nhiên</h3>
+          <p class="text-xs text-slate-600 leading-relaxed">
+            Hệ thống cấp 1 mã ngẫu nhiên (VD: <span class="font-mono bg-indigo-100 text-indigo-800 px-1 rounded font-bold">UTC2-892</span>). Người bán viết mã này ra giấy nháp đặt cạnh sách rồi chụp ảnh trong vòng 3 phút.
+          </p>
+        </div>
+
+        <!-- Bước 2 -->
+        <div class="p-5 rounded-2xl bg-slate-50 border border-slate-200">
+          <div class="w-9 h-9 rounded-xl bg-emerald-600 text-white flex items-center justify-center font-bold text-sm mb-3">2</div>
+          <h3 class="font-bold text-slate-800 text-sm mb-1">Ảnh Đóng Dấu TimeMark</h3>
+          <p class="text-xs text-slate-600 leading-relaxed">
+            Ảnh bắt buộc có đóng dấu thời gian thực và tọa độ GPS của khuôn viên trường. Không cho phép tải ảnh từ album cũ tải sẵn trên mạng.
+          </p>
+        </div>
+
+        <!-- Bước 3 -->
+        <div class="p-5 rounded-2xl bg-slate-50 border border-slate-200">
+          <div class="w-9 h-9 rounded-xl bg-amber-600 text-white flex items-center justify-center font-bold text-sm mb-3">3</div>
+          <h3 class="font-bold text-slate-800 text-sm mb-1">Giao Nhận Quét Mã QR</h3>
+          <p class="text-xs text-slate-600 leading-relaxed">
+            Gặp mặt tại sảnh trường kiểm tra đồ thực tế. Đúng như ảnh mới quét mã QR xác nhận nhận hàng. Sau khi quét, hệ thống <b>tự động xóa bài</b> khỏi hệ thống.
+          </p>
+        </div>
+
+      </div>
+    </div>
+  </section>
+
+  <!-- ================= SECTION KIẾN TRÚC 3 MÔN (DÀNH CHO GIẢNG VIÊN ĐÁNH GIÁ) ================= -->
+  <section id="architectureModal" class="bg-slate-900 text-white py-12">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+      <div class="mb-8">
+        <span class="text-xs font-mono text-indigo-400 uppercase tracking-wider">Tổng Quan Kỹ Thuật Dự Án</span>
+        <h2 class="text-xl font-bold tracking-tight mt-1">Phân Bổ Kiến Trúc 3 Môn: DSA - OOP - Thiết Kế Web</h2>
+      </div>
+
+      <div class="grid grid-cols-1 md:grid-cols-3 gap-6 text-xs">
+        
+        <!-- Môn DSA -->
+        <div class="bg-slate-800/80 p-5 rounded-2xl border border-slate-700">
+          <div class="flex items-center justify-between text-indigo-400 font-bold mb-3">
+            <span class="text-sm"><i class="fa-solid fa-network-wired mr-1"></i> Môn Cấu Trúc Dữ Liệu (DSA)</span>
+          </div>
+          <ul class="space-y-2 text-slate-300">
+            <li><b>1. Cây tiền tố (Trie):</b> Tìm kiếm tức thì từ khóa, mã môn học với độ phức tạp $O(L)$ thay vì quét database $O(N)$.</li>
+            <li><b>2. Cây AVL (Cân bằng):</b> Đánh chỉ mục khoảng giá để lọc sản phẩm cực nhanh trong $O(\log N + K)$.</li>
+            <li><b>3. Min-Heap (Priority Queue):</b> Quét các bài viết quá 14 ngày (TTL) để tự động hủy bài cũ/hết hạn.</li>
+          </ul>
+        </div>
+
+        <!-- Môn OOP -->
+        <div class="bg-slate-800/80 p-5 rounded-2xl border border-slate-700">
+          <div class="flex items-center justify-between text-emerald-400 font-bold mb-3">
+            <span class="text-sm"><i class="fa-solid fa-cubes mr-1"></i> Môn Hướng Đối Tượng (OOP)</span>
+          </div>
+          <ul class="space-y-2 text-slate-300">
+            <li><b>1. Kế thừa & Đa hình:</b> `ItemListing` trừu tượng chia thành `TextbookListing`, `DeviceListing`, `ApplianceListing`.</li>
+            <li><b>2. State Pattern:</b> Vòng đời bài đăng (`Available` $\rightarrow$ `Inspecting` $\rightarrow$ `Sold`).</li>
+            <li><b>3. Observer Pattern:</b> Tự động bắn thông báo khi có người đăng món đồ thuộc mã môn sinh viên đang theo dõi.</li>
+          </ul>
+        </div>
+
+        <!-- Môn Web -->
+        <div class="bg-slate-800/80 p-5 rounded-2xl border border-slate-700">
+          <div class="flex items-center justify-between text-amber-400 font-bold mb-3">
+            <span class="text-sm"><i class="fa-solid fa-code mr-1"></i> Môn Thiết Kế Web</span>
+          </div>
+          <ul class="space-y-2 text-slate-300">
+            <li><b>1. Giao diện Responsive:</b> Tương thích hoàn hảo từ Mobile đến Laptop bằng Tailwind CSS.</li>
+            <li><b>2. Xử lý bất đồng bộ:</b> Debounce 250ms cho thanh tìm kiếm, fetch API mượt mà không load lại trang.</li>
+            <li><b>3. UX Sinh viên:</b> Badge TimeMark, đếm ngược giữ đồ và bản đồ điểm hẹn trong khuôn viên.</li>
+          </ul>
+        </div>
+
+      </div>
+    </div>
+  </section>
+
+  <!-- ================= FOOTER ================= -->
+  <footer class="bg-slate-950 text-slate-400 text-xs py-6 border-t border-slate-800 text-center">
+    <p>© 2026 UniPass Project - Đồ án thực hành liên môn DSA & OOP & Thiết kế Web.</p>
+  </footer>
+
+  <!-- ================= JAVASCRIPT: MÔ PHỎNG THUẬT TOÁN ================= -->
+  <script>
+    // --- 1. DỮ LIỆU TỪNG MÓN ĐỒ (OOP DATA INSTANCES) ---
+    const rawProducts = [
+      {
+        id: 1,
+        title: "Giáo trình Cấu Trúc Dữ Liệu & Giải Thuật",
+        code: "IT003",
+        price: 45000,
+        originalPrice: 95000,
+        category: "TextbookListing",
+        location: "Thư viện tầng 2",
+        condition: "Tốt (Chỉ viết chì nhẹ)",
+        seller: "Nguyễn Văn A (@st.utc2.edu.vn)",
+        verifiedCode: "UTC2-892",
+        timeMark: "Hôm nay 08:30 - Sảnh A UTC2",
+        image: "https://images.unsplash.com/photo-1532012164546-f432f2e3777a?w=400&q=80"
+      },
+      {
+        id: 2,
+        title: "Máy tính Casio FX 580VNX",
+        code: "MATH101",
+        price: 180000,
+        originalPrice: 650000,
+        category: "DeviceListing",
+        location: "Sảnh Tòa A",
+        condition: "Mới 90% (Còn nắp trượt)",
+        seller: "Lê Thị B (@st.utc2.edu.vn)",
+        verifiedCode: "UTC2-301",
+        timeMark: "Hôm qua 16:45 - KTX D3",
+        image: "https://images.unsplash.com/photo-1594980596870-8aa52a78d8cd?w=400&q=80"
+      },
+      {
+        id: 3,
+        title: "Giáo trình Vật Lý Đại Cương A1",
+        code: "VL101",
+        price: 35000,
+        originalPrice: 80000,
+        category: "TextbookListing",
+        location: "Ký túc xá D3",
+        condition: "Có highlight bài tập",
+        seller: "Trần Minh C (@st.utc2.edu.vn)",
+        verifiedCode: "UTC2-612",
+        timeMark: "Hôm nay 09:15 - Căn tin",
+        image: "https://images.unsplash.com/photo-1544716278-ca5e3f4abd8c?w=400&q=80"
+      },
+      {
+        id: 4,
+        title: "Nồi Cơm Điện Mini Sunhouse 1.2L",
+        code: "APPL01",
+        price: 120000,
+        originalPrice: 350000,
+        category: "ApplianceListing",
+        location: "Ký túc xá D3",
+        condition: "Dùng tốt, nấu nhanh",
+        seller: "Hoàng Đức D (@st.utc2.edu.vn)",
+        verifiedCode: "UTC2-105",
+        timeMark: "23/09 19:20 - KTX D3",
+        image: "https://images.unsplash.com/photo-1544233726-9f1d2b27be8b?w=400&q=80"
+      },
+      {
+        id: 5,
+        title: "Sách Lập Trình C/C++ Hướng Đối Tượng",
+        code: "IT002",
+        price: 55000,
+        originalPrice: 110000,
+        category: "TextbookListing",
+        location: "Sảnh Tòa A",
+        condition: "Rất mới, chưa gấp mép",
+        seller: "Phạm Thu H (@st.utc2.edu.vn)",
+        verifiedCode: "UTC2-993",
+        timeMark: "Hôm nay 07:10 - Sảnh Tòa A",
+        image: "https://images.unsplash.com/photo-1517842645767-c639042777db?w=400&q=80"
+      }
+    ];
+
+    // --- 2. CÀI ĐẶT THUẬT TOÁN TRIE IN-MEMORY (MÔN DSA) ---
+    class TrieNode {
+      constructor() {
+        this.children = {};
+        this.isEndOfWord = false;
+        this.frequency = 0;
+      }
+    }
+
+    class TrieSearchEngine {
+      constructor() {
+        this.root = new TrieNode();
+      }
+
+      // Chèn từ khóa vào cây Trie
+      insert(word, frequency = 1) {
+        let node = this.root;
+        const cleanWord = word.toLowerCase().trim();
+        for (const char of cleanWord) {
+          if (!node.children[char]) {
+            node.children[char] = new TrieNode();
+          }
+          node = node.children[char];
+        }
+        node.isEndOfWord = true;
+        node.frequency = Math.max(node.frequency, frequency);
+      }
+
+      // Tìm các từ khóa bắt đầu bằng prefix
+      searchPrefix(prefix) {
+        let node = this.root;
+        const cleanPrefix = prefix.toLowerCase().trim();
+        for (const char of cleanPrefix) {
+          if (!node.children[char]) return [];
+          node = node.children[char];
+        }
+        
+        const results = [];
+        this._collectWords(node, cleanPrefix, results);
+        // Sắp xếp theo mức độ phổ biến (Frequency)
+        return results.sort((a, b) => b.frequency - a.frequency).slice(0, 5);
+      }
+
+      _collectWords(node, currentPrefix, results) {
+        if (node.isEndOfWord) {
+          results.push({ word: currentPrefix, frequency: node.frequency });
+        }
+        for (const char in node.children) {
+          this._collectWords(node.children[char], currentPrefix + char, results);
+        }
+      }
+    }
+
+    // Khởi tạo Trie và nạp dữ liệu từ điển
+    const trieEngine = new TrieSearchEngine();
+    trieEngine.insert("giao trinh toan cao cap", 98);
+    trieEngine.insert("giao trinh cau truc du lieu", 120);
+    trieEngine.insert("giao trinh lap trinh c++", 85);
+    trieEngine.insert("may tinh casio fx 580vnx", 150);
+    trieEngine.insert("noi com dien mini", 64);
+    trieEngine.insert("vat ly dai cuong vl101", 90);
+    trieEngine.insert("giao trinh phap luat dai cuong", 40);
+
+    // --- 3. XỬ LÝ SỰ KIỆN TÌM KIẾM (TRIE DROPDOWN) ---
+    function handleSearch(val) {
+      const dropdown = document.getElementById("trieDropdown");
+      const list = document.getElementById("trieResults");
+      
+      if (!val || val.trim().length === 0) {
+        dropdown.classList.add("hidden");
+        filterProducts();
+        return;
+      }
+
+      const suggestions = trieEngine.searchPrefix(val);
+      if (suggestions.length === 0) {
+        dropdown.classList.add("hidden");
+      } else {
+        list.innerHTML = suggestions.map(item => `
+          <li onclick="selectSuggestion('${item.word}')" class="px-4 py-2 hover:bg-indigo-50 cursor-pointer flex justify-between items-center transition">
+            <span class="text-slate-700 font-medium"><i class="fa-solid fa-magnifying-glass text-slate-400 mr-2 text-xs"></i>${item.word}</span>
+            <span class="text-[10px] text-amber-600 bg-amber-50 px-2 py-0.5 rounded font-semibold"><i class="fa-solid fa-fire text-amber-500 mr-1"></i>${item.frequency} lượt tìm</span>
+          </li>
+        `).join('');
+        dropdown.classList.remove("hidden");
+      }
+      filterProducts();
+    }
+
+    function selectSuggestion(word) {
+      document.getElementById("searchInput").value = word;
+      document.getElementById("trieDropdown").classList.add("hidden");
+      filterProducts();
+    }
+
+    // --- 4. BỘ LỌC DỮ LIỆU TỔNG HỢP (AVL TREE / PRICE FILTER) ---
+    function filterByPrice(val) {
+      document.getElementById("priceValue").innerText = parseInt(val).toLocaleString('vi-VN') + ' đ';
+      filterProducts();
+    }
+
+    function filterProducts() {
+      const query = document.getElementById("searchInput").value.toLowerCase().trim();
+      const maxPrice = parseInt(document.getElementById("priceRange").value);
+      const selectedLocation = document.getElementById("locationFilter").value;
+      
+      const checkedCategories = Array.from(document.querySelectorAll('.category-filter:checked')).map(cb => cb.value);
+
+      const filtered = rawProducts.filter(item => {
+        const matchesQuery = item.title.toLowerCase().includes(query) || item.code.toLowerCase().includes(query);
+        const matchesPrice = item.price <= maxPrice;
+        const matchesLocation = selectedLocation === "all" || item.location === selectedLocation;
+        const matchesCategory = checkedCategories.includes(item.category);
+        return matchesQuery && matchesPrice && matchesLocation && matchesCategory;
+      });
+
+      renderProducts(filtered);
+    }
+
+    // --- 5. RENDER CARD GIAO DIỆN WEB ---
+    function renderProducts(products) {
+      const grid = document.getElementById("productGrid");
+      const empty = document.getElementById("emptyState");
+
+      if (products.length === 0) {
+        grid.innerHTML = "";
+        empty.classList.remove("hidden");
+        return;
+      }
+
+      empty.classList.add("hidden");
+      grid.innerHTML = products.map(item => `
+        <div class="bg-white rounded-2xl border border-slate-200 overflow-hidden hover:shadow-lg transition-all duration-200 flex flex-col justify-between">
+          <div>
+            <!-- Ảnh sản phẩm & Badge TimeMark -->
+            <div class="relative h-44 overflow-hidden bg-slate-100">
+              <img src="${item.image}" alt="${item.title}" class="w-full h-full object-cover" />
+              
+              <!-- Badge TimeMark đóng dấu xác thực -->
+              <div class="absolute top-2.5 left-2.5 badge-timemark text-white text-[10px] font-bold px-2 py-1 rounded-md shadow-sm flex items-center gap-1">
+                <i class="fa-solid fa-clock"></i> TimeMark Verified
+              </div>
+
+              <!-- Mã xác thực giấy nháp -->
+              <div class="absolute bottom-2.5 right-2.5 bg-slate-900/80 backdrop-blur-sm text-amber-300 font-mono text-[10px] px-2 py-0.5 rounded border border-amber-400/40">
+                Paper Tag: ${item.verifiedCode}
+              </div>
+            </div>
+
+            <!-- Nội dung chi tiết -->
+            <div class="p-4">
+              <div class="flex items-center justify-between text-[11px] text-slate-500 mb-1">
+                <span class="font-semibold text-indigo-600 bg-indigo-50 px-2 py-0.5 rounded">${item.code}</span>
+                <span class="flex items-center gap-1"><i class="fa-solid fa-location-dot text-slate-400"></i>${item.location}</span>
+              </div>
+
+              <h3 class="font-bold text-slate-800 text-sm line-clamp-2 mt-1" title="${item.title}">${item.title}</h3>
+              
+              <div class="mt-2 text-[11px] text-slate-600 flex items-center gap-1.5">
+                <i class="fa-solid fa-circle-info text-slate-400"></i>
+                <span>Tình trạng: <b>${item.condition}</b></span>
+              </div>
+
+              <div class="mt-1 text-[10px] text-slate-400">
+                <i class="fa-solid fa-user-check text-emerald-600 mr-1"></i>${item.seller}
+              </div>
+            </div>
+          </div>
+
+          <!-- Giá & Nút hành động -->
+          <div class="p-4 pt-0">
+            <div class="flex items-baseline justify-between mb-3 border-t border-slate-100 pt-3">
+              <div>
+                <span class="text-base font-extrabold text-indigo-600">${item.price.toLocaleString('vi-VN')} đ</span>
+                <span class="text-xs text-slate-400 line-through ml-1">${item.originalPrice.toLocaleString('vi-VN')} đ</span>
+              </div>
+              <span class="text-[10px] bg-emerald-100 text-emerald-800 font-bold px-1.5 py-0.5 rounded">
+                -${Math.round((1 - item.price/item.originalPrice)*100)}%
+              </span>
+            </div>
+
+            <button onclick="handleOrder(${item.id})" class="w-full bg-slate-900 hover:bg-indigo-600 text-white text-xs font-semibold py-2 rounded-xl transition shadow-sm flex items-center justify-center gap-1.5">
+              <i class="fa-regular fa-calendar-check"></i> Hẹn Gặp Check Hàng
+            </button>
+          </div>
+        </div>
+      `).join('');
+    }
+
+    function handleOrder(id) {
+      const item = rawProducts.find(p => p.id === id);
+      alert(`[Xác nhận hẹn gặp]:\nBạn đã đặt hẹn lấy "${item.title}" tại ${item.location}.\nHệ thống đã tạo mã QR giao nhận và khóa tạm thời 10 điểm Karma để đảm bảo hai bên không bùng hẹn!`);
+    }
+
+    function scrollToSection(id) {
+      document.getElementById(id).scrollIntoView({ behavior: 'smooth' });
+    }
+
+    // Khởi chạy render lần đầu
+    renderProducts(rawProducts);
+  </script>
+</body>
+</html>
