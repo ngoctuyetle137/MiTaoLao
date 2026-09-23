@@ -1,0 +1,533 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8">
+  <title>Dijkstra Visualizer - Pink Edition</title>
+  <style>
+    :root {
+      --bg-main: #1f1118;
+      --bg-card: #2d1825;
+      --bg-input: #1a0d15;
+      --pink-primary: #f43f5e;
+      --pink-light: #fb7185;
+      --pink-soft: #fecdd3;
+      --pink-hover: #e11d48;
+      --pink-border: #881337;
+      --node-active: #ff007f;
+      --node-visited: #fb7185;
+      --text-main: #fff1f2;
+      --text-muted: #fda4af;
+    }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      background: var(--bg-main);
+      color: var(--text-main);
+      margin: 20px;
+    }
+    .container {
+      max-width: 950px;
+      margin: auto;
+      background: var(--bg-card);
+      padding: 25px;
+      border-radius: 16px;
+      box-shadow: 0 8px 32px rgba(244, 63, 94, 0.15);
+      border: 1px solid var(--pink-border);
+    }
+    h2 {
+      margin-top: 0;
+      text-align: center;
+      color: var(--pink-light);
+      text-shadow: 0 0 12px rgba(251, 113, 133, 0.4);
+    }
+
+    .panel-config {
+      display: grid;
+      grid-template-columns: 1fr 2fr;
+      gap: 16px;
+      background: var(--bg-input);
+      padding: 16px;
+      border-radius: 10px;
+      margin-bottom: 20px;
+      border: 1px solid rgba(244, 63, 94, 0.2);
+    }
+    label {
+      display: block;
+      font-size: 13px;
+      color: var(--text-muted);
+      margin-bottom: 4px;
+      font-weight: 500;
+    }
+    input, textarea {
+      width: 100%;
+      box-sizing: border-box;
+      background: #25121e;
+      border: 1px solid var(--pink-border);
+      color: #fff;
+      padding: 8px 10px;
+      border-radius: 6px;
+      font-family: monospace;
+      outline: none;
+    }
+    input:focus, textarea:focus {
+      border-color: var(--pink-primary);
+      box-shadow: 0 0 8px rgba(244, 63, 94, 0.3);
+    }
+    textarea {
+      height: 80px;
+      resize: vertical;
+    }
+
+    .btn-run {
+      background: var(--pink-primary);
+      color: white;
+      border: none;
+      padding: 10px 18px;
+      border-radius: 6px;
+      font-weight: bold;
+      cursor: pointer;
+      width: 100%;
+      margin-top: 10px;
+      transition: background 0.2s, transform 0.1s;
+    }
+    .btn-run:hover {
+      background: var(--pink-hover);
+    }
+    .btn-run:active {
+      transform: scale(0.98);
+    }
+
+    svg {
+      width: 100%;
+      height: 300px;
+      background: var(--bg-input);
+      border-radius: 10px;
+      border: 1px solid rgba(244, 63, 94, 0.15);
+    }
+    .controls {
+      margin: 16px 0;
+      display: flex;
+      justify-content: center;
+      gap: 12px;
+      align-items: center;
+    }
+    button.nav {
+      background: var(--pink-primary);
+      border: none;
+      padding: 8px 18px;
+      border-radius: 6px;
+      font-weight: bold;
+      cursor: pointer;
+      color: #ffffff;
+      transition: background 0.2s;
+    }
+    button.nav:hover:not(:disabled) {
+      background: var(--pink-hover);
+    }
+    button.nav:disabled {
+      background: #4c2838;
+      color: #88586c;
+      cursor: not-allowed;
+    }
+    #stepDisplay {
+      font-weight: bold;
+      color: var(--pink-soft);
+      min-width: 90px;
+      text-align: center;
+    }
+
+    .history-log-box {
+      background: var(--bg-input);
+      padding: 14px;
+      border-radius: 8px;
+      max-height: 130px;
+      overflow-y: auto;
+      font-size: 13px;
+      line-height: 1.6;
+      border: 1px solid var(--pink-border);
+      margin-bottom: 16px;
+    }
+    .log-item {
+      padding: 6px 10px;
+      margin-bottom: 6px;
+      border-radius: 4px;
+      background: rgba(255, 255, 255, 0.02);
+      border-left: 3px solid #55273a;
+    }
+    .log-item.active-step {
+      background: rgba(244, 63, 94, 0.12);
+      border-left: 3px solid var(--pink-primary);
+      color: #fff;
+    }
+
+    .table-wrapper {
+      max-height: 230px;
+      overflow-y: auto;
+      border-radius: 8px;
+      border: 1px solid var(--pink-border);
+    }
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 13px;
+      text-align: center;
+    }
+    th {
+      background: var(--pink-primary);
+      color: #fff;
+      padding: 10px 8px;
+      position: sticky;
+      top: 0;
+    }
+    td {
+      border: 1px solid #452131;
+      padding: 7px;
+      background: var(--bg-input);
+    }
+    tr.current-row td {
+      background: rgba(244, 63, 94, 0.22);
+      font-weight: bold;
+      color: #fff;
+    }
+    .val-dash {
+      color: #9f7385;
+      font-weight: bold;
+    }
+    .val-updated {
+      color: #ff4d94;
+      font-weight: bold;
+    }
+
+    .active-node {
+      fill: var(--node-active) !important;
+      stroke: #fff !important;
+      stroke-width: 3.5px !important;
+      filter: drop-shadow(0 0 8px #ff007f);
+    }
+    .visited-node {
+      fill: var(--node-visited) !important;
+      stroke: #fda4af !important;
+    }
+  </style>
+</head>
+<body>
+
+<div class="container">
+  <h2>Mô Phỏng Dijkstra - Phiên Bản Hồng Pastel</h2>
+
+  <div class="panel-config">
+    <div>
+      <label>Số đỉnh (V):</label>
+      <input type="number" id="inpNodes" value="4" min="2" max="10">
+      
+      <label style="margin-top: 8px;">Đỉnh bắt đầu (S):</label>
+      <input type="number" id="inpStart" value="1" min="1">
+      
+      <button class="btn-run" onclick="buildAndRun()">Áp Dụng & Chạy Lại</button>
+    </div>
+    <div>
+      <label>Danh sách các cạnh (<b>từ_đỉnh đến_đỉnh trọng_số</b>):</label>
+      <textarea id="inpEdges">1 2 3
+1 4 7
+2 3 4
+2 4 5
+3 4 6</textarea>
+    </div>
+  </div>
+
+  <svg id="graphSvg">
+    <defs>
+      <marker id="arrow" viewBox="0 0 10 10" refX="24" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+        <path d="M 0 0 L 10 5 L 0 10 z" fill="#fb7185"/>
+      </marker>
+    </defs>
+    <g id="edgesLayer"></g>
+    <g id="nodesLayer"></g>
+  </svg>
+
+  <div class="controls">
+    <button class="nav" id="btnPrev" onclick="changeStep(-1)">◀ Quay Lại</button>
+    <span id="stepDisplay">Bước 0 / 0</span>
+    <button class="nav" id="btnNext" onclick="changeStep(1)">Bước Tiếp ▶</button>
+    <button class="nav" onclick="resetStep()">Làm Mới</button>
+  </div>
+
+  <label style="margin-bottom: 6px;">Lịch sử diễn biến từng bước:</label>
+  <div class="history-log-box" id="logContainer"></div>
+
+  <label style="margin-top: 10px;">Bảng lưu vết khoảng cách qua các bước:</label>
+  <div class="table-wrapper">
+    <table id="historyTable">
+      <thead id="tableHead"></thead>
+      <tbody id="tableBody"></tbody>
+    </table>
+  </div>
+</div>
+
+<script>
+let steps = [];
+let cur = 0;
+let numNodes = 4;
+let nodePositions = {};
+
+function parseGraph() {
+  numNodes = parseInt(document.getElementById("inpNodes").value);
+  const startNode = parseInt(document.getElementById("inpStart").value);
+  const lines = document.getElementById("inpEdges").value.trim().split("\n");
+  
+  const adj = Array.from({ length: numNodes + 1 }, () => []);
+  lines.forEach(line => {
+    const parts = line.trim().split(/\s+/).map(Number);
+    if (parts.length >= 3 && parts[0] <= numNodes && parts[1] <= numNodes) {
+      adj[parts[0]].push({ to: parts[1], w: parts[2] });
+    }
+  });
+
+  return { numNodes, startNode, adj };
+}
+
+function calculateDijkstraSteps(numNodes, startNode, adj) {
+  const INF = "∞";
+  let d = Array(numNodes + 1).fill(Infinity);
+  d[startNode] = 0;
+
+  let pq = [{ kc: 0, u: startNode }];
+  let visited = [];
+  const frames = [];
+
+  // Frame 0: Khởi tạo
+  frames.push({
+    stepIndex: 0,
+    u: null,
+    visited: [],
+    closed: [], // Các đỉnh đã hoàn thành trước bước này
+    d: d.slice(1).map(x => x === Infinity ? INF : x),
+    selectedChoice: `Chọn đỉnh ${startNode} (kc = 0)`,
+    desc: `<b>Khởi tạo:</b> d[${startNode}] = 0, các đỉnh khác = ∞. Chọn đỉnh xuất phát là ${startNode}.`
+  });
+
+  let stepCounter = 1;
+  while (pq.length > 0) {
+    pq.sort((a, b) => a.kc - b.kc);
+    const top = pq.shift();
+    const u = top.u;
+    const curDist = top.kc;
+
+    if (curDist > d[u]) continue;
+    
+    // Đỉnh u đã được duyệt xong
+    const closedBeforeThis = [...visited];
+    if (!visited.includes(u)) visited.push(u);
+
+    let descLogs = [`<b>Xét đỉnh u = ${u} (kc = ${curDist}):</b>`];
+    
+    for (let edge of adj[u]) {
+      const v = edge.to;
+      const w = edge.w;
+      if (d[u] + w < d[v]) {
+        d[v] = d[u] + w;
+        pq.push({ kc: d[v], u: v });
+        descLogs.push(`- Cập nhật d[${v}] = ${curDist} + ${w} = ${d[v]}. Đẩy đỉnh ${v} vào PQ.`);
+      } else {
+        descLogs.push(`- Thăm cạnh ${u}→${v} (w=${w}): ${curDist} + ${w} = ${curDist + w} ≥ d[${v}] (${d[v] === Infinity ? INF : d[v]}), bỏ qua.`);
+      }
+    }
+
+    if (adj[u].length === 0) {
+      descLogs.push(`- Đỉnh ${u} không có nhánh đi tiếp.`);
+    }
+
+    // Xác định đỉnh tiếp theo được chọn từ hàng đợi (nếu còn)
+    let nextChoice = "-";
+    let tempPq = pq.slice().sort((a, b) => a.kc - b.kc);
+    while (tempPq.length > 0 && tempPq[0].kc > d[tempPq[0].u]) {
+      tempPq.shift();
+    }
+    if (tempPq.length > 0) {
+      nextChoice = `Chọn đỉnh ${tempPq[0].u} (kc = ${tempPq[0].kc})`;
+    } else {
+      nextChoice = "Hết đỉnh (Rỗng)";
+    }
+
+    frames.push({
+      stepIndex: stepCounter++,
+      u: u,
+      visited: [...visited],
+      closed: closedBeforeThis, // Các đỉnh đã xong trước bước này
+      d: d.slice(1).map(x => x === Infinity ? INF : x),
+      selectedChoice: nextChoice,
+      desc: descLogs.join("<br>")
+    });
+  }
+
+  frames.push({
+    stepIndex: stepCounter,
+    u: null,
+    visited: [...visited],
+    closed: [...visited],
+    d: d.slice(1).map(x => x === Infinity ? INF : x),
+    selectedChoice: "Hoàn tất",
+    desc: "<b>Hoàn tất:</b> Tất cả các đỉnh đã được duyệt tối ưu. Thuật toán kết thúc!"
+  });
+
+  return frames;
+}
+
+function drawGraph(numNodes, adj) {
+  const edgesLayer = document.getElementById("edgesLayer");
+  const nodesLayer = document.getElementById("nodesLayer");
+  edgesLayer.innerHTML = "";
+  nodesLayer.innerHTML = "";
+
+  const cx = 450, cy = 150, r = 100;
+  nodePositions = {};
+
+  for (let i = 1; i <= numNodes; i++) {
+    const angle = (2 * Math.PI / numNodes) * (i - 1) - Math.PI / 2;
+    nodePositions[i] = {
+      x: cx + r * Math.cos(angle),
+      y: cy + r * Math.sin(angle)
+    };
+  }
+
+  for (let u = 1; u <= numNodes; u++) {
+    for (let edge of adj[u]) {
+      const v = edge.to;
+      const p1 = nodePositions[u];
+      const p2 = nodePositions[v];
+      
+      const line = document.createElementNS("http://www.w3.org/2000/svg", "line");
+      line.setAttribute("x1", p1.x);
+      line.setAttribute("y1", p1.y);
+      line.setAttribute("x2", p2.x);
+      line.setAttribute("y2", p2.y);
+      line.setAttribute("stroke", "#fb7185");
+      line.setAttribute("stroke-width", "2");
+      line.setAttribute("marker-end", "url(#arrow)");
+      edgesLayer.appendChild(line);
+
+      const mx = (p1.x * 0.4 + p2.x * 0.6);
+      const my = (p1.y * 0.4 + p2.y * 0.6);
+      const txt = document.createElementNS("http://www.w3.org/2000/svg", "text");
+      txt.setAttribute("x", mx);
+      txt.setAttribute("y", my - 4);
+      txt.setAttribute("fill", "#fecdd3");
+      txt.setAttribute("font-size", "13");
+      txt.setAttribute("font-weight", "bold");
+      txt.textContent = edge.w;
+      edgesLayer.appendChild(txt);
+    }
+  }
+
+  for (let i = 1; i <= numNodes; i++) {
+    const p = nodePositions[i];
+    const g = document.createElementNS("http://www.w3.org/2000/svg", "g");
+    g.setAttribute("id", "node-" + i);
+
+    const circle = document.createElementNS("http://www.w3.org/2000/svg", "circle");
+    circle.setAttribute("cx", p.x);
+    circle.setAttribute("cy", p.y);
+    circle.setAttribute("r", 19);
+    circle.setAttribute("fill", "#2d1825");
+    circle.setAttribute("stroke", "#f43f5e");
+    circle.setAttribute("stroke-width", "3");
+
+    const text = document.createElementNS("http://www.w3.org/2000/svg", "text");
+    text.setAttribute("x", p.x);
+    text.setAttribute("y", p.y + 5);
+    text.setAttribute("text-anchor", "middle");
+    text.setAttribute("fill", "#ffffff");
+    text.setAttribute("font-weight", "bold");
+    text.textContent = i;
+
+    g.appendChild(circle);
+    g.appendChild(text);
+    nodesLayer.appendChild(g);
+  }
+}
+
+function initTableStructure(numNodes) {
+  let theadHTML = `<tr><th>Bước</th><th>Đỉnh u xét</th>`;
+  for (let i = 1; i <= numNodes; i++) theadHTML += `<th>d[${i}]</th>`;
+  theadHTML += `<th>Đỉnh được chọn tiếp</th></tr>`;
+  document.getElementById("tableHead").innerHTML = theadHTML;
+}
+
+function updateUI() {
+  if (steps.length === 0) return;
+  const s = steps[cur];
+
+  document.getElementById("stepDisplay").innerText = `Bước ${cur} / ${steps.length - 1}`;
+  document.getElementById("btnPrev").disabled = (cur === 0);
+  document.getElementById("btnNext").disabled = (cur === steps.length - 1);
+
+
+  for (let i = 1; i <= numNodes; i++) {
+    const circle = document.querySelector(`#node-${i} circle`);
+    if (circle) {
+      circle.className.baseVal = "";
+      if (s.visited.includes(i)) circle.classList.add("visited-node");
+      if (s.u === i) circle.classList.add("active-node");
+    }
+  }
+
+
+  const logBox = document.getElementById("logContainer");
+  let logsHTML = "";
+  for (let i = 0; i <= cur; i++) {
+    const isLatest = (i === cur);
+    logsHTML += `<div class="log-item ${isLatest ? 'active-step' : ''}">
+      <span style="color: var(--pink-light); font-weight: bold;">[Bước ${i}]:</span> ${steps[i].desc}
+    </div>`;
+  }
+  logBox.innerHTML = logsHTML;
+  logBox.scrollTop = logBox.scrollHeight;
+
+
+  const tbody = document.getElementById("tableBody");
+  let tbodyHTML = "";
+  for (let i = 0; i <= cur; i++) {
+    const row = steps[i];
+    const isCurrentRow = (i === cur);
+    tbodyHTML += `<tr class="${isCurrentRow ? 'current-row' : ''}">
+      <td><b>${i}</b></td>
+      <td>${row.u !== null ? row.u : '-'}</td>`;
+    
+    for (let j = 1; j <= numNodes; j++) {
+      // Nếu đỉnh j nằm trong danh sách các đỉnh đã xét xong (đã qua), hiển thị dấu '-'
+      if (row.closed && row.closed.includes(j)) {
+        tbodyHTML += `<td class="val-dash">-</td>`;
+      } else {
+        const val = row.d[j - 1];
+        tbodyHTML += `<td>${val}</td>`;
+      }
+    }
+    
+    tbodyHTML += `<td style="font-weight: 600; color: var(--pink-soft);">${row.selectedChoice}</td></tr>`;
+  }
+  tbody.innerHTML = tbodyHTML;
+}
+
+function changeStep(delta) {
+  cur = Math.max(0, Math.min(steps.length - 1, cur + delta));
+  updateUI();
+}
+
+function resetStep() {
+  cur = 0;
+  updateUI();
+}
+
+function buildAndRun() {
+  const data = parseGraph();
+  drawGraph(data.numNodes, data.adj);
+  initTableStructure(data.numNodes);
+  steps = calculateDijkstraSteps(data.numNodes, data.startNode, data.adj);
+  cur = 0;
+  updateUI();
+}
+
+buildAndRun();
+</script>
+</body>
+</html>
