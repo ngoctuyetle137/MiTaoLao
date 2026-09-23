@@ -1,0 +1,337 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Báo Cáo Đề Tài - UniPass System</title>
+  <!-- Tailwind CSS CDN -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <!-- Font Awesome Icons -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css"/>
+  <style>
+    .slide {
+      display: none;
+      opacity: 0;
+      transition: opacity 0.3s ease-in-out;
+    }
+    .slide.active {
+      display: flex;
+      opacity: 1;
+    }
+  </style>
+</head>
+<body class="bg-slate-950 text-slate-100 font-sans select-none overflow-hidden h-screen flex flex-col justify-between">
+
+  <!-- ================= TOP BAR ================= -->
+  <header class="px-8 py-4 border-b border-slate-800 flex items-center justify-between text-xs text-slate-400 bg-slate-900/50">
+    <div class="flex items-center gap-2">
+      <span class="w-3 h-3 rounded-full bg-indigo-500"></span>
+      <span class="font-bold tracking-wider text-slate-200 uppercase">ĐỒ ÁN LIÊN MÔN: DSA • OOP • WEB DESIGN</span>
+    </div>
+    <div class="flex items-center gap-4">
+      <span>Đề tài: <b>Hệ Thống Pass Đồ Sinh Viên (UniPass)</b></span>
+      <span class="bg-indigo-900/60 text-indigo-300 px-2 py-0.5 rounded font-mono" id="slideIndicator">1 / 6</span>
+    </div>
+  </header>
+
+  <!-- ================= SLIDE CONTAINER ================= -->
+  <main class="flex-1 max-w-6xl w-full mx-auto p-6 md:p-10 flex items-center justify-center">
+
+    <!-- SLIDE 1: TRANG TIÊU ĐỀ -->
+    <div class="slide active flex-col items-center text-center space-y-6 w-full">
+      <span class="px-3 py-1 bg-indigo-600/30 text-indigo-300 border border-indigo-500/40 rounded-full text-xs font-semibold uppercase tracking-widest">
+        Báo Cáo Đề Tài Tốt Nghiệp / Bài Tập Lớn
+      </span>
+      <h1 class="text-4xl md:text-5xl font-extrabold text-white tracking-tight leading-tight max-w-3xl">
+        Hệ Thống Pass Đồ & Trao Đổi Giáo Trình Sinh Viên Tại Trường Đại Học
+      </h1>
+      <p class="text-slate-400 text-sm max-w-xl">
+        Tối ưu hóa bài toán mua bán nội bộ khuôn viên trường bằng thuật toán <b>DSA</b>, kiến trúc lớp <b>OOP</b> chuẩn mực và nền tảng <b>Web tương tác thời gian thực</b>.
+      </p>
+      
+      <div class="grid grid-cols-3 gap-4 pt-4 max-w-2xl w-full text-left">
+        <div class="bg-slate-900 p-4 rounded-xl border border-slate-800">
+          <div class="text-indigo-400 font-bold text-xs mb-1"><i class="fa-solid fa-network-wired mr-1"></i> DSA Core</div>
+          <p class="text-[11px] text-slate-400">Trie Search $O(L)$, AVL Tree Range Query, Priority Queue.</p>
+        </div>
+        <div class="bg-slate-900 p-4 rounded-xl border border-slate-800">
+          <div class="text-emerald-400 font-bold text-xs mb-1"><i class="fa-solid fa-cubes mr-1"></i> OOP Design</div>
+          <p class="text-[11px] text-slate-400">Factory, State Pattern vòng đời tin, Observer Pattern.</p>
+        </div>
+        <div class="bg-slate-900 p-4 rounded-xl border border-slate-800">
+          <div class="text-amber-400 font-bold text-xs mb-1"><i class="fa-solid fa-code mr-1"></i> Web Frontend</div>
+          <p class="text-[11px] text-slate-400">Responsive, TimeMark Verification, Gợi ý Shopee-style.</p>
+        </div>
+      </div>
+    </div>
+
+    <!-- SLIDE 2: VẤN ĐỀ & BỐI CẢNH THỰC TẾ -->
+    <div class="slide flex-col justify-center space-y-6 w-full">
+      <div class="border-l-4 border-indigo-500 pl-4">
+        <span class="text-xs text-indigo-400 font-bold uppercase">Phần 1: Bối Cảnh & Thách Thức</span>
+        <h2 class="text-3xl font-bold text-white mt-1">Tại Sao Sinh Viên Cần Một Sàn Riêng?</h2>
+      </div>
+
+      <div class="grid grid-cols-1 md:grid-cols-3 gap-6 pt-2">
+        <div class="bg-slate-900 p-6 rounded-2xl border border-slate-800 space-y-3">
+          <div class="w-10 h-10 rounded-lg bg-rose-500/20 text-rose-400 flex items-center justify-center font-bold text-lg">
+            <i class="fa-solid fa-images"></i>
+          </div>
+          <h3 class="font-bold text-white text-base">Hàng Không Giống Hình</h3>
+          <p class="text-xs text-slate-400 leading-relaxed">
+            Dùng ảnh mạng, ảnh từ các kỳ trước, che giấu vết rách, viết bậy bút bi hoặc máy tính trầy xước màn hình.
+          </p>
+        </div>
+
+        <div class="bg-slate-900 p-6 rounded-2xl border border-slate-800 space-y-3">
+          <div class="w-10 h-10 rounded-lg bg-amber-500/20 text-amber-400 flex items-center justify-center font-bold text-lg">
+            <i class="fa-solid fa-user-clock"></i>
+          </div>
+          <h3 class="font-bold text-white text-base">Bùng Hẹn & Lệch Giờ Học</h3>
+          <p class="text-xs text-slate-400 leading-relaxed">
+            Hẹn giao nhận ngoài cổng trường nhưng bị đổi tiết học đột xuất, hẹn giờ dây thun gây mất thời gian cả hai bên.
+          </p>
+        </div>
+
+        <div class="bg-slate-900 p-6 rounded-2xl border border-slate-800 space-y-3">
+          <div class="w-10 h-10 rounded-lg bg-blue-500/20 text-blue-400 flex items-center justify-center font-bold text-lg">
+            <i class="fa-solid fa-broom"></i>
+          </div>
+          <h3 class="font-bold text-white text-base">Tin Rác & Tin Đã Bán Xong</h3>
+          <p class="text-xs text-slate-400 leading-relaxed">
+            Bán xong không xóa bài, cò mồi photocopy bên ngoài vào spam bảng tin gây loãng thông tin của sinh viên.
+          </p>
+        </div>
+      </div>
+    </div>
+
+    <!-- SLIDE 3: THÀNH PHẦN DSA -->
+    <div class="slide flex-col justify-center space-y-6 w-full">
+      <div class="border-l-4 border-indigo-500 pl-4">
+        <span class="text-xs text-indigo-400 font-bold uppercase">Phần 2: Cấu Trúc Dữ Liệu & Giải Thuật</span>
+        <h2 class="text-3xl font-bold text-white mt-1">Các Module DSA Tự Xây Dựng (In-Memory Engine)</h2>
+      </div>
+
+      <div class="grid grid-cols-1 md:grid-cols-3 gap-6 pt-2">
+        <div class="bg-slate-900 p-6 rounded-2xl border border-indigo-900/50 space-y-3">
+          <div class="flex items-center justify-between">
+            <span class="text-xs font-mono bg-indigo-950 text-indigo-300 px-2 py-1 rounded">Module 1</span>
+            <span class="text-[11px] text-emerald-400 font-bold">$O(L)$ Time</span>
+          </div>
+          <h3 class="font-bold text-white text-base">Cây Tiền Tố (Trie)</h3>
+          <p class="text-xs text-slate-400 leading-relaxed">
+            Tự cài đặt cây tiền tố để tìm kiếm từ khóa và mã môn học (`VL101`, `IT002`). Gợi ý từ khóa tức thì kèm số lượt tìm kiếm phổ biến khi người dùng vừa gõ phím.
+          </p>
+        </div>
+
+        <div class="bg-slate-900 p-6 rounded-2xl border border-indigo-900/50 space-y-3">
+          <div class="flex items-center justify-between">
+            <span class="text-xs font-mono bg-indigo-950 text-indigo-300 px-2 py-1 rounded">Module 2</span>
+            <span class="text-[11px] text-emerald-400 font-bold">$O(\log N + K)$</span>
+          </div>
+          <h3 class="font-bold text-white text-base">Cây Cân Bằng (AVL Tree)</h3>
+          <p class="text-xs text-slate-400 leading-relaxed">
+            Đánh chỉ mục giá bán. Cho phép lọc theo khoảng giá $[Min, Max]$ cực nhanh nhờ phép quay cây (Rotations), không phải duyệt tuyến tính $O(N)$ toàn bộ danh sách.
+          </p>
+        </div>
+
+        <div class="bg-slate-900 p-6 rounded-2xl border border-indigo-900/50 space-y-3">
+          <div class="flex items-center justify-between">
+            <span class="text-xs font-mono bg-indigo-950 text-indigo-300 px-2 py-1 rounded">Module 3</span>
+            <span class="text-[11px] text-emerald-400 font-bold">Priority Queue</span>
+          </div>
+          <h3 class="font-bold text-white text-base">Min-Heap Xử Lý Tin Rác</h3>
+          <p class="text-xs text-slate-400 leading-relaxed">
+            Quản lý vòng đời bài đăng theo cơ chế TTL (14 ngày). Hệ thống quét đỉnh Min-Heap để tự động giải phóng hoặc ẩn các bài đăng quá hạn, bảo đảm sàn luôn sạch.
+          </p>
+        </div>
+      </div>
+    </div>
+
+    <!-- SLIDE 4: THÀNH PHẦN OOP -->
+    <div class="slide flex-col justify-center space-y-6 w-full">
+      <div class="border-l-4 border-emerald-500 pl-4">
+        <span class="text-xs text-emerald-400 font-bold uppercase">Phần 3: Lập Trình Hướng Đối Tượng</span>
+        <h2 class="text-3xl font-bold text-white mt-1">Mô Hình Hóa Thực Thể & Design Patterns</h2>
+      </div>
+
+      <div class="grid grid-cols-1 md:grid-cols-3 gap-6 pt-2">
+        <div class="bg-slate-900 p-5 rounded-2xl border border-slate-800 space-y-2">
+          <div class="text-emerald-400 font-bold text-xs"><i class="fa-solid fa-sitemap mr-1"></i> Tính Kế Thừa & Đa Hình</div>
+          <div class="font-mono text-[11px] bg-slate-950 p-2.5 rounded-lg text-slate-300 space-y-1">
+            <div class="text-indigo-400">abstract class ItemListing</div>
+            <div class="pl-3">↳ TextbookListing (mã môn, tác giả)</div>
+            <div class="pl-3">↳ DeviceListing (bảo hành, pin)</div>
+            <div class="pl-3">↳ ApplianceListing (công suất, thể tích)</div>
+          </div>
+          <p class="text-[11px] text-slate-400">Phương thức `calculateDepositFee()` được override riêng cho từng danh mục đồ dùng.</p>
+        </div>
+
+        <div class="bg-slate-900 p-5 rounded-2xl border border-slate-800 space-y-2">
+          <div class="text-emerald-400 font-bold text-xs"><i class="fa-solid fa-arrows-spin mr-1"></i> State Pattern (Vòng Đời Tin)</div>
+          <div class="font-mono text-[11px] bg-slate-950 p-2.5 rounded-lg text-slate-300 space-y-1">
+            <div>[AvailableState] (Đang mở)</div>
+            <div class="pl-2">↳ [InspectingState] (Đang xem đồ)</div>
+            <div class="pl-4">↳ [SoldState] (Quét QR xong)</div>
+          </div>
+          <p class="text-[11px] text-slate-400">Triệt tiêu hoàn toàn lệnh `if-else` chắp vá khi đổi trạng thái hiển thị nút bấm trên web.</p>
+        </div>
+
+        <div class="bg-slate-900 p-5 rounded-2xl border border-slate-800 space-y-2">
+          <div class="text-emerald-400 font-bold text-xs"><i class="fa-solid fa-bell mr-1"></i> Observer Pattern (Thông Báo)</div>
+          <p class="text-xs text-slate-300 font-medium">Auto Subject Notification</p>
+          <p class="text-[11px] text-slate-400 leading-relaxed">
+            Sinh viên đăng ký theo dõi mã môn `VL101`. Khi có sinh viên khác đăng bán sách `VL101`, `NotificationManager` kích hoạt bắn thông báo tức thì đến người theo dõi.
+          </p>
+        </div>
+      </div>
+    </div>
+
+    <!-- SLIDE 5: GIẢI PHÁP ĐỘT PHÁ CHỐNG GIAN LẬN -->
+    <div class="slide flex-col justify-center space-y-6 w-full">
+      <div class="border-l-4 border-amber-500 pl-4">
+        <span class="text-xs text-amber-400 font-bold uppercase">Phần 4: Cơ Chế Đảm Bảo Tin Cậy</span>
+        <h2 class="text-3xl font-bold text-white mt-1">Bộ 3 Lớp Chống Lừa Đảo & Hàng Không Như Hình</h2>
+      </div>
+
+      <div class="grid grid-cols-1 md:grid-cols-3 gap-6 pt-2">
+        <div class="bg-slate-900 p-6 rounded-2xl border border-slate-800 space-y-3">
+          <div class="text-amber-400 font-bold text-base flex items-center gap-2">
+            <i class="fa-solid fa-camera"></i> 1. TimeMark & Mã Giấy
+          </div>
+          <p class="text-xs text-slate-400 leading-relaxed">
+            Hệ thống sinh mã ngẫu nhiên (VD: <span class="text-amber-300 font-mono font-bold">UTC2-892</span>). Người bán phải viết mã ra giấy đặt cạnh đồ dùng và chụp trong vòng 3 phút bằng TimeMark (có GPS trường). Triệt tiêu việc lấy ảnh mạng.
+          </p>
+        </div>
+
+        <div class="bg-slate-900 p-6 rounded-2xl border border-slate-800 space-y-3">
+          <div class="text-amber-400 font-bold text-base flex items-center gap-2">
+            <i class="fa-solid fa-qrcode"></i> 2. Quét QR Trực Tiếp Tại Trường
+          </div>
+          <p class="text-xs text-slate-400 leading-relaxed">
+            Hai bạn hẹn gặp tại Sảnh Tòa A / Ký túc xá. Người mua cầm tận tay kiểm tra thực tế: đúng sách đúng đồ mới quét mã QR của người bán. Quét xong hệ thống tự động gỡ tin đăng.
+          </p>
+        </div>
+
+        <div class="bg-slate-900 p-6 rounded-2xl border border-slate-800 space-y-3">
+          <div class="text-amber-400 font-bold text-base flex items-center gap-2">
+            <i class="fa-solid fa-shield-halved"></i> 3. Cổng Đăng Nhập SSO Trường
+          </div>
+          <p class="text-xs text-slate-400 leading-relaxed">
+            Chỉ chấp nhận sinh viên có email đuôi trường (<span class="text-indigo-300 font-mono">@st.utc2.edu.vn</span>). Giới hạn tối đa 3 tin/ngày để ngăn chặn hoàn toàn các quán in ấn, cò mồi spam bài phá giá.
+          </p>
+        </div>
+      </div>
+    </div>
+
+    <!-- SLIDE 6: KẾT LUẬN & TRẢI NGHIỆM DEMO TRỰC TIẾP (CẬP NHẬT LINK GITHUB PAGES & QR) -->
+    <div class="slide flex-col items-center justify-center text-center space-y-6 w-full">
+      <div class="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 text-xs font-semibold uppercase tracking-wider">
+        <i class="fa-solid fa-circle-check"></i> Sản Phẩm Đã Được Triển Khai Thực Tế
+      </div>
+      
+      <h2 class="text-3xl md:text-4xl font-extrabold text-white">Trải Nghiệm Trực Tiếp Hệ Thống UniPass</h2>
+      <p class="text-slate-400 text-xs md:text-sm max-w-xl">
+        Thầy cô và các bạn có thể bấm trực tiếp vào liên kết bên dưới hoặc quét mã QR bằng điện thoại để xem phiên bản web đang hoạt động:
+      </p>
+
+      <!-- Card hiển thị Link & QR Code động -->
+      <div class="bg-slate-900 p-6 rounded-3xl border border-slate-800 max-w-lg w-full flex flex-col sm:flex-row items-center gap-6 shadow-2xl">
+        <!-- QR Code tự động sinh từ link GitHub Pages -->
+        <div class="bg-white p-3 rounded-2xl shadow-md shrink-0">
+          <img 
+            src="https://api.qrserver.com/v1/create-qr-code/?size=130x130&data=https://ngoctuyetle137.github.io/MiTaoLao/PassDo.index.html" 
+            alt="QR Code UniPass" 
+            class="w-28 h-28"
+          />
+          <span class="block text-[10px] text-slate-700 font-bold mt-1 text-center">Quét xem trên ĐT</span>
+        </div>
+
+        <!-- Khối Link bấm trực tiếp -->
+        <div class="text-left flex-1 space-y-3 w-full">
+          <div>
+            <span class="text-[11px] text-slate-400 uppercase tracking-wider font-semibold block mb-1">Đường dẫn Website:</span>
+            <a 
+              href="https://ngoctuyetle137.github.io/MiTaoLao/PassDo.index.html" 
+              target="_blank" 
+              class="text-xs text-indigo-400 hover:text-indigo-300 font-mono break-all underline decoration-indigo-500 underline-offset-4"
+            >
+              https://ngoctuyetle137.github.io/MiTaoLao/PassDo.index.html
+            </a>
+          </div>
+
+          <a 
+            href="https://ngoctuyetle137.github.io/MiTaoLao/PassDo.index.html" 
+            target="_blank"
+            class="inline-flex items-center justify-center gap-2 w-full py-2.5 px-4 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white font-bold text-xs transition shadow-lg shadow-indigo-600/30"
+          >
+            <i class="fa-solid fa-arrow-up-right-from-square"></i> Mở Website Trải Nghiệm Demo
+          </a>
+        </div>
+      </div>
+
+      <div class="text-xs text-slate-500 pt-2">
+        Cảm ơn Quý Thầy Cô và các bạn đã lắng nghe • Sẵn sàng phần Q&A
+      </div>
+    </div>
+
+  </main>
+
+  <!-- ================= BOTTOM NAVIGATION CONTROLS ================= -->
+  <footer class="px-8 py-4 border-t border-slate-800 flex items-center justify-between bg-slate-900/50">
+    <div class="text-xs text-slate-500">
+      Dùng phím <kbd class="px-1.5 py-0.5 bg-slate-800 text-slate-300 rounded border border-slate-700">←</kbd> và <kbd class="px-1.5 py-0.5 bg-slate-800 text-slate-300 rounded border border-slate-700">→</kbd> trên bàn phím để chuyển trang
+    </div>
+    <div class="flex items-center gap-2">
+      <button onclick="prevSlide()" class="px-4 py-2 bg-slate-800 hover:bg-slate-700 text-slate-300 text-xs font-semibold rounded-lg transition">
+        <i class="fa-solid fa-arrow-left mr-1"></i> Trang trước
+      </button>
+      <button onclick="nextSlide()" class="px-4 py-2 bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-semibold rounded-lg transition shadow-md shadow-indigo-600/20">
+        Trang sau <i class="fa-solid fa-arrow-right ml-1"></i>
+      </button>
+    </div>
+  </footer>
+
+  <!-- ================= LOGIC CHUYỂN SLIDE ================= -->
+  <script>
+    let currentSlide = 0;
+    const slides = document.querySelectorAll('.slide');
+    const totalSlides = slides.length;
+    const indicator = document.getElementById('slideIndicator');
+
+    function updateSlide() {
+      slides.forEach((s, idx) => {
+        if (idx === currentSlide) {
+          s.classList.add('active');
+        } else {
+          s.classList.remove('active');
+        }
+      });
+      indicator.innerText = `${currentSlide + 1} / ${totalSlides}`;
+    }
+
+    function nextSlide() {
+      if (currentSlide < totalSlides - 1) {
+        currentSlide++;
+        updateSlide();
+      }
+    }
+
+    function prevSlide() {
+      if (currentSlide > 0) {
+        currentSlide--;
+        updateSlide();
+      }
+    }
+
+    // Bắt sự kiện bàn phím
+    document.addEventListener('keydown', (e) => {
+      if (e.key === 'ArrowRight' || e.key === ' ') {
+        nextSlide();
+      } else if (e.key === 'ArrowLeft') {
+        prevSlide();
+      }
+    });
+  </script>
+</body>
+</html>
