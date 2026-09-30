@@ -1,0 +1,1054 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Graph Algorithm Visualizer - Class Edition</title>
+  <style>
+    :root {
+      --bg-dark: #1e131d;
+      --card-bg: #2a1b29;
+      --primary-pink: #ff4b72;
+      --primary-hover: #ff6b8b;
+      --primary-border: #4a283e;
+      --text-main: #f5e6eb;
+      --text-muted: #a38997;
+      --accent-yellow: #ffeaa7;
+      --accent-green: #00b894;
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    }
+
+    body {
+      background-color: var(--bg-dark);
+      color: var(--text-main);
+      padding: 20px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      min-height: 100vh;
+      gap: 16px;
+    }
+
+    .container {
+      width: 100%;
+      max-width: 980px;
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
+    }
+
+    /* Header & Controls */
+    .panel {
+      background: var(--card-bg);
+      border: 1px solid var(--primary-border);
+      border-radius: 12px;
+      padding: 16px 20px;
+      box-shadow: 0 8px 24px rgba(0, 0, 0, 0.35);
+    }
+
+    .header-bar {
+      display: flex;
+      flex-wrap: wrap;
+      justify-content: space-between;
+      align-items: center;
+      gap: 12px;
+    }
+
+    h1 {
+      font-size: 1.3rem;
+      color: var(--primary-pink);
+      font-weight: 700;
+      letter-spacing: 0.5px;
+    }
+
+    .controls-row {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      gap: 10px;
+    }
+
+    select, input[type="text"], input[type="number"] {
+      background: #190e18;
+      border: 1px solid var(--primary-border);
+      color: var(--text-main);
+      padding: 7px 12px;
+      border-radius: 8px;
+      font-size: 0.9rem;
+      outline: none;
+    }
+
+    select:focus, input:focus {
+      border-color: var(--primary-pink);
+    }
+
+    button {
+      background: var(--primary-pink);
+      color: #fff;
+      border: none;
+      padding: 8px 16px;
+      border-radius: 8px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.2s ease;
+    }
+
+    button:hover:not(:disabled) {
+      background: var(--primary-hover);
+      transform: translateY(-1px);
+    }
+
+    button:disabled {
+      opacity: 0.4;
+      cursor: not-allowed;
+      transform: none;
+    }
+
+    button.secondary {
+      background: #3d2435;
+      color: var(--text-main);
+    }
+
+    button.secondary:hover:not(:disabled) {
+      background: #523048;
+    }
+
+    /* Canvas Card */
+    .canvas-container {
+      position: relative;
+      background: #170d16;
+      border: 1px solid var(--primary-border);
+      border-radius: 12px;
+      overflow: hidden;
+      display: flex;
+      justify-content: center;
+    }
+
+    canvas {
+      cursor: crosshair;
+      display: block;
+      background-image: radial-gradient(#3a1d30 1.2px, transparent 1.2px);
+      background-size: 24px 24px;
+    }
+
+    .canvas-hint {
+      position: absolute;
+      top: 10px;
+      left: 14px;
+      font-size: 0.78rem;
+      color: var(--text-muted);
+      pointer-events: none;
+    }
+
+    /* Playback buttons */
+    .nav-buttons {
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      gap: 12px;
+      margin: 4px 0;
+    }
+
+    .step-badge {
+      font-weight: bold;
+      color: var(--text-main);
+      font-size: 1rem;
+      min-width: 110px;
+      text-align: center;
+    }
+
+    /* Log Box */
+    .log-card {
+      background: #190e18;
+      border: 1px solid var(--primary-border);
+      border-radius: 8px;
+      padding: 12px 16px;
+      font-size: 0.9rem;
+      line-height: 1.5;
+    }
+
+    .log-card b {
+      color: var(--primary-pink);
+    }
+
+    /* Table Styles */
+    .table-section-title {
+      font-weight: 700;
+      font-size: 0.95rem;
+      color: var(--primary-pink);
+      margin-bottom: 8px;
+    }
+
+    .table-container {
+      width: 100%;
+      overflow-x: auto;
+      border: 1px solid var(--primary-border);
+      border-radius: 8px;
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      text-align: center;
+      font-size: 0.88rem;
+    }
+
+    th {
+      background: var(--primary-pink);
+      color: #ffffff;
+      padding: 10px 8px;
+      font-weight: 600;
+      white-space: nowrap;
+    }
+
+    td {
+      padding: 9px 8px;
+      border-bottom: 1px solid #361b2e;
+      color: var(--text-main);
+      white-space: nowrap;
+    }
+
+    tr:last-child td {
+      border-bottom: none;
+    }
+
+    tr.active-row {
+      background: rgba(255, 75, 114, 0.22);
+      font-weight: bold;
+    }
+
+    /* Modal nhập 2 chiều */
+    #edgeModalOverlay {
+      position: fixed;
+      top: 0; left: 0; right: 0; bottom: 0;
+      background: rgba(0, 0, 0, 0.65);
+      backdrop-filter: blur(4px);
+      display: none;
+      align-items: center;
+      justify-content: center;
+      z-index: 100;
+    }
+
+    .modal-box {
+      background: var(--card-bg);
+      padding: 20px 24px;
+      border-radius: 12px;
+      width: 320px;
+      border: 1px solid var(--primary-pink);
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+      box-shadow: 0 10px 30px rgba(0,0,0,0.5);
+    }
+
+    .modal-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      font-size: 0.9rem;
+    }
+
+    .modal-row input {
+      width: 80px;
+      text-align: center;
+    }
+
+    .modal-note {
+      font-size: 0.75rem;
+      color: var(--text-muted);
+      line-height: 1.3;
+    }
+
+    .modal-actions {
+      display: flex;
+      justify-content: flex-end;
+      gap: 8px;
+      margin-top: 6px;
+    }
+  </style>
+</head>
+<body>
+
+  <div class="container">
+    <!-- Panel lựa chọn & tạo bước -->
+    <div class="panel">
+      <div class="header-bar">
+        <h1>Graph Algorithm Visualizer</h1>
+        <div class="controls-row">
+          <label>Thuật toán:</label>
+          <select id="algoSelect">
+            <option value="dijkstra">Dijkstra</option>
+            <option value="bellman-ford">Bellman-Ford</option>
+            <option value="prim">Prim (MST)</option>
+            <option value="kruskal">Kruskal (MST)</option>
+            <option value="johnson">Johnson (All-Pairs)</option>
+          </select>
+
+          <span id="startNodeWrapper">
+            <label>Gốc:</label>
+            <input type="text" id="startNode" value="1" style="width: 44px; text-align: center;" />
+          </span>
+
+          <button id="prepareBtn">Áp Dụng & Chạy Lại</button>
+          <button id="sampleBtn" class="secondary">Mẫu Lớp Học</button>
+          <button id="clearBtn" class="secondary">Làm Mới Đồ Thị</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Canvas vẽ đồ thị -->
+    <div class="canvas-container">
+      <div class="canvas-hint">• Click vùng trống: Thêm đỉnh | Kéo 2 đỉnh: Nhập trọng số cả 2 chiều (nhập 0 nếu không có đường)</div>
+      <canvas id="graphCanvas" width="940" height="380"></canvas>
+    </div>
+
+    <!-- Bộ điều khiển tiến / lùi -->
+    <div class="nav-buttons">
+      <button id="prevBtn" class="secondary" disabled>◀ Quay Lại</button>
+      <div class="step-badge" id="stepCounter">Bước 0 / 0</div>
+      <button id="nextBtn" disabled>Bước Tiếp ▶</button>
+      <button id="resetStepBtn" class="secondary" disabled>Về Bước 0</button>
+    </div>
+
+    <!-- Hộp ghi lịch sử diễn biến -->
+    <div class="log-card" id="currentLog">
+      [Bước 0]: Bấm "Áp Dụng & Chạy Lại" để bắt đầu giải bài toán.
+    </div>
+
+    <!-- Bảng lưu vết khoảng cách/trạng thái qua các bước -->
+    <div class="panel">
+      <div class="table-section-title" id="tableTitle">Bảng lưu vết qua các bước:</div>
+      <div class="table-container">
+        <table id="trackingTable">
+          <thead id="tableHead"></thead>
+          <tbody id="tableBody"></tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal nhập trọng số 2 chiều -->
+  <div id="edgeModalOverlay">
+    <div class="modal-box">
+      <h3 style="color: var(--primary-pink); font-size: 1rem;">Nhập trọng số cạnh</h3>
+      <div class="modal-row">
+        <label id="lblForward">Từ 1 qua 2:</label>
+        <input type="number" id="inputForward" value="4" />
+      </div>
+      <div class="modal-row">
+        <label id="lblBackward">Từ 2 qua 1:</label>
+        <input type="number" id="inputBackward" value="0" />
+      </div>
+      <div class="modal-note">* Nhập 0 hoặc để trống nếu không có đường đi theo chiều đó.</div>
+      <div class="modal-actions">
+        <button id="btnCancelModal" class="secondary">Hủy</button>
+        <button id="btnConfirmModal">Xác nhận</button>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    const canvas = document.getElementById('graphCanvas');
+    const ctx = canvas.getContext('2d');
+    const algoSelect = document.getElementById('algoSelect');
+    const startNodeInput = document.getElementById('startNode');
+    const startNodeWrapper = document.getElementById('startNodeWrapper');
+
+    const prepareBtn = document.getElementById('prepareBtn');
+    const prevBtn = document.getElementById('prevBtn');
+    const nextBtn = document.getElementById('nextBtn');
+    const resetStepBtn = document.getElementById('resetStepBtn');
+    const stepCounter = document.getElementById('stepCounter');
+    const currentLog = document.getElementById('currentLog');
+
+    const tableTitle = document.getElementById('tableTitle');
+    const tableHead = document.getElementById('tableHead');
+    const tableBody = document.getElementById('tableBody');
+
+    const edgeModalOverlay = document.getElementById('edgeModalOverlay');
+    const lblForward = document.getElementById('lblForward');
+    const lblBackward = document.getElementById('lblBackward');
+    const inputForward = document.getElementById('inputForward');
+    const inputBackward = document.getElementById('inputBackward');
+    const btnCancelModal = document.getElementById('btnCancelModal');
+    const btnConfirmModal = document.getElementById('btnConfirmModal');
+
+    let nodes = [];
+    let edges = [];
+    let isDragging = false;
+    let dragStartNode = null;
+    let mousePos = { x: 0, y: 0 };
+    let pendingEdgePair = null;
+
+    let snapshots = [];
+    let currentStepIndex = 0;
+
+    algoSelect.addEventListener('change', () => {
+      const algo = algoSelect.value;
+      startNodeWrapper.style.display = (algo === 'kruskal' || algo === 'johnson') ? 'none' : 'inline';
+      clearSnapshots();
+    });
+
+    // Mũi tên chỉ hướng
+    function drawArrowHead(toX, toY, angle, color) {
+      const headlen = 11;
+      ctx.beginPath();
+      ctx.moveTo(toX, toY);
+      ctx.lineTo(toX - headlen * Math.cos(angle - Math.PI / 6), toY - headlen * Math.sin(angle - Math.PI / 6));
+      ctx.lineTo(toX - headlen * Math.cos(angle + Math.PI / 6), toY - headlen * Math.sin(angle + Math.PI / 6));
+      ctx.fillStyle = color;
+      ctx.fill();
+    }
+
+    function draw() {
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+      if (isDragging && dragStartNode) {
+        ctx.beginPath();
+        ctx.moveTo(dragStartNode.x, dragStartNode.y);
+        ctx.lineTo(mousePos.x, mousePos.y);
+        ctx.strokeStyle = '#ff758c';
+        ctx.setLineDash([4, 4]);
+        ctx.lineWidth = 2;
+        ctx.stroke();
+        ctx.setLineDash([]);
+      }
+
+      edges.forEach(edge => {
+        const u = nodes.find(n => n.id === edge.u);
+        const v = nodes.find(n => n.id === edge.v);
+        if (!u || !v) return;
+
+        const hasReverse = edges.some(e => e.u === edge.v && e.v === edge.u);
+
+        let strokeColor = '#6d455d';
+        let lineWidth = 2;
+        if (edge.state === 'active') {
+          strokeColor = '#ffeaa7';
+          lineWidth = 3.5;
+        } else if (edge.state === 'tree') {
+          strokeColor = '#ff4b72';
+          lineWidth = 4;
+        }
+
+        ctx.strokeStyle = strokeColor;
+        ctx.lineWidth = lineWidth;
+
+        const dx = v.x - u.x;
+        const dy = v.y - u.y;
+        const dist = Math.hypot(dx, dy);
+        if (dist === 0) return;
+
+        const angle = Math.atan2(dy, dx);
+        const nodeR = 20;
+
+        if (hasReverse) {
+          const curveOffset = 26;
+          const midX = (u.x + v.x) / 2 + Math.cos(angle + Math.PI / 2) * curveOffset;
+          const midY = (u.y + v.y) / 2 + Math.sin(angle + Math.PI / 2) * curveOffset;
+
+          ctx.beginPath();
+          ctx.moveTo(u.x, u.y);
+          ctx.quadraticCurveTo(midX, midY, v.x, v.y);
+          ctx.stroke();
+
+          const tangentAngle = Math.atan2(v.y - midY, v.x - midX);
+          const arrowX = v.x - nodeR * Math.cos(tangentAngle);
+          const arrowY = v.y - nodeR * Math.sin(tangentAngle);
+          drawArrowHead(arrowX, arrowY, tangentAngle, strokeColor);
+
+          drawWeightBadge(edge.weight, midX, midY);
+        } else {
+          ctx.beginPath();
+          ctx.moveTo(u.x, u.y);
+          ctx.lineTo(v.x, v.y);
+          ctx.stroke();
+
+          const arrowX = v.x - nodeR * Math.cos(angle);
+          const arrowY = v.y - nodeR * Math.sin(angle);
+          drawArrowHead(arrowX, arrowY, angle, strokeColor);
+
+          const midX = (u.x + v.x) / 2;
+          const midY = (u.y + v.y) / 2;
+          drawWeightBadge(edge.weight, midX, midY);
+        }
+      });
+
+      nodes.forEach(node => {
+        ctx.beginPath();
+        ctx.arc(node.x, node.y, 20, 0, 2 * Math.PI);
+
+        if (node.state === 'active') {
+          ctx.fillStyle = '#ffeaa7';
+          ctx.strokeStyle = '#fdcb6e';
+        } else if (node.state === 'visited') {
+          ctx.fillStyle = '#ff4b72';
+          ctx.strokeStyle = '#ffffff';
+        } else {
+          ctx.fillStyle = '#2a1b29';
+          ctx.strokeStyle = '#ff4b72';
+        }
+
+        ctx.lineWidth = 3;
+        ctx.fill();
+        ctx.stroke();
+
+        ctx.fillStyle = node.state === 'visited' ? '#ffffff' : '#f5e6eb';
+        ctx.font = 'bold 13px Segoe UI';
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+        ctx.fillText(node.id, node.x, node.y);
+
+        if (node.distLabel !== undefined) {
+          ctx.fillStyle = '#ff7675';
+          ctx.font = 'bold 11px Segoe UI';
+          ctx.fillText(`d:${node.distLabel}`, node.x, node.y - 26);
+        }
+      });
+    }
+
+    function drawWeightBadge(weight, x, y) {
+      ctx.beginPath();
+      ctx.arc(x, y, 10, 0, 2 * Math.PI);
+      ctx.fillStyle = '#1e131d';
+      ctx.fill();
+      ctx.strokeStyle = '#ff4b72';
+      ctx.lineWidth = 1.5;
+      ctx.stroke();
+
+      ctx.fillStyle = '#ffffff';
+      ctx.font = 'bold 11px Segoe UI';
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'middle';
+      ctx.fillText(weight, x, y);
+    }
+
+    canvas.addEventListener('mousedown', (e) => {
+      if (snapshots.length > 0) return;
+      const rect = canvas.getBoundingClientRect();
+      const x = e.clientX - rect.left;
+      const y = e.clientY - rect.top;
+
+      const clickedNode = nodes.find(n => Math.hypot(n.x - x, n.y - y) <= 22);
+      if (clickedNode) {
+        isDragging = true;
+        dragStartNode = clickedNode;
+      } else {
+        const nextId = (nodes.length + 1).toString();
+        nodes.push({ id: nextId, x, y, state: 'default' });
+        draw();
+      }
+    });
+
+    canvas.addEventListener('mousemove', (e) => {
+      const rect = canvas.getBoundingClientRect();
+      mousePos.x = e.clientX - rect.left;
+      mousePos.y = e.clientY - rect.top;
+      if (isDragging) draw();
+    });
+
+    canvas.addEventListener('mouseup', (e) => {
+      if (!isDragging) return;
+      isDragging = false;
+
+      const rect = canvas.getBoundingClientRect();
+      const x = e.clientX - rect.left;
+      const y = e.clientY - rect.top;
+      const targetNode = nodes.find(n => Math.hypot(n.x - x, n.y - y) <= 22);
+
+      if (targetNode && targetNode !== dragStartNode) {
+        pendingEdgePair = { u: dragStartNode.id, v: targetNode.id };
+        lblForward.textContent = `Từ ${dragStartNode.id} qua ${targetNode.id}:`;
+        lblBackward.textContent = `Từ ${targetNode.id} qua ${dragStartNode.id}:`;
+
+        const existingFwd = edges.find(e => e.u === dragStartNode.id && e.v === targetNode.id);
+        const existingBwd = edges.find(e => e.u === targetNode.id && e.v === dragStartNode.id);
+
+        inputForward.value = existingFwd ? existingFwd.weight : 4;
+        inputBackward.value = existingBwd ? existingBwd.weight : 0;
+
+        edgeModalOverlay.style.display = 'flex';
+        inputForward.focus();
+      }
+      dragStartNode = null;
+      draw();
+    });
+
+    btnConfirmModal.addEventListener('click', () => {
+      if (!pendingEdgePair) return;
+      const { u, v } = pendingEdgePair;
+
+      const wFwd = parseInt(inputForward.value, 10);
+      const wBwd = parseInt(inputBackward.value, 10);
+
+      edges = edges.filter(e => !( (e.u === u && e.v === v) || (e.u === v && e.v === u) ));
+
+      if (!isNaN(wFwd) && wFwd !== 0) {
+        edges.push({ id: `${u}-${v}-${Date.now()}`, u, v, weight: wFwd, state: 'default' });
+      }
+
+      if (!isNaN(wBwd) && wBwd !== 0) {
+        edges.push({ id: `${v}-${u}-${Date.now() + 1}`, u: v, v: u, weight: wBwd, state: 'default' });
+      }
+
+      edgeModalOverlay.style.display = 'none';
+      pendingEdgePair = null;
+      draw();
+    });
+
+    btnCancelModal.addEventListener('click', () => {
+      edgeModalOverlay.style.display = 'none';
+      pendingEdgePair = null;
+    });
+
+    // Mẫu chuẩn giống lớp học (Đỉnh 1, 2, 3, 4 như hình bạn gửi)
+    document.getElementById('sampleBtn').addEventListener('click', () => {
+      clearSnapshots();
+      nodes = [
+        { id: '1', x: 470, y: 70, state: 'default' },
+        { id: '2', x: 610, y: 190, state: 'default' },
+        { id: '3', x: 470, y: 310, state: 'default' },
+        { id: '4', x: 330, y: 190, state: 'default' }
+      ];
+      edges = [
+        { id: 'e1', u: '1', v: '2', weight: 3, state: 'default' },
+        { id: 'e2', u: '1', v: '4', weight: 7, state: 'default' },
+        { id: 'e3', u: '2', v: '4', weight: 5, state: 'default' },
+        { id: 'e4', u: '2', v: '3', weight: 4, state: 'default' },
+        { id: 'e5', u: '3', v: '4', weight: 6, state: 'default' }
+      ];
+      startNodeInput.value = '1';
+      currentLog.innerHTML = `Đã tải đồ thị mẫu chuẩn 4 đỉnh. Nhấn <b>"Áp Dụng & Chạy Lại"</b> để tạo bảng lưu vết!`;
+      draw();
+    });
+
+    document.getElementById('clearBtn').addEventListener('click', () => {
+      clearSnapshots();
+      nodes = [];
+      edges = [];
+      tableHead.innerHTML = '';
+      tableBody.innerHTML = '';
+      currentLog.innerHTML = `Đã làm mới đồ thị.`;
+      draw();
+    });
+
+    function clearSnapshots() {
+      snapshots = [];
+      currentStepIndex = 0;
+      prevBtn.disabled = true;
+      nextBtn.disabled = true;
+      resetStepBtn.disabled = true;
+      stepCounter.textContent = 'Bước 0 / 0';
+      nodes.forEach(n => { n.state = 'default'; delete n.distLabel; });
+      edges.forEach(e => e.state = 'default');
+      draw();
+    }
+
+    // --- SNAPSHOT ENGINE KÈM DỮ LIỆU BẢNG ---
+    function createSnapshot(logText, tableRows, activeRowIdx) {
+      return {
+        log: logText,
+        tableRows: JSON.parse(JSON.stringify(tableRows)),
+        activeRowIdx: activeRowIdx,
+        nodes: nodes.map(n => ({ id: n.id, x: n.x, y: n.y, state: n.state, distLabel: n.distLabel })),
+        edges: edges.map(e => ({ id: e.id, u: e.u, v: e.v, weight: e.weight, state: e.state }))
+      };
+    }
+
+    function applySnapshot(index) {
+      if (index < 0 || index >= snapshots.length) return;
+      currentStepIndex = index;
+      const snap = snapshots[index];
+
+      nodes = snap.nodes.map(n => ({ ...n }));
+      edges = snap.edges.map(e => ({ ...e }));
+
+      stepCounter.textContent = `Bước ${index} / ${snapshots.length - 1}`;
+      currentLog.innerHTML = snap.log;
+
+      prevBtn.disabled = (index === 0);
+      nextBtn.disabled = (index === snapshots.length - 1);
+      resetStepBtn.disabled = (index === 0);
+
+      // Render bảng tương ứng với bước hiện tại
+      renderTable(snap.tableRows, snap.activeRowIdx);
+
+      draw();
+    }
+
+    function renderTable(rows, activeRowIdx) {
+      tableBody.innerHTML = '';
+      rows.forEach((row, idx) => {
+        const tr = document.createElement('tr');
+        if (idx === activeRowIdx) tr.className = 'active-row';
+
+        row.forEach(cell => {
+          const td = document.createElement('td');
+          td.innerHTML = (cell === Infinity) ? '&infin;' : cell;
+          tr.appendChild(td);
+        });
+        tableBody.appendChild(tr);
+      });
+    }
+
+    // --- DIJKSTRA (BẢNG THEO GIÁO TRÌNH) ---
+    function recordDijkstra(startId) {
+      snapshots = [];
+      tableTitle.textContent = "Bảng lưu vết khoảng cách qua các bước (Dijkstra):";
+
+      // Khởi tạo headers: Bước | Đỉnh u xét | d[1] | d[2] | ... | Đỉnh chọn tiếp
+      const sortedNodeIds = nodes.map(n => n.id).sort();
+      let theadHTML = `<tr><th>Bước</th><th>Đỉnh u xét</th>`;
+      sortedNodeIds.forEach(id => { theadHTML += `<th>d[${id}]</th>`; });
+      theadHTML += `<th>Đỉnh được chọn tiếp</th></tr>`;
+      tableHead.innerHTML = theadHTML;
+
+      const dist = {};
+      const visited = new Set();
+      nodes.forEach(n => {
+        dist[n.id] = Infinity;
+        n.distLabel = '∞';
+        n.state = 'default';
+      });
+      edges.forEach(e => e.state = 'default');
+
+      dist[startId] = 0;
+      nodes.find(n => n.id === startId).distLabel = 0;
+
+      const tableHistory = [];
+
+      // Bước 0: Khởi tạo
+      let row0 = [0, '-'];
+      sortedNodeIds.forEach(id => row0.push(dist[id]));
+      row0.push(`Chọn đỉnh ${startId} (kc = 0)`);
+      tableHistory.push(row0);
+
+      snapshots.push(createSnapshot(
+        `<b>[Bước 0]: Khởi tạo:</b> d[${startId}] = 0, các đỉnh khác = &infin;. Chọn đỉnh xuất phát là <b>${startId}</b>.`,
+        tableHistory,
+        0
+      ));
+
+      let stepNum = 1;
+
+      while (visited.size < nodes.length) {
+        let u = null;
+        let minD = Infinity;
+        for (const n of nodes) {
+          if (!visited.has(n.id) && dist[n.id] < minD) {
+            minD = dist[n.id];
+            u = n.id;
+          }
+        }
+        if (u === null || minD === Infinity) break;
+
+        visited.add(u);
+        const uNode = nodes.find(n => n.id === u);
+        uNode.state = 'active';
+
+        // Cập nhật cạnh
+        const outgoing = edges.filter(e => e.u === u);
+        let relaxedNotes = [];
+
+        for (const edge of outgoing) {
+          const v = edge.v;
+          if (!visited.has(v)) {
+            if (dist[u] + edge.weight < dist[v]) {
+              dist[v] = dist[u] + edge.weight;
+              nodes.find(n => n.id === v).distLabel = dist[v];
+              edge.state = 'tree';
+              relaxedNotes.push(`d[${v}] = ${dist[v]}`);
+            }
+          }
+        }
+
+        uNode.state = 'visited';
+
+        // Tìm đỉnh tiếp theo được chọn
+        let nextU = null;
+        let nextMin = Infinity;
+        for (const n of nodes) {
+          if (!visited.has(n.id) && dist[n.id] < nextMin) {
+            nextMin = dist[n.id];
+            nextU = n.id;
+          }
+        }
+
+        const nextChoiceStr = (nextU !== null && nextMin !== Infinity) 
+          ? `Chọn đỉnh ${nextU} (kc = ${nextMin})` 
+          : 'Kết thúc (Tất cả đỉnh đã chốt)';
+
+        let curRow = [stepNum, u];
+        sortedNodeIds.forEach(id => {
+          curRow.push(visited.has(id) ? `${dist[id]}*` : dist[id]);
+        });
+        curRow.push(nextChoiceStr);
+        tableHistory.push(curRow);
+
+        const relaxStr = relaxedNotes.length > 0 ? `Cập nhật: ${relaxedNotes.join(', ')}.` : 'Không có đường tối ưu hơn.';
+        snapshots.push(createSnapshot(
+          `<b>[Bước ${stepNum}]: Cố định đỉnh ${u}:</b> ${relaxStr} ${nextChoiceStr}.`,
+          tableHistory,
+          tableHistory.length - 1
+        ));
+
+        stepNum++;
+      }
+    }
+
+    // --- BELLMAN-FORD (BẢNG THEO VÒNG LẶP K) ---
+    function recordBellmanFord(startId) {
+      snapshots = [];
+      tableTitle.textContent = "Bảng lưu vết qua các vòng lặp (Bellman-Ford):";
+
+      const sortedNodeIds = nodes.map(n => n.id).sort();
+      let theadHTML = `<tr><th>Vòng lặp k</th><th>Cung (u &rarr; v) xét</th>`;
+      sortedNodeIds.forEach(id => { theadHTML += `<th>d[${id}]</th>`; });
+      theadHTML += `<th>Trạng thái cập nhật</th></tr>`;
+      tableHead.innerHTML = theadHTML;
+
+      const dist = {};
+      nodes.forEach(n => {
+        dist[n.id] = Infinity;
+        n.distLabel = '∞';
+        n.state = 'default';
+      });
+      edges.forEach(e => e.state = 'default');
+
+      dist[startId] = 0;
+      nodes.find(n => n.id === startId).distLabel = 0;
+
+      const tableHistory = [];
+      let row0 = [0, 'Khởi tạo'];
+      sortedNodeIds.forEach(id => row0.push(dist[id]));
+      row0.push(`d[${startId}] = 0`);
+      tableHistory.push(row0);
+
+      snapshots.push(createSnapshot(
+        `<b>[Vòng 0]: Khởi tạo:</b> d[${startId}] = 0, các đỉnh còn lại = &infin;.`,
+        tableHistory,
+        0
+      ));
+
+      const V = nodes.length;
+      for (let k = 1; k <= V - 1; k++) {
+        let updatedInRound = false;
+
+        for (const edge of edges) {
+          const { u, v, weight } = edge;
+          edge.state = 'active';
+
+          if (dist[u] !== Infinity && dist[u] + weight < dist[v]) {
+            dist[v] = dist[u] + weight;
+            nodes.find(n => n.id === v).distLabel = dist[v];
+            edge.state = 'tree';
+            updatedInRound = true;
+
+            let row = [k, `(${u} &rarr; ${v}, w=${weight})`];
+            sortedNodeIds.forEach(id => row.push(dist[id]));
+            row.push(`Giảm d[${v}] &rarr; ${dist[v]}`);
+            tableHistory.push(row);
+
+            snapshots.push(createSnapshot(
+              `<b>[Vòng ${k}]: Nới lỏng (${u} &rarr; ${v}):</b> d[${v}] giảm xuống <b>${dist[v]}</b>.`,
+              tableHistory,
+              tableHistory.length - 1
+            ));
+          } else {
+            edge.state = 'default';
+          }
+        }
+
+        if (!updatedInRound) {
+          let rowEnd = [k, 'Hội tụ sớm'];
+          sortedNodeIds.forEach(id => rowEnd.push(dist[id]));
+          rowEnd.push('Không còn cạnh nào thay đổi');
+          tableHistory.push(rowEnd);
+
+          snapshots.push(createSnapshot(
+            `<b>[Vòng ${k}]: Đồ thị đã hội tụ sớm.</b> Kết thúc thuật toán Bellman-Ford.`,
+            tableHistory,
+            tableHistory.length - 1
+          ));
+          break;
+        }
+      }
+    }
+
+    // --- PRIM MST (BẢNG THEO DÕI CÂY KHUNG) ---
+    function recordPrim(startId) {
+      snapshots = [];
+      tableTitle.textContent = "Bảng lưu vết kết nạp đỉnh vào cây khung (Prim MST):";
+
+      tableHead.innerHTML = `<tr><th>Bước</th><th>Đỉnh kết nạp</th><th>Cạnh chọn</th><th>Trọng số</th><th>Tập đỉnh V_T</th><th>Tổng trọng số MST</th></tr>`;
+
+      nodes.forEach(n => { n.state = 'default'; delete n.distLabel; });
+      edges.forEach(e => e.state = 'default');
+
+      const visited = new Set([startId]);
+      nodes.find(n => n.id === startId).state = 'visited';
+      let totalW = 0;
+
+      const tableHistory = [];
+      tableHistory.push([0, startId, '-', '-', `{${startId}}`, 0]);
+
+      snapshots.push(createSnapshot(
+        `<b>[Bước 0]: Bắt đầu từ gốc ${startId}:</b> Đưa ${startId} vào cây khung MST.`,
+        tableHistory,
+        0
+      ));
+
+      let step = 1;
+      while (visited.size < nodes.length) {
+        let minEdge = null;
+        let minW = Infinity;
+
+        for (const edge of edges) {
+          const uIn = visited.has(edge.u);
+          const vIn = visited.has(edge.v);
+          if (uIn && !vIn) {
+            if (edge.weight < minW) {
+              minW = edge.weight;
+              minEdge = edge;
+            }
+          }
+        }
+
+        if (!minEdge) break;
+
+        minEdge.state = 'tree';
+        visited.add(minEdge.v);
+        nodes.find(n => n.id === minEdge.v).state = 'visited';
+        totalW += minEdge.weight;
+
+        const vSet = `{${Array.from(visited).join(', ')}}`;
+        tableHistory.push([step, minEdge.v, `(${minEdge.u} &rarr; ${minEdge.v})`, minEdge.weight, vSet, totalW]);
+
+        snapshots.push(createSnapshot(
+          `<b>[Bước ${step}]: Kết nạp cạnh (${minEdge.u} &rarr; ${minEdge.v}):</b> Trọng số = ${minEdge.weight}. Tổng MST hiện tại = <b>${totalW}</b>.`,
+          tableHistory,
+          tableHistory.length - 1
+        ));
+
+        step++;
+      }
+    }
+
+    // --- KRUSKAL MST (BẢNG SẮP XẾP CẠNH) ---
+    function recordKruskal() {
+      snapshots = [];
+      tableTitle.textContent = "Bảng xét thứ tự cạnh theo trọng số (Kruskal MST):";
+
+      tableHead.innerHTML = `<tr><th>Thứ tự</th><th>Cạnh (u &rarr; v)</th><th>Trọng số</th><th>Hành động</th><th>Tổng MST</th></tr>`;
+
+      nodes.forEach(n => { n.state = 'default'; delete n.distLabel; });
+      edges.forEach(e => e.state = 'default');
+
+      const sortedEdges = [...edges].sort((a, b) => a.weight - b.weight);
+      const parent = {};
+      nodes.forEach(n => parent[n.id] = n.id);
+
+      function find(i) {
+        if (parent[i] === i) return i;
+        return parent[i] = find(parent[i]);
+      }
+      function union(i, j) {
+        const rootI = find(i);
+        const rootJ = find(j);
+        if (rootI !== rootJ) {
+          parent[rootI] = rootJ;
+          return true;
+        }
+        return false;
+      }
+
+      let totalW = 0;
+      let count = 0;
+      const tableHistory = [];
+
+      snapshots.push(createSnapshot(
+        `<b>[Bắt đầu Kruskal]:</b> Đã sắp xếp ${sortedEdges.length} cạnh theo chiều tăng dần trọng số.`,
+        tableHistory,
+        -1
+      ));
+
+      sortedEdges.forEach((edge, idx) => {
+        edge.state = 'active';
+        let action = '';
+
+        if (union(edge.u, edge.v)) {
+          edge.state = 'tree';
+          totalW += edge.weight;
+          count++;
+          action = `<span style="color: #00b894; font-weight: bold;">Chấp nhận (Vào MST)</span>`;
+        } else {
+          edge.state = 'default';
+          action = `<span style="color: #fab1a0;">Bỏ qua (Tạo chu trình)</span>`;
+        }
+
+        tableHistory.push([idx + 1, `(${edge.u} &rarr; ${edge.v})`, edge.weight, action, totalW]);
+
+        snapshots.push(createSnapshot(
+          `<b>[Xét cạnh ${idx + 1}]: (${edge.u} &rarr; ${edge.v}) w = ${edge.weight}:</b> ${action}. Tổng trọng số = <b>${totalW}</b>.`,
+          tableHistory,
+          tableHistory.length - 1
+        ));
+      });
+
+      nodes.forEach(n => n.state = 'visited');
+    }
+
+    // --- JOHNSON ---
+    function recordJohnson() {
+      if (nodes.length > 0) recordDijkstra(nodes[0].id);
+    }
+
+    // --- SỰ KIỆN THỰC THI & CHUYỂN BƯỚC ---
+    prepareBtn.addEventListener('click', () => {
+      if (nodes.length === 0) {
+        alert("Vui lòng tạo đỉnh trên màn hình trước!");
+        return;
+      }
+
+      const algo = algoSelect.value;
+      const startId = startNodeInput.value.trim();
+
+      if (['dijkstra', 'bellman-ford', 'prim'].includes(algo)) {
+        if (!nodes.some(n => n.id === startId)) {
+          alert(`Đỉnh gốc "${startId}" không tồn tại trên đồ thị!`);
+          return;
+        }
+      }
+
+      if (algo === 'dijkstra') recordDijkstra(startId);
+      else if (algo === 'bellman-ford') recordBellmanFord(startId);
+      else if (algo === 'prim') recordPrim(startId);
+      else if (algo === 'kruskal') recordKruskal();
+      else if (algo === 'johnson') recordJohnson();
+
+      applySnapshot(0);
+    });
+
+    prevBtn.addEventListener('click', () => {
+      if (currentStepIndex > 0) applySnapshot(currentStepIndex - 1);
+    });
+
+    nextBtn.addEventListener('click', () => {
+      if (currentStepIndex < snapshots.length - 1) applySnapshot(currentStepIndex + 1);
+    });
+
+    resetStepBtn.addEventListener('click', () => {
+      applySnapshot(0);
+    });
+s
+    // Mặc định nạp mẫu đồ thị 4 đỉnh
+    document.getElementById('sampleBtn').click();
+  </script>
+</body>
+</html>
