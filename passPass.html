@@ -1,0 +1,2550 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>UniPass UTC2 - Hệ Thống Pass Đồ Sinh Viên (DSA + OOP + Web)</title>
+  <!-- Tailwind CSS CDN -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <!-- Phosphor Icons -->
+  <script src="https://unpkg.com/@phosphor-icons/web"></script>
+  <!-- Canvas Confetti -->
+  <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.6.0/dist/confetti.browser.min.js"></script>
+  <!-- Mermaid.js for Class Diagram -->
+  <script src="https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.min.js"></script>
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800;900&family=JetBrains+Mono:wght@500;700&display=swap');
+    body { font-family: 'Plus Jakarta Sans', sans-serif; user-select: none; }
+    .font-mono { font-family: 'JetBrains Mono', monospace; }
+    .custom-scrollbar::-webkit-scrollbar { width: 6px; height: 6px; }
+    .custom-scrollbar::-webkit-scrollbar-track { background: #f8fafc; }
+    .custom-scrollbar::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 6px; }
+    .custom-scrollbar::-webkit-scrollbar-thumb:hover { background: #94a3b8; }
+    .grid-cell { width: 44px; height: 44px; transition: background-color 0.12s ease, transform 0.1s ease; }
+    @media (max-width: 640px) {
+      .grid-cell { width: 36px; height: 36px; }
+    }
+    .draggable-shape { touch-action: none; cursor: grab; }
+    .draggable-shape:active { cursor: grabbing; }
+    #dragGhost { pointer-events: none; }
+    .badge-pulse { animation: pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite; }
+  </style>
+</head>
+<body class="bg-slate-50 text-slate-800 antialiased min-h-screen flex flex-col">
+
+  <!-- ================= 1. CỔNG XÁC THỰC EMAIL TRƯỜNG (@st.utc2.edu.vn) ================= -->
+  <div id="authGateway" class="fixed inset-0 z-50 bg-slate-900/90 backdrop-blur-md flex items-center justify-center p-4">
+    <div class="bg-white rounded-3xl shadow-2xl max-w-md w-full p-8 border border-slate-100 relative overflow-hidden">
+      <div class="absolute -top-12 -right-12 w-44 h-44 bg-indigo-500/15 rounded-full blur-2xl"></div>
+      <div class="absolute -bottom-12 -left-12 w-44 h-44 bg-violet-500/15 rounded-full blur-2xl"></div>
+      
+      <div class="text-center mb-6 relative">
+        <div class="w-16 h-16 bg-gradient-to-tr from-indigo-600 to-violet-600 rounded-2xl flex items-center justify-center text-white mx-auto shadow-lg shadow-indigo-200 mb-3">
+          <i class="ph-bold ph-swap text-3xl"></i>
+        </div>
+        <h2 class="text-2xl font-black text-slate-900 tracking-tight">UniPass UTC2</h2>
+        <p class="text-xs text-slate-500 mt-1">Cộng đồng Pass Đồ Dùng & Giáo Trình Sinh Viên Đại Học</p>
+        <span class="inline-flex items-center gap-1.5 mt-2.5 px-3 py-1 bg-amber-50 text-amber-700 rounded-full text-[11px] font-bold border border-amber-200">
+          <i class="ph-fill ph-shield-check"></i> Chống Clone & Lừa Đảo: Chỉ nhận Email trường UTC2
+        </span>
+      </div>
+
+      <div class="space-y-4 relative">
+        <div>
+          <label class="block text-xs font-bold uppercase tracking-wider text-slate-600 mb-1.5">Email Sinh Viên UTC2</label>
+          <div class="relative">
+            <i class="ph ph-envelope-simple absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400 text-lg"></i>
+            <input id="authEmailInput" type="email" placeholder="ma_sinh_vien@st.utc2.edu.vn" 
+                   class="w-full pl-10 pr-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:bg-white transition" />
+          </div>
+        </div>
+
+        <div>
+          <label class="block text-xs font-bold uppercase tracking-wider text-slate-600 mb-1.5">Họ và Tên</label>
+          <div class="relative">
+            <i class="ph ph-user absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400 text-lg"></i>
+            <input id="authNameInput" type="text" placeholder="Lê Thị Ngọc Tuyết" 
+                   class="w-full pl-10 pr-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:bg-white transition" />
+          </div>
+        </div>
+
+        <button onclick="handleCustomLogin()" class="w-full py-3 bg-indigo-600 hover:bg-indigo-700 text-white font-bold rounded-xl shadow-lg shadow-indigo-200 transition flex items-center justify-center gap-2">
+          <span>Đăng nhập hệ thống</span>
+          <i class="ph-bold ph-arrow-right"></i>
+        </button>
+
+        <div class="relative my-4">
+          <div class="absolute inset-0 flex items-center"><div class="w-full border-t border-slate-200"></div></div>
+          <div class="relative flex justify-center text-xs uppercase"><span class="bg-white px-2 text-slate-400 font-bold">Dùng nhanh 2 tài khoản demo</span></div>
+        </div>
+
+        <div class="grid grid-cols-2 gap-2.5">
+          <button onclick="quickLoginDemo('A')" class="p-3 border border-indigo-200 bg-indigo-50/70 hover:bg-indigo-100 rounded-2xl text-left transition group">
+            <div class="text-xs font-black text-indigo-900 flex items-center gap-1.5 mb-0.5">
+              <span class="w-2 h-2 rounded-full bg-emerald-500"></span> TK A (Tuyết)
+            </div>
+            <div class="text-[10px] text-indigo-600 truncate font-medium">tuyet.le@st.utc2.edu.vn</div>
+            <div class="text-[10px] text-slate-500 mt-1 flex items-center justify-between">
+              <span>KTX Cỏ May</span>
+              <span class="font-bold text-amber-600">⭐ 98</span>
+            </div>
+          </button>
+          
+          <button onclick="quickLoginDemo('B')" class="p-3 border border-slate-200 bg-slate-50 hover:bg-slate-100 rounded-2xl text-left transition group">
+            <div class="text-xs font-black text-slate-800 flex items-center gap-1.5 mb-0.5">
+              <span class="w-2 h-2 rounded-full bg-blue-500"></span> TK B (Lâm)
+            </div>
+            <div class="text-[10px] text-slate-500 truncate font-medium">phuclam@st.utc2.edu.vn</div>
+            <div class="text-[10px] text-slate-500 mt-1 flex items-center justify-between">
+              <span>Cổng 1 UTC2</span>
+              <span class="font-bold text-amber-600">⭐ 92</span>
+            </div>
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ================= 2. HEADER & THANH ĐIỀU HƯỚNG TỔNG ================= -->
+  <header class="bg-white/90 backdrop-blur-md sticky top-0 z-40 border-b border-slate-200 shadow-sm">
+    <div class="max-w-7xl mx-auto px-4 h-16 flex items-center justify-between gap-3">
+      <!-- Logo -->
+      <div class="flex items-center gap-2.5 cursor-pointer shrink-0" onclick="switchTab('market')">
+        <div class="w-10 h-10 bg-indigo-600 text-white rounded-2xl flex items-center justify-center font-bold shadow-md shadow-indigo-200">
+          <i class="ph-bold ph-swap text-xl"></i>
+        </div>
+        <div>
+          <span class="text-lg font-black text-slate-900 tracking-tight">Uni<span class="text-indigo-600">Pass</span></span>
+          <span class="text-[9px] block font-bold text-indigo-600/80 -mt-1 tracking-wider uppercase">UTC2 Campus Hub</span>
+        </div>
+      </div>
+
+      <!-- Navigation Tabs (Desktop) -->
+      <nav class="hidden lg:flex items-center gap-1 bg-slate-100/80 p-1 rounded-2xl">
+        <button id="nav-market" onclick="switchTab('market')" class="px-3.5 py-1.5 rounded-xl text-xs font-bold transition text-white bg-indigo-600 shadow-sm flex items-center gap-1.5">
+          <i class="ph-bold ph-storefront"></i> Sàn Đồ
+        </button>
+        <button id="nav-recommend" onclick="switchTab('recommend')" class="px-3.5 py-1.5 rounded-xl text-xs font-bold transition text-slate-600 hover:text-slate-900 flex items-center gap-1.5">
+          <i class="ph-bold ph-sparkle text-amber-500"></i> Đề Xuất Shopee
+        </button>
+        <button id="nav-post" onclick="switchTab('post')" class="px-3.5 py-1.5 rounded-xl text-xs font-bold transition text-slate-600 hover:text-slate-900 flex items-center gap-1.5">
+          <i class="ph-bold ph-camera"></i> Đăng Bài & TimeMark
+        </button>
+        <button id="nav-chat" onclick="switchTab('chat')" class="px-3.5 py-1.5 rounded-xl text-xs font-bold transition text-slate-600 hover:text-slate-900 flex items-center gap-1.5 relative">
+          <i class="ph-bold ph-chat-teardrop-dots"></i> Tin Nhắn
+          <span id="unreadBadge" class="hidden w-2 h-2 rounded-full bg-rose-500 absolute top-1 right-1.5"></span>
+        </button>
+        <button id="nav-orders" onclick="switchTab('orders')" class="px-3.5 py-1.5 rounded-xl text-xs font-bold transition text-slate-600 hover:text-slate-900 flex items-center gap-1.5">
+          <i class="ph-bold ph-receipt"></i> Đơn Cọc
+          <span id="orderCountBadge" class="bg-indigo-100 text-indigo-700 text-[10px] font-black px-1.5 py-0.2 rounded-full">0</span>
+        </button>
+        <button id="nav-game" onclick="switchTab('game')" class="px-3.5 py-1.5 rounded-xl text-xs font-bold transition text-slate-600 hover:text-slate-900 flex items-center gap-1.5">
+          <i class="ph-bold ph-game-controller text-amber-500"></i> Kéo Thả Săn Xu
+        </button>
+        <button id="nav-profile" onclick="switchTab('profile')" class="px-3.5 py-1.5 rounded-xl text-xs font-bold transition text-slate-600 hover:text-slate-900 flex items-center gap-1.5">
+          <i class="ph-bold ph-user-circle"></i> Cá Nhân
+        </button>
+      </nav>
+
+      <!-- User Area & Quick Switch -->
+      <div class="flex items-center gap-2.5">
+        <button onclick="toggleUserQuickSwitch()" title="Đổi tài khoản A/B ngay để test mua bán & chat 2 bên" 
+                class="flex items-center gap-1.5 px-3 py-1.5 bg-indigo-50 border border-indigo-200 text-indigo-700 hover:bg-indigo-100 rounded-xl text-xs font-bold transition">
+          <i class="ph-bold ph-arrows-left-right"></i>
+          <span id="switchBtnLabel" class="hidden sm:inline">Đổi sang TK B</span>
+        </button>
+
+        <!-- User info pill -->
+        <div onclick="switchTab('profile')" class="flex items-center gap-2 bg-slate-50 border border-slate-200 pl-2 pr-3 py-1 rounded-2xl cursor-pointer hover:bg-slate-100 transition">
+          <div id="currentUserAvatar" class="w-8 h-8 rounded-xl bg-gradient-to-tr from-indigo-600 to-violet-600 text-white font-bold text-xs flex items-center justify-center shadow-sm">A</div>
+          <div class="text-left text-xs leading-tight">
+            <div id="currentUserName" class="font-extrabold text-slate-800 truncate max-w-[100px] sm:max-w-[130px]">Đang tải...</div>
+            <div class="flex items-center gap-1 text-[10px] text-amber-600 font-bold">
+              <i class="ph-fill ph-coin"></i> <span id="currentUserCoins">0</span> Xu
+            </div>
+          </div>
+        </div>
+
+        <button onclick="handleLogout()" title="Đăng xuất" class="p-2 text-slate-400 hover:text-rose-600 transition">
+          <i class="ph-bold ph-sign-out text-lg"></i>
+        </button>
+      </div>
+    </div>
+
+    <!-- Mobile Nav Bar (Bottom scrollable) -->
+    <div class="lg:hidden flex items-center gap-2 overflow-x-auto custom-scrollbar border-t border-slate-100 py-2 bg-white px-3 text-xs">
+      <button onclick="switchTab('market')" class="px-2.5 py-1 text-indigo-600 font-bold flex items-center gap-1 shrink-0"><i class="ph-bold ph-storefront"></i>Sàn Đồ</button>
+      <button onclick="switchTab('recommend')" class="px-2.5 py-1 text-slate-600 font-bold flex items-center gap-1 shrink-0"><i class="ph-bold ph-sparkle text-amber-500"></i>Shopee</button>
+      <button onclick="switchTab('post')" class="px-2.5 py-1 text-slate-600 font-bold flex items-center gap-1 shrink-0"><i class="ph-bold ph-camera"></i>Đăng Bài</button>
+      <button onclick="switchTab('chat')" class="px-2.5 py-1 text-slate-600 font-bold flex items-center gap-1 shrink-0"><i class="ph-bold ph-chat-teardrop-dots"></i>Chat</button>
+      <button onclick="switchTab('orders')" class="px-2.5 py-1 text-slate-600 font-bold flex items-center gap-1 shrink-0"><i class="ph-bold ph-receipt"></i>Đơn Cọc</button>
+      <button onclick="switchTab('game')" class="px-2.5 py-1 text-slate-600 font-bold flex items-center gap-1 shrink-0"><i class="ph-bold ph-game-controller text-amber-500"></i>Game</button>
+      <button onclick="switchTab('profile')" class="px-2.5 py-1 text-slate-600 font-bold flex items-center gap-1 shrink-0"><i class="ph-bold ph-user-circle"></i>Cá Nhân</button>
+    </div>
+  </header>
+
+  <!-- ================= 3. KHU VỰC NỘI DUNG CHÍNH (CÁC TABS) ================= -->
+  <main class="max-w-7xl mx-auto px-4 py-6 flex-1 w-full">
+
+    <!-- ================= TAB 1: SÀN PASS ĐỒ (TRIE SEARCH & AVL RANGE FILTER) ================= -->
+    <div id="tab-market" class="space-y-6">
+      <!-- Hero Banner với Trie Search -->
+      <div class="bg-gradient-to-r from-indigo-700 via-indigo-600 to-violet-700 rounded-3xl p-6 sm:p-8 text-white relative shadow-xl overflow-visible">
+        <div class="max-w-3xl">
+          <div class="flex items-center gap-2 flex-wrap mb-2">
+            <span class="px-3 py-1 bg-white/20 rounded-full text-[11px] font-bold backdrop-blur-sm flex items-center gap-1">
+              <i class="ph-bold ph-tree-view"></i> Trie In-Memory Autocomplete
+            </span>
+            <span class="px-3 py-1 bg-white/20 rounded-full text-[11px] font-bold backdrop-blur-sm flex items-center gap-1">
+              <i class="ph-bold ph-graph"></i> AVL Tree Range Search
+            </span>
+          </div>
+          <h1 class="text-2xl sm:text-3xl font-black tracking-tight">Tìm giáo trình, mã môn & đồ dùng UTC2</h1>
+          <p class="text-indigo-100 text-xs sm:text-sm mt-1 mb-5">Hệ thống gợi ý từ khóa hoàn thành tức thì dựa trên tần suất tra cứu thực tế</p>
+          
+          <!-- Thanh tìm kiếm Trie -->
+          <div class="relative text-slate-800">
+            <div class="flex items-center bg-white rounded-2xl shadow-xl p-1.5 border border-white/50">
+              <i class="ph ph-magnifying-glass text-slate-400 text-xl ml-3"></i>
+              <input id="trieSearchInput" type="text" oninput="handleTrieSearch(this.value)" 
+                     placeholder="Thử gõ: VL101, casio, toán, c++, nồi cơm, máy sấy, lap trinh..." 
+                     class="w-full px-3 py-2 text-sm outline-none font-medium placeholder-slate-400 bg-transparent" autocomplete="off" />
+              <button onclick="applyFilters()" class="px-5 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-bold rounded-xl transition flex items-center gap-1">
+                <span>Tìm kiếm</span>
+                <i class="ph-bold ph-arrow-right"></i>
+              </button>
+            </div>
+
+            <!-- Dropdown gợi ý Trie -->
+            <div id="trieDropdown" class="hidden absolute left-0 right-0 top-full mt-2 bg-white rounded-2xl shadow-2xl border border-slate-100 overflow-hidden z-30">
+              <div class="px-4 py-2 bg-slate-50 border-b border-slate-100 text-[11px] font-bold text-slate-500 uppercase tracking-wider flex justify-between">
+                <span>Gợi ý từ khóa (Trie Prefix Search)</span>
+                <span class="text-indigo-600">Độ Phổ Biến</span>
+              </div>
+              <div id="trieList" class="divide-y divide-slate-50 max-h-56 overflow-y-auto custom-scrollbar"></div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Khu vực Sàn đồ: Bộ lọc bên trái + Lưới sản phẩm bên phải -->
+      <div class="grid grid-cols-1 lg:grid-cols-4 gap-6 items-start">
+        
+        <!-- BỘ LỌC CÓ CHỌN LỌC (BÊN TRÁI TRANG) -->
+        <div class="bg-white p-5 rounded-3xl border border-slate-200 shadow-sm space-y-5">
+          <div class="flex items-center justify-between border-b border-slate-100 pb-3">
+            <h3 class="font-black text-sm text-slate-900 flex items-center gap-1.5">
+              <i class="ph-bold ph-faders"></i> Bộ Lọc Chọn Lọc
+            </h3>
+            <button onclick="resetFilters()" class="text-xs text-indigo-600 hover:underline font-bold">Đặt lại</button>
+          </div>
+
+          <!-- LỌC GIÁ MONG MUỐN (DSA AVL TREE RANGE SEARCH) -->
+          <div>
+            <div class="flex items-center justify-between mb-1.5">
+              <label class="text-xs font-black text-slate-800 flex items-center gap-1">
+                <span>Khoảng Giá Mong Muốn</span>
+              </label>
+              <span class="text-[10px] bg-indigo-50 text-indigo-700 font-bold px-1.5 py-0.5 rounded">AVL Tree</span>
+            </div>
+            <div class="grid grid-cols-2 gap-2">
+              <input id="filterMinPrice" type="number" placeholder="Từ: 0 đ" class="w-full p-2 bg-slate-50 border border-slate-200 rounded-xl text-xs outline-none focus:ring-1 focus:ring-indigo-500" />
+              <input id="filterMaxPrice" type="number" placeholder="Đến: 300k" class="w-full p-2 bg-slate-50 border border-slate-200 rounded-xl text-xs outline-none focus:ring-1 focus:ring-indigo-500" />
+            </div>
+            <p class="text-[10px] text-slate-400 mt-1">Lọc nhị phân tự cân bằng O(log N + K)</p>
+          </div>
+
+          <!-- LỌC THEO VỊ TRÍ GẦN XA (CAMPUS GRAPH & DIJKSTRA) -->
+          <div>
+            <div class="flex justify-between items-center mb-1.5">
+              <label class="text-xs font-black text-slate-800">Khoảng cách quanh UTC2</label>
+              <span id="radiusLabel" class="text-xs font-black text-indigo-600">5 km</span>
+            </div>
+            <input id="filterRadius" type="range" min="0.5" max="15" value="5" step="0.5" oninput="updateRadiusLabel(this.value)" class="w-full accent-indigo-600 cursor-pointer" />
+            <div class="flex justify-between text-[10px] text-slate-400 mt-1">
+              <span>Cổng trường (0.5km)</span>
+              <span>KTX Khu B (15km)</span>
+            </div>
+          </div>
+
+          <!-- DANH MỤC MẶT HÀNG (OOP FACTORY PRODUCTS) -->
+          <div>
+            <label class="text-xs font-black text-slate-800 block mb-2">Danh mục mặt hàng</label>
+            <div class="space-y-1 text-xs">
+              <label class="flex items-center gap-2 p-1.5 rounded-lg hover:bg-slate-50 cursor-pointer">
+                <input type="radio" name="categoryFilter" value="all" checked onchange="applyFilters()" class="accent-indigo-600" />
+                <span class="font-medium">Tất cả sản phẩm</span>
+              </label>
+              <label class="flex items-center gap-2 p-1.5 rounded-lg hover:bg-slate-50 cursor-pointer">
+                <input type="radio" name="categoryFilter" value="book" onchange="applyFilters()" class="accent-indigo-600" />
+                <span class="font-medium">📚 Giáo trình & Sách học</span>
+              </label>
+              <label class="flex items-center gap-2 p-1.5 rounded-lg hover:bg-slate-50 cursor-pointer">
+                <input type="radio" name="categoryFilter" value="tech" onchange="applyFilters()" class="accent-indigo-600" />
+                <span class="font-medium">💻 Thiết bị điện tử, Casio</span>
+              </label>
+              <label class="flex items-center gap-2 p-1.5 rounded-lg hover:bg-slate-50 cursor-pointer">
+                <input type="radio" name="categoryFilter" value="life" onchange="applyFilters()" class="accent-indigo-600" />
+                <span class="font-medium">🍳 Đồ dùng sinh viên, KTX</span>
+              </label>
+            </div>
+          </div>
+
+          <!-- Thông số thuật toán DSA benchmark -->
+          <div class="p-3 bg-slate-50 rounded-2xl border border-slate-100 text-[11px] text-slate-500 space-y-1">
+            <div class="font-bold text-slate-700 flex items-center justify-between">
+              <span>Thông tin DSA Engine:</span>
+              <i class="ph-bold ph-cpu text-indigo-600"></i>
+            </div>
+            <div id="dsaFilterStat">Đã nạp 4 thuật toán in-memory.</div>
+          </div>
+
+          <button onclick="applyFilters()" class="w-full py-2.5 bg-slate-900 hover:bg-indigo-600 text-white rounded-xl text-xs font-bold transition flex items-center justify-center gap-1.5 shadow-sm">
+            <i class="ph-bold ph-funnel"></i>
+            <span>Áp dụng bộ lọc</span>
+          </button>
+        </div>
+
+        <!-- LƯỚI HIỂN THỊ SẢN PHẨM (BÊN PHẢI) -->
+        <div class="lg:col-span-3 space-y-4">
+          <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center bg-white px-4 py-3 rounded-2xl border border-slate-200 gap-2">
+            <span class="text-xs text-slate-500">Hiển thị <b id="productCount" class="text-indigo-600 font-black">0</b> món đồ sẵn sàng pass</span>
+            <div class="flex items-center gap-2 text-xs">
+              <span class="text-slate-400 font-medium">Sắp xếp:</span>
+              <select id="sortOption" onchange="applyFilters()" class="bg-slate-50 border border-slate-200 rounded-lg p-1.5 text-xs font-bold outline-none text-slate-700">
+                <option value="newest">Mới đăng nhất</option>
+                <option value="priceAsc">Giá thấp đến cao</option>
+                <option value="distanceAsc">Khoảng cách gần nhất</option>
+                <option value="reputationDesc">Điểm uy tín người bán</option>
+              </select>
+            </div>
+          </div>
+
+          <div id="productGrid" class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
+            <!-- Render động bằng JS -->
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ================= TAB 2: ĐỀ XUẤT SẢN PHẨM SHOPEE (MAX-HEAP ALGORITHM) ================= -->
+    <div id="tab-recommend" class="hidden space-y-6">
+      <div class="bg-gradient-to-r from-amber-500 via-orange-500 to-rose-500 rounded-3xl p-6 sm:p-8 text-white relative shadow-xl">
+        <div class="max-w-2xl">
+          <div class="inline-flex items-center gap-1.5 px-3 py-1 bg-white/20 rounded-full text-xs font-bold mb-2 backdrop-blur-sm">
+            <i class="ph-fill ph-fire text-amber-200"></i> Max-Heap Priority Recommendation
+          </div>
+          <h2 class="text-2xl sm:text-3xl font-black tracking-tight">Gợi Ý Sản Phẩm Tương Tự Shopee</h2>
+          <p class="text-orange-100 text-xs sm:text-sm mt-1">
+            Hệ thống dùng Hàng đợi ưu tiên (Max-Heap) tự code độc lập để xếp hạng đề xuất dựa trên điểm uy tín người bán, khoảng cách gần bạn và lượt quan tâm.
+          </p>
+        </div>
+      </div>
+
+      <div class="flex items-center justify-between">
+        <h3 class="font-black text-base text-slate-900 flex items-center gap-2">
+          <i class="ph-fill ph-sparkle text-amber-500"></i> Top Món Đồ Phù Hợp Nhất Cho Bạn Hôm Nay
+        </h3>
+        <span class="text-xs text-slate-400">Tự động cập nhật in-memory</span>
+      </div>
+
+      <div id="recommendedGrid" class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+        <!-- Render động qua MaxHeap -->
+      </div>
+    </div>
+
+    <!-- ================= TAB 3: ĐĂNG BÀI & XÁC MINH HÌNH ẢNH TIMEMARK ================= -->
+    <div id="tab-post" class="hidden max-w-3xl mx-auto">
+      <div class="bg-white rounded-3xl p-6 sm:p-8 border border-slate-200 shadow-sm space-y-6">
+        <div>
+          <div class="inline-flex items-center gap-1.5 px-3 py-1 bg-indigo-50 text-indigo-700 text-xs font-bold rounded-full mb-2">
+            <i class="ph-bold ph-shield-check"></i> Xác Minh TimeMark Chống Bán Hàng Ảo
+          </div>
+          <h2 class="text-2xl font-black text-slate-900">Đăng bài pass đồ & Đối soát ảnh thật</h2>
+          <p class="text-xs text-slate-500 mt-1">
+            Chụp ảnh món đồ cùng mẩu giấy ghi mã xác minh của hệ thống. Khớp mã mới được duyệt bài, tránh đăng ảnh mạng lừa đảo.
+          </p>
+        </div>
+
+        <div class="space-y-4">
+          <div>
+            <label class="block text-xs font-bold text-slate-700 mb-1">Tên món đồ / Mã môn học <span class="text-rose-500">*</span></label>
+            <input id="postTitle" type="text" placeholder="VD: Giáo trình Vật lý 1 (VL101), Casio 580..." class="w-full p-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm outline-none focus:ring-1 focus:ring-indigo-500 font-medium" />
+          </div>
+
+          <div class="grid grid-cols-2 gap-3">
+            <div>
+              <label class="block text-xs font-bold text-slate-700 mb-1">Danh mục sản phẩm</label>
+              <select id="postCategory" class="w-full p-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm outline-none font-medium">
+                <option value="book">Giáo trình & Sách môn học</option>
+                <option value="tech">Thiết bị điện tử & Máy tính</option>
+                <option value="life">Đồ dùng phòng trọ, KTX</option>
+              </select>
+            </div>
+            <div>
+              <label class="block text-xs font-bold text-slate-700 mb-1">Giá pass mong muốn (VNĐ) <span class="text-rose-500">*</span></label>
+              <input id="postPrice" type="number" placeholder="50000" class="w-full p-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm outline-none font-medium" />
+            </div>
+          </div>
+
+          <div class="grid grid-cols-2 gap-3">
+            <div>
+              <label class="block text-xs font-bold text-slate-700 mb-1">Địa điểm hẹn giao nhận quanh UTC2</label>
+              <select id="postLocationSelect" class="w-full p-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm outline-none font-medium">
+                <option value="Cổng 1 Trường UTC2">Cổng 1 Lê Văn Việt</option>
+                <option value="Ký túc xá Cỏ May UTC2">KTX Cỏ May UTC2</option>
+                <option value="Thư viện & Khu tự học UTC2">Thư viện UTC2</option>
+                <option value="Căn tin UTC2">Căn tin Trường UTC2</option>
+                <option value="Giảng đường A4 UTC2">Giảng đường A4</option>
+                <option value="Ký túc xá Khu B ĐHQG">KTX Khu B ĐHQG</option>
+              </select>
+            </div>
+            <div>
+              <label class="block text-xs font-bold text-slate-700 mb-1">Khoảng cách ước lượng (km)</label>
+              <input id="postDistance" type="number" step="0.1" value="0.5" class="w-full p-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm outline-none font-medium" />
+            </div>
+          </div>
+
+          <!-- BƯỚC ĐỐI SOÁT TIMEMARK -->
+          <div class="p-5 bg-amber-50/80 border-2 border-dashed border-amber-300 rounded-3xl space-y-4">
+            <div class="flex items-center justify-between">
+              <span class="text-xs font-black text-amber-900 flex items-center gap-1.5">
+                <i class="ph-bold ph-camera"></i> Bước Bắt Buộc: Chụp ảnh sản phẩm cùng Mã TimeMark
+              </span>
+              <button onclick="generateNewOTP()" type="button" class="text-xs font-bold text-indigo-700 hover:underline">Đổi mã ngẫu nhiên</button>
+            </div>
+            
+            <p class="text-xs text-amber-800 leading-relaxed">
+              1. Hãy viết mã xác minh dưới đây lên một mẩu giấy note.<br/>
+              2. Đặt mẩu giấy cạnh món đồ và chụp ảnh thật, sau đó tải ảnh lên.<br/>
+              3. Hệ thống sẽ đối soát mã và đóng dấu Watermark chống hàng giả mạo.
+            </p>
+
+            <div class="bg-white p-3.5 rounded-2xl border border-amber-200 text-center shadow-sm">
+              <div class="text-[11px] font-bold text-slate-400 uppercase">Mã Xác Minh TimeMark Của Bạn:</div>
+              <span id="currentOTPCode" class="text-3xl font-black text-indigo-700 tracking-widest block my-1 font-mono">UTC2-8924</span>
+              <div class="text-[10px] text-slate-400">Thời gian tạo: <span id="currentOTPTime">Vừa xong</span> | Tự hết hạn sau 7 ngày</div>
+            </div>
+
+            <div class="space-y-2">
+              <label class="block text-xs font-bold text-slate-700">Tải ảnh chụp sản phẩm thực tế (kèm mẩu giấy ghi mã trên)</label>
+              <input id="postImageInput" type="file" accept="image/*" onchange="previewUploadImage(this)" class="w-full text-xs text-slate-500 file:mr-4 file:py-2 file:px-4 file:rounded-xl file:border-0 file:text-xs file:font-bold file:bg-indigo-50 file:text-indigo-700 hover:file:bg-indigo-100 cursor-pointer" />
+            </div>
+
+            <div id="imagePreviewContainer" class="hidden relative rounded-2xl overflow-hidden border border-slate-200 bg-slate-900 max-h-64 flex items-center justify-center">
+              <img id="imagePreviewElement" src="" alt="Ảnh sản phẩm" class="w-full h-64 object-cover" />
+              <div class="absolute bottom-3 left-3 bg-black/75 backdrop-blur-md text-white text-[11px] font-mono px-3 py-1.5 rounded-xl border border-white/20 flex items-center gap-2">
+                <i class="ph-bold ph-shield-check text-emerald-400 text-base"></i>
+                <div>
+                  <div class="font-bold tracking-wider text-amber-300" id="previewWatermarkCode">UTC2-8924</div>
+                  <div class="text-[9px] text-slate-300">Đã đối soát khớp ảnh thật UTC2</div>
+                </div>
+              </div>
+            </div>
+
+            <div class="bg-white p-3.5 rounded-2xl border border-slate-200">
+              <label class="block text-xs font-bold text-slate-700 mb-1">Nhập lại mã xác minh trên giấy để kiểm tra đối khớp <span class="text-rose-500">*</span></label>
+              <div class="flex gap-2">
+                <input id="verifyCodeInput" type="text" placeholder="Nhập mã UTC2-xxxx..." class="flex-1 p-2 bg-slate-50 border border-slate-200 rounded-xl text-xs font-mono font-bold outline-none focus:ring-1 focus:ring-indigo-500 uppercase" />
+                <button type="button" onclick="verifyImageCodeOnly()" class="px-4 py-2 bg-indigo-50 hover:bg-indigo-100 text-indigo-700 font-bold rounded-xl text-xs transition">Kiểm tra mã</button>
+              </div>
+            </div>
+          </div>
+
+          <div class="p-3 bg-indigo-50 rounded-2xl text-[11px] text-indigo-800 flex items-center gap-2">
+            <i class="ph-bold ph-clock-countdown text-lg"></i>
+            <span>Bài đăng sẽ tự động hết hạn sau <b>7 ngày</b> để tránh tin rác. Bạn có thể gia hạn bất kỳ lúc nào tại mục Cá nhân.</span>
+          </div>
+
+          <button onclick="handleCreatePost()" class="w-full py-3 bg-indigo-600 hover:bg-indigo-700 text-white font-bold rounded-xl shadow-lg shadow-indigo-200 transition flex items-center justify-center gap-2">
+            <i class="ph-bold ph-upload-simple"></i>
+            <span>Kiểm Duyệt TimeMark & Đăng Lên Sàn</span>
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- ================= TAB 4: HỘP THƯ TIN NHẮN 2 CHIỀU ================= -->
+    <div id="tab-chat" class="hidden max-w-4xl mx-auto">
+      <div class="bg-white rounded-3xl border border-slate-200 shadow-sm overflow-hidden grid grid-cols-1 md:grid-cols-3 h-[600px]">
+        
+        <!-- Cột trái: Danh sách hội thoại -->
+        <div class="border-r border-slate-200 flex flex-col h-full bg-slate-50/50">
+          <div class="p-4 border-b border-slate-200 bg-white">
+            <h3 class="font-black text-sm text-slate-800">Hộp Thư Trao Đổi</h3>
+            <p class="text-[11px] text-slate-400">Đàm phán giá & hẹn gặp giao nhận tại trường</p>
+          </div>
+          <div id="chatThreadsList" class="flex-1 overflow-y-auto divide-y divide-slate-100 custom-scrollbar"></div>
+        </div>
+
+        <!-- Cột phải: Khung chat trực tiếp -->
+        <div class="md:col-span-2 flex flex-col h-full bg-white">
+          <div id="chatActiveHeader" class="p-3.5 border-b border-slate-200 flex items-center justify-between">
+            <div class="flex items-center gap-3">
+              <div id="chatPartnerAvatar" class="w-9 h-9 rounded-xl bg-violet-600 text-white font-bold flex items-center justify-center text-sm">B</div>
+              <div>
+                <h4 id="chatPartnerName" class="text-xs font-black text-slate-800">Chọn một cuộc trò chuyện</h4>
+                <p id="chatProductContext" class="text-[10px] text-slate-400">Chưa chọn món đồ</p>
+              </div>
+            </div>
+            
+            <!-- NÚT GIAO HÀNG XONG -> TỰ ĐỘNG XÓA BÀI ĐĂNG THEO ĐÚNG YÊU CẦU ĐỀ BÀI -->
+            <button id="btnCompleteTrade" onclick="confirmCompleteTrade()" class="hidden px-3.5 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-xs font-bold transition flex items-center gap-1 shadow-sm">
+              <i class="ph-bold ph-check-circle"></i> Xác Nhận Đã Nhận Đồ
+            </button>
+          </div>
+
+          <div id="chatMessagesBox" class="flex-1 p-4 overflow-y-auto space-y-3 custom-scrollbar bg-slate-50/30">
+            <div class="text-center text-xs text-slate-400 my-auto">Chọn một cuộc hội thoại từ danh sách bên trái để bắt đầu trao đổi.</div>
+          </div>
+
+          <form id="chatInputForm" onsubmit="handleSendMessage(event)" class="p-3 border-t border-slate-200 flex gap-2 bg-white">
+            <input id="chatInputMessage" type="text" placeholder="Nhập tin nhắn hẹn giờ và địa điểm nhận đồ..." class="flex-1 px-4 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs outline-none focus:ring-1 focus:ring-indigo-500 font-medium" />
+            <button type="submit" class="px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl text-xs font-bold transition">
+              <i class="ph-bold ph-paper-plane-right"></i>
+            </button>
+          </form>
+        </div>
+      </div>
+    </div>
+
+    <!-- ================= TAB 5: ĐƠN ĐẶT CỌC GIỮ CHỖ (OOP STRATEGY) ================= -->
+    <div id="tab-orders" class="hidden max-w-4xl mx-auto space-y-6">
+      <div class="bg-white rounded-3xl p-6 border border-slate-200 shadow-sm space-y-4">
+        <div class="flex items-center justify-between">
+          <div>
+            <h2 class="text-xl font-black text-slate-900">Danh Sách Đơn Đặt Cọc Giữ Chỗ</h2>
+            <p class="text-xs text-slate-500">Bảo vệ đôi bên tránh bùng kèo. Tiền cọc được giữ an toàn và hoàn trả 100% khi nhận đồ.</p>
+          </div>
+          <span class="px-3 py-1 bg-indigo-50 text-indigo-700 font-bold text-xs rounded-full border border-indigo-200">
+            Strategy Pattern
+          </span>
+        </div>
+
+        <div id="ordersListContainer" class="space-y-3">
+          <!-- Render danh sách cọc -->
+        </div>
+      </div>
+    </div>
+
+    <!-- ================= TAB 6: MINI-GAME BLOCK BLAST 8X8 (KÉO THẢ TRỰC THỤ SĂN XU) ================= -->
+    <div id="tab-game" class="hidden max-w-4xl mx-auto space-y-6">
+      <div class="bg-white rounded-3xl p-6 sm:p-8 border border-slate-200 shadow-sm relative overflow-hidden">
+        <div class="flex flex-col md:flex-row items-center justify-between gap-4 mb-6 border-b border-slate-100 pb-5">
+          <div>
+            <div class="inline-flex items-center gap-1.5 px-3 py-1 bg-amber-50 text-amber-700 text-xs font-bold rounded-full mb-1">
+              <i class="ph-fill ph-hand-pointing"></i> Kéo Thả Khối Gạch (Drag & Drop)
+            </div>
+            <h2 class="text-xl font-black text-slate-900">Block Blast 8x8 Săn UniCoins</h2>
+            <p class="text-xs text-slate-500">Giữ và kéo khối gạch vào bàn cờ. Đạt <b class="text-indigo-600">≥ 2.000 điểm</b> nhận ngay <b class="text-amber-600">+50 UniCoins</b> giảm tiền cọc!</p>
+          </div>
+
+          <div class="flex items-center gap-3">
+            <div class="bg-slate-50 border border-slate-200 px-4 py-2 rounded-2xl text-center">
+              <span class="text-[10px] font-bold uppercase text-slate-400 block">Điểm Hiện Tại</span>
+              <span id="gameCurrentScore" class="text-2xl font-black text-indigo-600">0</span>
+            </div>
+            <div class="bg-amber-50 border border-amber-200 px-4 py-2 rounded-2xl text-center">
+              <span class="text-[10px] font-bold uppercase text-amber-600 block">Kỷ Lục</span>
+              <span id="gameHighScore" class="text-2xl font-black text-amber-700">0</span>
+            </div>
+            <button onclick="initBlockBlastGame()" class="p-3 bg-slate-100 hover:bg-slate-200 rounded-2xl text-slate-600 transition" title="Chơi ván mới">
+              <i class="ph-bold ph-arrow-counter-clockwise text-lg"></i>
+            </button>
+          </div>
+        </div>
+
+        <!-- Bàn cờ 8x8 & Khay kéo thả -->
+        <div class="flex flex-col items-center justify-center gap-6">
+          <div id="blockBlastGrid" class="grid grid-cols-8 gap-1.5 p-3 bg-slate-800 rounded-2xl shadow-xl select-none relative">
+            <!-- 64 ô cờ render động -->
+          </div>
+
+          <div class="w-full max-w-lg bg-slate-50 p-4 rounded-2xl border border-slate-200 text-center">
+            <div class="text-xs font-bold text-slate-500 mb-3 flex items-center justify-center gap-1.5">
+              <i class="ph-bold ph-arrows-out-cardinal"></i> NHẤN GIỮ VÀ KÉO KHỐI GẠCH THẢ VÀO BÀN CỜ
+            </div>
+            <div id="shapesTray" class="flex justify-around items-center min-h-[110px] select-none">
+              <!-- 3 khối gạch ngẫu nhiên hỗ trợ kéo thả -->
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ================= TAB 7: TÀI KHOẢN CÁ NHÂN & QUẢN LÝ BÀI ĐĂNG (GIA HẠN 7 NGÀY) ================= -->
+    <div id="tab-profile" class="hidden max-w-4xl mx-auto space-y-6">
+      <!-- Thẻ thông tin cá nhân -->
+      <div class="bg-white rounded-3xl p-6 sm:p-8 border border-slate-200 shadow-sm relative overflow-hidden">
+        <div class="flex flex-col sm:flex-row items-center gap-5">
+          <div id="profileAvatarBig" class="w-20 h-20 rounded-3xl bg-gradient-to-tr from-indigo-600 to-violet-600 text-white font-black text-3xl flex items-center justify-center shadow-lg shadow-indigo-100">
+            A
+          </div>
+          <div class="flex-1 text-center sm:text-left">
+            <div class="flex items-center justify-center sm:justify-start gap-2">
+              <h2 id="profileNameBig" class="text-xl font-black text-slate-900">Lê Thị Ngọc Tuyết</h2>
+              <span class="px-2 py-0.5 bg-emerald-50 text-emerald-700 text-[10px] font-bold rounded border border-emerald-200 flex items-center gap-1">
+                <i class="ph-bold ph-seal-check"></i> Đã xác thực SV UTC2
+              </span>
+            </div>
+            <p id="profileEmailBig" class="text-xs text-slate-500 mt-0.5 font-medium">tuyet.le@st.utc2.edu.vn</p>
+            
+            <div class="flex items-center justify-center sm:justify-start gap-4 mt-3 flex-wrap">
+              <div class="flex items-center gap-1.5 text-xs font-bold text-amber-600 bg-amber-50 px-3 py-1 rounded-xl border border-amber-200">
+                <i class="ph-fill ph-coin"></i> <span id="profileCoinsBig">120</span> UniCoins
+              </div>
+              <div class="flex items-center gap-1.5 text-xs font-bold text-indigo-700 bg-indigo-50 px-3 py-1 rounded-xl border border-indigo-200">
+                <i class="ph-fill ph-star"></i> Điểm uy tín: <span id="profileReputationBig">98</span>/100
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Quản lý bài đăng của tôi: Gia hạn sau 1 tuần hoặc gỡ bài -->
+      <div class="bg-white rounded-3xl p-6 border border-slate-200 shadow-sm space-y-4">
+        <div class="flex items-center justify-between border-b border-slate-100 pb-3">
+          <div>
+            <h3 class="font-black text-base text-slate-900">Bài Đăng Đang Hoạt Động Của Tôi</h3>
+            <p class="text-xs text-slate-500">Mỗi bài có hạn 7 ngày. Khi gần hết hạn, hãy nhấn Gia Hạn để bài tiếp tục hiển thị.</p>
+          </div>
+          <button onclick="switchTab('post')" class="px-3.5 py-1.5 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl text-xs font-bold transition flex items-center gap-1">
+            <i class="ph-bold ph-plus"></i> Đăng bài mới
+          </button>
+        </div>
+
+        <div id="myPostsList" class="space-y-3">
+          <!-- Render danh sách bài đăng của user -->
+        </div>
+      </div>
+
+      <!-- Lịch sử giao dịch trao đổi thành công -->
+      <div class="bg-white rounded-3xl p-6 border border-slate-200 shadow-sm space-y-4">
+        <div class="flex items-center justify-between">
+          <h3 class="font-black text-base text-slate-900">Lịch Sử Giao Dịch Thành Công</h3>
+          <button onclick="switchTab('architecture')" class="text-xs font-bold text-slate-400 hover:text-indigo-600 flex items-center gap-1 transition">
+            <i class="ph-bold ph-tree-structure"></i> Xem Sơ Đồ Kỹ Thuật (DSA/OOP)
+          </button>
+        </div>
+        <div id="tradeHistoryList" class="space-y-2">
+          <!-- Render lịch sử -->
+        </div>
+      </div>
+    </div>
+
+    <!-- ================= TAB 8: BẢN BÁO CÁO KIẾN TRÚC HỆ THỐNG (DSA + OOP SHOWCASE) ================= -->
+    <div id="tab-architecture" class="hidden max-w-5xl mx-auto space-y-6">
+      <div class="bg-white rounded-3xl p-6 sm:p-8 border border-slate-200 shadow-sm space-y-6">
+        <div class="flex items-start justify-between flex-wrap gap-3">
+          <div>
+            <span class="px-3 py-1 bg-emerald-50 text-emerald-700 text-xs font-bold rounded-full border border-emerald-200">
+              Đồ Án Liên Môn: DSA + OOP + Thiết Kế Web
+            </span>
+            <h2 class="text-2xl font-black text-slate-900 mt-2">Báo Cáo Kiến Trúc Hệ Thống UniPass UTC2</h2>
+            <p class="text-xs text-slate-500 mt-1">Phân tích chi tiết các Cấu trúc dữ liệu tự xây dựng độc lập và Mô hình Hướng đối tượng (Design Patterns)</p>
+          </div>
+          <button onclick="switchTab('market')" class="px-4 py-2 bg-slate-100 hover:bg-indigo-600 hover:text-white text-slate-700 rounded-xl text-xs font-bold transition flex items-center gap-1.5">
+            <i class="ph-bold ph-arrow-left"></i> Quay lại Sàn đồ
+          </button>
+        </div>
+
+        <!-- 1. BẢNG PHÂN TÍCH 4 CẤU TRÚC DỮ LIỆU ĐỘC LẬP (DSA) -->
+        <div class="space-y-3">
+          <h3 class="font-black text-sm text-indigo-700 flex items-center gap-2">
+            <i class="ph-bold ph-tree-structure"></i> 1. Các Module Cấu Trúc Dữ Liệu Tự Xây Dựng Độc Lập (DSA)
+          </h3>
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div class="p-4 bg-slate-50 rounded-2xl border border-slate-200 space-y-2">
+              <div class="font-bold text-xs text-slate-800 flex items-center justify-between">
+                <span>1. Trie (Prefix Tree with Frequency)</span>
+                <span class="text-indigo-600 font-mono">O(L)</span>
+              </div>
+              <p class="text-xs text-slate-600">
+                Tự cài đặt lớp `TrieNode` và `Trie` để gợi ý tức thì khi sinh viên gõ tên giáo trình (VL101, Casio, Toán, Nồi cơm...). Xếp hạng gợi ý theo tần suất tìm kiếm `frequency`.
+              </p>
+            </div>
+
+            <div class="p-4 bg-slate-50 rounded-2xl border border-slate-200 space-y-2">
+              <div class="font-bold text-xs text-slate-800 flex items-center justify-between">
+                <span>2. AVL Tree (Cây Tự Cân Bằng)</span>
+                <span class="text-indigo-600 font-mono">O(log N + K)</span>
+              </div>
+              <p class="text-xs text-slate-600">
+                Tự cài đặt `AVLTreeNode` với các phép xoay Left/Right rotation. Module `rangeSearch(minPrice, maxPrice)` độc lập lọc sản phẩm theo khoảng giá siêu tốc in-memory.
+              </p>
+            </div>
+
+            <div class="p-4 bg-slate-50 rounded-2xl border border-slate-200 space-y-2">
+              <div class="font-bold text-xs text-slate-800 flex items-center justify-between">
+                <span>3. Max-Heap (Priority Queue Shopee)</span>
+                <span class="text-indigo-600 font-mono">O(N log K)</span>
+              </div>
+              <p class="text-xs text-slate-600">
+                Tự code thuật toán Heapify Up/Down để tính trọng số gợi ý sản phẩm phù hợp nhất (Shopee-style) dựa trên Uy tín x 0.4 + Views x 0.3 + Khoảng cách x 0.3.
+              </p>
+            </div>
+
+            <div class="p-4 bg-slate-50 rounded-2xl border border-slate-200 space-y-2">
+              <div class="font-bold text-xs text-slate-800 flex items-center justify-between">
+                <span>4. Campus Graph & Dijkstra</span>
+                <span class="text-indigo-600 font-mono">O(E + V log V)</span>
+              </div>
+              <p class="text-xs text-slate-600">
+                Đồ thị vô hướng mô phỏng các mốc địa lý thực tế tại ĐH UTC2 (Cổng 1, KTX Cỏ May, Thư viện, Giảng đường A4...). Tính khoảng cách ngắn nhất để sinh viên nhận đồ.
+              </p>
+            </div>
+          </div>
+        </div>
+
+        <!-- 2. BIỂU ĐỒ LỚP (CLASS DIAGRAM) & DESIGN PATTERNS -->
+        <div class="space-y-3 pt-2">
+          <h3 class="font-black text-sm text-indigo-700 flex items-center gap-2">
+            <i class="ph-bold ph-diamonds-four"></i> 2. Biểu Đồ Lớp (Class Diagram) & 4 Design Patterns Kinh Điển
+          </h3>
+          
+          <div class="p-4 bg-indigo-950 text-indigo-100 rounded-2xl border border-indigo-900 text-xs font-mono overflow-x-auto custom-scrollbar leading-relaxed">
+<pre class="text-emerald-300">
++---------------------------------------------------------------------------------+
+|                                 CLASS DIAGRAM                                   |
++---------------------------------------------------------------------------------+
+| <<abstract>> Product                                                            |
+| - id, title, price, category, sellerId, sellerName, sellerReputation            |
+| - location, distance, timeMarkCode, imageUrl, daysRemaining, status             |
+| + calculateDeposit(): number                                                    |
+| + getCategoryBadge(): string                                                    |
++---------------------------------------------------------------------------------+
+            ^                             ^                              ^
+            |                             |                              |
++----------------------+     +-------------------------+     +--------------------+
+| BookProduct          |     | TechProduct             |     | LivingProduct      |
+| - courseCode (VL101) |     | - warrantyMonths        |     | - roomType         |
+| - publisher          |     | - conditionPercentage   |     | - isPortable       |
++----------------------+     +-------------------------+     +--------------------+
+            ^
+            |  (Uses Factory Pattern)
++---------------------------------------------------------------------------------+
+| ProductFactory: createProduct(category, data): Product                          |
+| Singleton: UniPassDatabase (getInstance, products, trie, avlTree, maxHeap)      |
+| Strategy: DepositContext -> StandardDepositStrategy | HighReputationStrategy    |
+| Observer: EventManager -> notifySubscribers(TRADE_COMPLETED, POST_EXPIRED)     |
++---------------------------------------------------------------------------------+
+</pre>
+          </div>
+
+          <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-3 text-xs">
+            <div class="p-3 bg-slate-50 border border-slate-200 rounded-xl">
+              <span class="font-black text-indigo-700 block mb-1">Singleton Pattern</span>
+              <p class="text-slate-500 text-[11px]">Đảm bảo 1 phiên bản `UniPassDatabase` duy nhất quản lý in-memory store và cache đồng bộ.</p>
+            </div>
+            <div class="p-3 bg-slate-50 border border-slate-200 rounded-xl">
+              <span class="font-black text-indigo-700 block mb-1">Factory Pattern</span>
+              <p class="text-slate-500 text-[11px]">`ProductFactory` khởi tạo đúng đối tượng Book, Tech hoặc Living dựa trên danh mục.</p>
+            </div>
+            <div class="p-3 bg-slate-50 border border-slate-200 rounded-xl">
+              <span class="font-black text-indigo-700 block mb-1">Strategy Pattern</span>
+              <p class="text-slate-500 text-[11px]">Đổi linh hoạt công thức tính cọc dựa trên điểm uy tín sinh viên và trừ xu UniCoins.</p>
+            </div>
+            <div class="p-3 bg-slate-50 border border-slate-200 rounded-xl">
+              <span class="font-black text-indigo-700 block mb-1">Observer Pattern</span>
+              <p class="text-slate-500 text-[11px]">`EventManager` tự động bắn thông báo khi có cọc mới, hết hạn bài đăng, hoặc nhận đồ xong.</p>
+            </div>
+          </div>
+        </div>
+
+      </div>
+    </div>
+
+  </main>
+
+  <!-- PHẦN TỬ KHỐI GẠCH BAY THEO TAY KHI ĐANG KÉO (DRAG GHOST CHO GAME) -->
+  <div id="dragGhost" class="fixed hidden z-50 pointer-events-none transform -translate-x-1/2 -translate-y-1/2 opacity-90 scale-105 drop-shadow-2xl"></div>
+
+  <!-- ================= 4. MODAL CHI TIẾT SẢN PHẨM & ĐẶT CỌC GIỮ ĐỒ ================= -->
+  <div id="productDetailModal" class="hidden fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center p-4">
+    <div class="bg-white rounded-3xl max-w-lg w-full p-6 border border-slate-200 shadow-2xl space-y-4 relative overflow-hidden">
+      <button onclick="closeProductModal()" class="absolute top-4 right-4 text-slate-400 hover:text-slate-700 z-10 p-1 rounded-full hover:bg-slate-100 transition">
+        <i class="ph-bold ph-x text-xl"></i>
+      </button>
+
+      <div class="relative w-full h-52 rounded-2xl overflow-hidden bg-slate-100 border border-slate-200">
+        <img id="modalItemImage" src="" alt="Ảnh sản phẩm" class="w-full h-full object-cover" />
+        <div class="absolute bottom-3 left-3 bg-slate-950/80 backdrop-blur-md text-white text-[11px] font-mono px-3 py-1 rounded-xl border border-white/20 flex items-center gap-1.5">
+          <i class="ph-bold ph-seal-check text-emerald-400 text-sm"></i>
+          <span>Xác minh TimeMark: <b id="modalItemTimeMarkTag" class="text-amber-300">UTC2-8924</b></span>
+        </div>
+      </div>
+
+      <div>
+        <div class="flex items-center gap-2 mb-1">
+          <span id="modalItemBadge" class="text-[10px] font-bold px-2 py-0.5 rounded-md bg-indigo-100 text-indigo-700">Giáo trình</span>
+          <span class="text-[10px] font-bold text-emerald-600 bg-emerald-50 px-2 py-0.5 rounded border border-emerald-200 flex items-center gap-1">
+            <i class="ph-bold ph-check-circle"></i> Đã kiểm duyệt ảnh thật
+          </span>
+          <span id="modalItemDaysTag" class="text-[10px] font-bold text-rose-500 bg-rose-50 px-2 py-0.5 rounded">Hết hạn sau 7 ngày</span>
+        </div>
+        <h3 id="modalItemTitle" class="text-lg font-black text-slate-900 leading-tight">Tên sản phẩm</h3>
+        <p id="modalItemPrice" class="text-xl font-black text-indigo-600 mt-1">50,000 đ</p>
+      </div>
+
+      <div class="bg-slate-50 p-3.5 rounded-2xl border border-slate-100 space-y-1.5 text-xs">
+        <div class="flex justify-between">
+          <span class="text-slate-400 font-medium">Người đăng pass:</span>
+          <span id="modalItemSeller" class="font-bold text-slate-800">Lê Thị Ngọc Tuyết</span>
+        </div>
+        <div class="flex justify-between">
+          <span class="text-slate-400 font-medium">Điểm uy tín người bán:</span>
+          <span id="modalItemReputation" class="font-bold text-emerald-600">⭐ 98/100</span>
+        </div>
+        <div class="flex justify-between">
+          <span class="text-slate-400 font-medium">Địa điểm hẹn giao nhận:</span>
+          <span id="modalItemLocation" class="font-bold text-slate-800">Cổng 1 UTC2 (0.5 km)</span>
+        </div>
+      </div>
+
+      <!-- Ô Tính Tiền Cọc & Giảm Trừ Xu (Strategy Pattern) -->
+      <div class="bg-amber-50 p-3.5 rounded-2xl border border-amber-200 text-xs space-y-2">
+        <div class="font-black text-amber-900 flex items-center justify-between">
+          <span class="flex items-center gap-1.5"><i class="ph-bold ph-shield-check"></i> Đặt cọc chống bùng hẹn (OOP Strategy)</span>
+          <span id="modalDepositRateLabel" class="text-[10px] bg-amber-200/80 px-2 py-0.5 rounded-full font-bold">10% cọc</span>
+        </div>
+        <div class="flex justify-between items-center text-slate-700">
+          <span>Tiền cọc giữ đồ:</span>
+          <b id="modalDepositAmount" class="text-sm font-black text-amber-900">10,000 đ</b>
+        </div>
+        <div class="flex items-center justify-between pt-1 border-t border-amber-200/60 text-[11px]">
+          <label class="flex items-center gap-1.5 cursor-pointer">
+            <input type="checkbox" id="modalUseCoinCheck" onchange="handleToggleCoinDiscount()" class="accent-indigo-600" />
+            <span class="font-medium">Dùng <b>20 UniCoins</b> săn được để giảm 2.000 đ</span>
+          </label>
+        </div>
+        <p class="text-[10px] text-amber-800 italic">
+          * Tiền cọc được bảo vệ tự động và hoàn trả 100% về ví khi 2 bạn gặp nhau trao đồ thành công.
+        </p>
+      </div>
+
+      <div class="grid grid-cols-2 gap-3 pt-1">
+        <button id="modalBtnChat" onclick="openChatFromProduct()" class="py-2.5 bg-slate-100 hover:bg-slate-200 text-slate-800 font-bold rounded-xl text-xs transition flex items-center justify-center gap-1.5">
+          <i class="ph-bold ph-chat-teardrop-dots text-base"></i> Nhắn tin hẹn gặp
+        </button>
+        <button id="modalBtnDeposit" onclick="confirmDepositItem()" class="py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white font-bold rounded-xl text-xs transition flex items-center justify-center gap-1.5 shadow-md shadow-indigo-200">
+          <i class="ph-bold ph-hand-coins text-base"></i> Đặt cọc giữ món đồ
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ================= 5. CORE JAVASCRIPT: DSA + OOP + FULL LOGIC ================= -->
+  <script>
+    /* ==========================================================================
+       I. CẤU TRÚC DỮ LIỆU & GIẢI THUẬT ĐỘC LẬP (DSA MODULE)
+       ========================================================================== */
+
+    // 1. CẤU TRÚC TRIE CHO TÌM KIẾM TỪ KHÓA & AUTOCOMPLETE TỨC THÌ
+    class TrieNode {
+      constructor() {
+        this.children = {};
+        this.isEndOfWord = false;
+        this.word = null;
+        this.frequency = 0;
+      }
+    }
+
+    class Trie {
+      constructor() {
+        this.root = new TrieNode();
+      }
+
+      insert(word, frequency = 1) {
+        if (!word) return;
+        let current = this.root;
+        const normalized = word.toLowerCase().trim();
+        for (let char of normalized) {
+          if (!current.children[char]) current.children[char] = new TrieNode();
+          current = current.children[char];
+        }
+        current.isEndOfWord = true;
+        current.word = word;
+        current.frequency = Math.max(current.frequency, frequency);
+      }
+
+      searchPrefix(prefix) {
+        if (!prefix) return [];
+        let current = this.root;
+        const normalized = prefix.toLowerCase().trim();
+        for (let char of normalized) {
+          if (!current.children[char]) return [];
+          current = current.children[char];
+        }
+        const results = [];
+        this._collectWords(current, results);
+        return results.sort((a, b) => b.frequency - a.frequency);
+      }
+
+      _collectWords(node, results) {
+        if (node.isEndOfWord) {
+          results.push({ word: node.word, frequency: node.frequency });
+        }
+        for (let char in node.children) {
+          this._collectWords(node.children[char], results);
+        }
+      }
+    }
+
+    // 2. CÂY NHỊ PHÂN TỰ CÂN BẰNG AVL (AVL TREE) CHO LỌC KHOẢNG GIÁ IN-MEMORY O(log N + K)
+    class AVLTreeNode {
+      constructor(product) {
+        this.price = product.price;
+        this.products = [product];
+        this.left = null;
+        this.right = null;
+        this.height = 1;
+      }
+    }
+
+    class AVLTree {
+      constructor() {
+        this.root = null;
+      }
+
+      getHeight(node) {
+        return node ? node.height : 0;
+      }
+
+      getBalance(node) {
+        return node ? this.getHeight(node.left) - this.getHeight(node.right) : 0;
+      }
+
+      rotateRight(y) {
+        const x = y.left;
+        const T2 = x.right;
+        x.right = y;
+        y.left = T2;
+        y.height = Math.max(this.getHeight(y.left), this.getHeight(y.right)) + 1;
+        x.height = Math.max(this.getHeight(x.left), this.getHeight(x.right)) + 1;
+        return x;
+      }
+
+      rotateLeft(x) {
+        const y = x.right;
+        const T2 = y.left;
+        y.left = x;
+        x.right = T2;
+        x.height = Math.max(this.getHeight(x.left), this.getHeight(x.right)) + 1;
+        y.height = Math.max(this.getHeight(y.left), this.getHeight(y.right)) + 1;
+        return y;
+      }
+
+      insert(product) {
+        this.root = this._insertNode(this.root, product);
+      }
+
+      _insertNode(node, product) {
+        if (!node) return new AVLTreeNode(product);
+
+        if (product.price === node.price) {
+          node.products.push(product);
+          return node;
+        } else if (product.price < node.price) {
+          node.left = this._insertNode(node.left, product);
+        } else {
+          node.right = this._insertNode(node.right, product);
+        }
+
+        node.height = 1 + Math.max(this.getHeight(node.left), this.getHeight(node.right));
+        const balance = this.getBalance(node);
+
+        // Trường hợp mất cân bằng
+        if (balance > 1 && product.price < node.left.price) return this.rotateRight(node);
+        if (balance < -1 && product.price > node.right.price) return this.rotateLeft(node);
+        if (balance > 1 && product.price > node.left.price) {
+          node.left = this.rotateLeft(node.left);
+          return this.rotateRight(node);
+        }
+        if (balance < -1 && product.price < node.right.price) {
+          node.right = this.rotateRight(node.right);
+          return this.rotateLeft(node);
+        }
+
+        return node;
+      }
+
+      // Duyệt trong khoảng giá [minPrice, maxPrice]
+      rangeSearch(minPrice, maxPrice) {
+        const results = [];
+        this._rangeSearchNode(this.root, minPrice, maxPrice, results);
+        return results;
+      }
+
+      _rangeSearchNode(node, min, max, results) {
+        if (!node) return;
+        if (node.price > min) this._rangeSearchNode(node.left, min, max, results);
+        if (node.price >= min && node.price <= max) {
+          results.push(...node.products);
+        }
+        if (node.price < max) this._rangeSearchNode(node.right, min, max, results);
+      }
+    }
+
+    // 3. HÀNG ĐỢI ƯU TIÊN MAX-HEAP CHO ĐỀ XUẤT SẢN PHẨM SHOPEE
+    class MaxHeap {
+      constructor() {
+        this.heap = [];
+      }
+
+      parent(i) { return Math.floor((i - 1) / 2); }
+      leftChild(i) { return 2 * i + 1; }
+      rightChild(i) { return 2 * i + 2; }
+
+      insert(item, score) {
+        this.heap.push({ item, score });
+        this.heapifyUp(this.heap.length - 1);
+      }
+
+      heapifyUp(i) {
+        while (i > 0 && this.heap[this.parent(i)].score < this.heap[i].score) {
+          [this.heap[i], this.heap[this.parent(i)]] = [this.heap[this.parent(i)], this.heap[i]];
+          i = this.parent(i);
+        }
+      }
+
+      extractMax() {
+        if (this.heap.length === 0) return null;
+        if (this.heap.length === 1) return this.heap.pop().item;
+        const max = this.heap[0].item;
+        this.heap[0] = this.heap.pop();
+        this.heapifyDown(0);
+        return max;
+      }
+
+      heapifyDown(i) {
+        let maxIndex = i;
+        const l = this.leftChild(i);
+        const r = this.rightChild(i);
+
+        if (l < this.heap.length && this.heap[l].score > this.heap[maxIndex].score) maxIndex = l;
+        if (r < this.heap.length && this.heap[r].score > this.heap[maxIndex].score) maxIndex = r;
+
+        if (i !== maxIndex) {
+          [this.heap[i], this.heap[maxIndex]] = [this.heap[maxIndex], this.heap[i]];
+          this.heapifyDown(maxIndex);
+        }
+      }
+
+      size() {
+        return this.heap.length;
+      }
+    }
+
+    // 4. ĐỒ THỊ KHUÔN VIÊN UTC2 & THUẬT TOÁN TÍNH KHOẢNG CÁCH GẦN NHẤT
+    class CampusGraph {
+      constructor() {
+        this.adjacencyList = {
+          "Cổng 1 Trường UTC2": { "Ký túc xá Cỏ May UTC2": 0.5, "Thư viện & Khu tự học UTC2": 0.3, "Căn tin UTC2": 0.2 },
+          "Ký túc xá Cỏ May UTC2": { "Cổng 1 Trường UTC2": 0.5, "Giảng đường A4 UTC2": 0.6 },
+          "Thư viện & Khu tự học UTC2": { "Cổng 1 Trường UTC2": 0.3, "Giảng đường A4 UTC2": 0.2 },
+          "Giảng đường A4 UTC2": { "Thư viện & Khu tự học UTC2": 0.2, "Ký túc xá Cỏ May UTC2": 0.6, "Căn tin UTC2": 0.4 },
+          "Căn tin UTC2": { "Cổng 1 Trường UTC2": 0.2, "Giảng đường A4 UTC2": 0.4 },
+          "Ký túc xá Khu B ĐHQG": { "Cổng 1 Trường UTC2": 12.0 }
+        };
+      }
+
+      getEstimatedDistance(locA, locB) {
+        if (locA === locB) return 0.1;
+        if (this.adjacencyList[locA] && this.adjacencyList[locA][locB]) {
+          return this.adjacencyList[locA][locB];
+        }
+        return 0.8; // Trung bình trong trường
+      }
+    }
+
+    /* ==========================================================================
+       II. HƯỚNG ĐỐI TƯỢNG (OOP) & DESIGN PATTERNS
+       ========================================================================== */
+
+    // 1. ABSTRACT BASE CLASS PRODUCT & KẾ THỪA (INHERITANCE)
+    class Product {
+      constructor(data) {
+        this.id = data.id;
+        this.title = data.title;
+        this.price = data.price;
+        this.category = data.category;
+        this.sellerId = data.sellerId;
+        this.sellerName = data.sellerName;
+        this.sellerReputation = data.sellerReputation || 90;
+        this.location = data.location || "Cổng 1 Trường UTC2";
+        this.distance = data.distance || 0.5;
+        this.timeMarkCode = data.timeMarkCode || "UTC2-0000";
+        this.imageUrl = data.imageUrl;
+        this.daysRemaining = data.daysRemaining !== undefined ? data.daysRemaining : 7;
+        this.status = data.status || "active";
+        this.views = data.views || 10;
+        this.createdAt = data.createdAt || Date.now();
+      }
+
+      // Đa hình (Polymorphism)
+      getCategoryBadge() {
+        return "Sản phẩm";
+      }
+
+      isExpired() {
+        return this.daysRemaining <= 0;
+      }
+    }
+
+    class BookProduct extends Product {
+      constructor(data) {
+        super(data);
+        this.courseCode = data.courseCode || "VL101";
+      }
+      getCategoryBadge() { return "Giáo trình"; }
+    }
+
+    class TechProduct extends Product {
+      constructor(data) {
+        super(data);
+        this.warrantyMonths = data.warrantyMonths || 6;
+      }
+      getCategoryBadge() { return "Điện tử"; }
+    }
+
+    class LivingProduct extends Product {
+      constructor(data) {
+        super(data);
+        this.roomType = data.roomType || "KTX";
+      }
+      getCategoryBadge() { return "Đồ dùng KTX"; }
+    }
+
+    // 2. FACTORY METHOD PATTERN TẠO SẢN PHẨM
+    class ProductFactory {
+      static createProduct(data) {
+        switch (data.category) {
+          case "book": return new BookProduct(data);
+          case "tech": return new TechProduct(data);
+          case "life": return new LivingProduct(data);
+          default: return new Product(data);
+        }
+      }
+    }
+
+    // 3. STRATEGY PATTERN TÍNH TIỀN CỌC & GIẢM GIÁ XU
+    class StandardDepositStrategy {
+      static calculate(price, reputation) {
+        let rate = reputation >= 95 ? 0.10 : (reputation >= 85 ? 0.15 : 0.25);
+        let deposit = Math.round(price * rate);
+        return Math.max(deposit, 5000);
+      }
+    }
+
+    class CoinDiscountStrategy {
+      static applyDiscount(baseDeposit, userCoins) {
+        const maxCoinUsage = 20; // Dùng tối đa 20 xu = 2.000 đ
+        const coinsToUse = Math.min(userCoins, maxCoinUsage);
+        const discount = coinsToUse * 100;
+        return {
+          finalDeposit: Math.max(baseDeposit - discount, 2000),
+          usedCoins: coinsToUse,
+          discountAmount: discount
+        };
+      }
+    }
+
+    // 4. OBSERVER PATTERN (EVENT MANAGER)
+    class UniPassEventBus {
+      constructor() {
+        this.listeners = {};
+      }
+
+      subscribe(event, callback) {
+        if (!this.listeners[event]) this.listeners[event] = [];
+        this.listeners[event].push(callback);
+      }
+
+      publish(event, payload) {
+        if (this.listeners[event]) {
+          this.listeners[event].forEach(cb => cb(payload));
+        }
+      }
+    }
+
+    const eventBus = new UniPassEventBus();
+
+    // 5. SINGLETON PATTERN QUẢN LÝ DATABASE VÀ CẤU TRÚC DỮ LIỆU IN-MEMORY
+    class UniPassDatabase {
+      constructor() {
+        if (UniPassDatabase.instance) {
+          return UniPassDatabase.instance;
+        }
+
+        this.trie = new Trie();
+        this.avlTree = new AVLTree();
+        this.campusGraph = new CampusGraph();
+        this.products = [];
+        this.chats = [];
+        this.orders = [];
+        this.tradeHistory = [];
+        this.currentUser = null;
+
+        this.initKeywords();
+        this.loadStorage();
+        this.buildDSACaches();
+
+        UniPassDatabase.instance = this;
+      }
+
+      static getInstance() {
+        if (!UniPassDatabase.instance) {
+          UniPassDatabase.instance = new UniPassDatabase();
+        }
+        return UniPassDatabase.instance;
+      }
+
+      initKeywords() {
+        const DEFAULT_KEYWORDS = [
+          { kw: "VL101", freq: 99 },
+          { kw: "Giáo trình Vật Lý Đại Cương 1", freq: 95 },
+          { kw: "Máy tính Casio fx-580VN X", freq: 96 },
+          { kw: "Nồi cơm điện mini", freq: 85 },
+          { kw: "Toán cao cấp A1", freq: 89 },
+          { kw: "Lập trình C++ OOP", freq: 92 },
+          { kw: "Cấu trúc dữ liệu & Giải thuật", freq: 94 },
+          { kw: "Bàn học gấp sinh viên", freq: 78 },
+          { kw: "Đèn học chống cận", freq: 75 },
+          { kw: "Ấm siêu tốc 1.8L", freq: 82 }
+        ];
+        DEFAULT_KEYWORDS.forEach(k => this.trie.insert(k.kw, k.freq));
+      }
+
+      buildDSACaches() {
+        this.avlTree = new AVLTree();
+        this.products.forEach(p => {
+          if (p.status === "active") {
+            this.avlTree.insert(p);
+            this.trie.insert(p.title, 40);
+          }
+        });
+      }
+
+      loadStorage() {
+        const DEFAULT_PRODUCTS = [
+          {
+            id: "p1",
+            title: "Giáo trình Vật Lý Đại Cương 1 (VL101) - Tái bản mới",
+            price: 35000,
+            category: "book",
+            sellerId: "user_a",
+            sellerName: "Lê Thị Ngọc Tuyết",
+            sellerReputation: 98,
+            location: "Ký túc xá Cỏ May UTC2",
+            distance: 0.5,
+            timeMarkCode: "UTC2-8924",
+            imageUrl: "https://images.unsplash.com/photo-1544716278-ca5e3f4abd8c?auto=format&fit=crop&w=600&q=80",
+            daysRemaining: 6,
+            views: 45,
+            status: "active"
+          },
+          {
+            id: "p2",
+            title: "Máy tính Casio fx-580VN X (còn đủ nắp đậy và tem Bitex)",
+            price: 250000,
+            category: "tech",
+            sellerId: "user_b",
+            sellerName: "Phúc Lâm",
+            sellerReputation: 92,
+            location: "Cổng 1 Trường UTC2",
+            distance: 0.8,
+            timeMarkCode: "UTC2-1042",
+            imageUrl: "https://images.unsplash.com/photo-1587145820266-a5951ee6f620?auto=format&fit=crop&w=600&q=80",
+            daysRemaining: 5,
+            views: 88,
+            status: "active"
+          },
+          {
+            id: "p3",
+            title: "Nồi cơm điện mini 1.2L nắp gài cho sinh viên phòng trọ",
+            price: 120000,
+            category: "life",
+            sellerId: "user_b",
+            sellerName: "Phúc Lâm",
+            sellerReputation: 92,
+            location: "Cổng 1 Trường UTC2",
+            distance: 0.4,
+            timeMarkCode: "UTC2-5531",
+            imageUrl: "https://images.unsplash.com/photo-1544233726-9f1d2b27be8b?auto=format&fit=crop&w=600&q=80",
+            daysRemaining: 4,
+            views: 62,
+            status: "active"
+          },
+          {
+            id: "p4",
+            title: "Sách Cấu Trúc Dữ Liệu & Giải Thuật (C++) bản in màu",
+            price: 45000,
+            category: "book",
+            sellerId: "user_a",
+            sellerName: "Lê Thị Ngọc Tuyết",
+            sellerReputation: 98,
+            location: "Thư viện & Khu tự học UTC2",
+            distance: 0.2,
+            timeMarkCode: "UTC2-7719",
+            imageUrl: "https://images.unsplash.com/photo-1532012164546-f432f2e3edd4?auto=format&fit=crop&w=600&q=80",
+            daysRemaining: 7,
+            views: 53,
+            status: "active"
+          }
+        ];
+
+        const rawProducts = JSON.parse(localStorage.getItem("unipass_products_v2")) || DEFAULT_PRODUCTS;
+        this.products = rawProducts.map(p => ProductFactory.createProduct(p));
+
+        const DEFAULT_CHATS = [
+          {
+            id: "chat_ab_p2",
+            productId: "p2",
+            productTitle: "Máy tính Casio fx-580VN X",
+            userA_id: "user_a",
+            userB_id: "user_b",
+            messages: [
+              { senderId: "user_a", senderName: "Lê Thị Ngọc Tuyết", text: "Chào Lâm, máy Casio này màn hình còn sắc nét và đủ nắp không?", time: "14:20" },
+              { senderId: "user_b", senderName: "Phúc Lâm", text: "Chào Tuyết, còn nguyên nắp và phím bấm rất nảy nhé! Trưa mai 11h hẹn ở Căn tin trường test máy nha.", time: "14:25" }
+            ]
+          }
+        ];
+        this.chats = JSON.parse(localStorage.getItem("unipass_chats_v2")) || DEFAULT_CHATS;
+        this.orders = JSON.parse(localStorage.getItem("unipass_orders_v2")) || [];
+        this.tradeHistory = JSON.parse(localStorage.getItem("unipass_history_v2")) || [];
+        this.currentUser = JSON.parse(localStorage.getItem("unipass_current_user_v2")) || null;
+      }
+
+      save() {
+        localStorage.setItem("unipass_products_v2", JSON.stringify(this.products));
+        localStorage.setItem("unipass_chats_v2", JSON.stringify(this.chats));
+        localStorage.setItem("unipass_orders_v2", JSON.stringify(this.orders));
+        localStorage.setItem("unipass_history_v2", JSON.stringify(this.tradeHistory));
+        localStorage.setItem("unipass_current_user_v2", JSON.stringify(this.currentUser));
+        this.buildDSACaches();
+      }
+    }
+
+    const db = UniPassDatabase.getInstance();
+
+    /* ==========================================================================
+       III. LOGIC GIAO DIỆN & TƯƠNG TÁC NGƯỜI DÙNG (WEB UI)
+       ========================================================================== */
+
+    let activeChatThreadId = null;
+    let selectedModalProduct = null;
+    let currentUploadedImageData = null;
+
+    // A. XÁC THỰC NGƯỜI DÙNG & QUICK LOGIN
+    function checkAuthOnLoad() {
+      if (!db.currentUser) {
+        document.getElementById("authGateway").classList.remove("hidden");
+      } else {
+        document.getElementById("authGateway").classList.add("hidden");
+        updateUserUI();
+        renderProducts();
+        renderRecommendedShopee();
+        renderOrders();
+        renderMyPosts();
+      }
+    }
+
+    function quickLoginDemo(accountType) {
+      if (accountType === 'A') {
+        db.currentUser = {
+          id: "user_a",
+          name: "Lê Thị Ngọc Tuyết",
+          email: "tuyet.le@st.utc2.edu.vn",
+          coins: parseInt(localStorage.getItem("unipass_coins_a") || "120"),
+          reputation: 98,
+          location: "Ký túc xá Cỏ May UTC2"
+        };
+      } else {
+        db.currentUser = {
+          id: "user_b",
+          name: "Phúc Lâm",
+          email: "phuclam@st.utc2.edu.vn",
+          coins: parseInt(localStorage.getItem("unipass_coins_b") || "80"),
+          reputation: 92,
+          location: "Cổng 1 Trường UTC2"
+        };
+      }
+      db.save();
+      document.getElementById("authGateway").classList.add("hidden");
+      updateUserUI();
+      renderProducts();
+      renderRecommendedShopee();
+      renderOrders();
+      renderMyPosts();
+    }
+
+    function handleCustomLogin() {
+      const email = document.getElementById("authEmailInput").value.trim().toLowerCase();
+      const name = document.getElementById("authNameInput").value.trim();
+
+      if (!email.endsWith("@st.utc2.edu.vn") && !email.endsWith(".edu.vn")) {
+        alert("⚠️ UniPass chỉ cho phép đăng nhập bằng Email sinh viên (@st.utc2.edu.vn hoặc đuôi .edu.vn) để chặn tin rác & nick clone!");
+        return;
+      }
+      if (!name) {
+        alert("Vui lòng nhập họ và tên của bạn!");
+        return;
+      }
+
+      db.currentUser = {
+        id: "user_" + btoa(email).substring(0, 8),
+        name: name,
+        email: email,
+        coins: 50,
+        reputation: 95,
+        location: "Cổng 1 Trường UTC2"
+      };
+      db.save();
+      document.getElementById("authGateway").classList.add("hidden");
+      updateUserUI();
+      renderProducts();
+      renderRecommendedShopee();
+    }
+
+    function handleLogout() {
+      if (confirm("Bạn có chắc chắn muốn đăng xuất tài khoản?")) {
+        localStorage.removeItem("unipass_current_user_v2");
+        db.currentUser = null;
+        document.getElementById("authGateway").classList.remove("hidden");
+      }
+    }
+
+    function toggleUserQuickSwitch() {
+      if (!db.currentUser) return;
+      if (db.currentUser.id === "user_a") {
+        quickLoginDemo('B');
+      } else {
+        quickLoginDemo('A');
+      }
+    }
+
+    function updateUserUI() {
+      if (!db.currentUser) return;
+      document.getElementById("currentUserName").textContent = db.currentUser.name;
+      document.getElementById("currentUserCoins").textContent = db.currentUser.coins;
+      document.getElementById("currentUserAvatar").textContent = db.currentUser.name.charAt(0);
+      
+      const switchBtn = document.getElementById("switchBtnLabel");
+      if (switchBtn) {
+        switchBtn.textContent = db.currentUser.id === 'user_a' ? "Đổi sang TK B (Lâm)" : "Đổi sang TK A (Tuyết)";
+      }
+
+      // Profile Tab
+      const pAvatar = document.getElementById("profileAvatarBig");
+      if (pAvatar) pAvatar.textContent = db.currentUser.name.charAt(0);
+      const pName = document.getElementById("profileNameBig");
+      if (pName) pName.textContent = db.currentUser.name;
+      const pEmail = document.getElementById("profileEmailBig");
+      if (pEmail) pEmail.textContent = db.currentUser.email;
+      const pCoins = document.getElementById("profileCoinsBig");
+      if (pCoins) pCoins.textContent = db.currentUser.coins;
+      const pRep = document.getElementById("profileReputationBig");
+      if (pRep) pRep.textContent = db.currentUser.reputation;
+
+      const orderBadge = document.getElementById("orderCountBadge");
+      if (orderBadge) orderBadge.textContent = db.orders.length;
+    }
+
+    // B. ĐIỀU HƯỚNG TABS
+    function switchTab(tabId) {
+      const allTabs = ['market', 'recommend', 'post', 'chat', 'orders', 'game', 'profile', 'architecture'];
+      allTabs.forEach(t => {
+        const el = document.getElementById(`tab-${t}`);
+        if (el) el.classList.add("hidden");
+        const btn = document.getElementById(`nav-${t}`);
+        if (btn) {
+          btn.classList.remove("text-white", "bg-indigo-600", "shadow-sm");
+          btn.classList.add("text-slate-600");
+        }
+      });
+
+      const activeEl = document.getElementById(`tab-${tabId}`);
+      if (activeEl) activeEl.classList.remove("hidden");
+      const activeBtn = document.getElementById(`nav-${tabId}`);
+      if (activeBtn) {
+        activeBtn.classList.remove("text-slate-600");
+        activeBtn.classList.add("text-white", "bg-indigo-600", "shadow-sm");
+      }
+
+      if (tabId === 'game') initBlockBlastGame();
+      else if (tabId === 'chat') renderChatThreads();
+      else if (tabId === 'orders') renderOrders();
+      else if (tabId === 'recommend') renderRecommendedShopee();
+      else if (tabId === 'profile') renderMyPosts();
+    }
+
+    // C. TÌM KIẾM TRIE & LỌC GIÁ AVL TREE
+    function handleTrieSearch(query) {
+      const dropdown = document.getElementById("trieDropdown");
+      const list = document.getElementById("trieList");
+      if (!query.trim()) {
+        dropdown.classList.add("hidden");
+        return;
+      }
+
+      const matches = db.trie.searchPrefix(query);
+      if (matches.length === 0) {
+        dropdown.classList.add("hidden");
+        return;
+      }
+
+      list.innerHTML = matches.map(m => `
+        <div onclick="selectTrieWord('${m.word}')" class="px-4 py-2.5 hover:bg-indigo-50 cursor-pointer flex justify-between items-center transition">
+          <div class="flex items-center gap-2">
+            <i class="ph ph-magnifying-glass text-slate-400 text-xs"></i>
+            <span class="text-xs font-bold text-slate-800">${m.word}</span>
+          </div>
+          <span class="text-[10px] font-black text-indigo-600 bg-indigo-50 px-2 py-0.5 rounded-full">Độ hot: ${m.frequency}</span>
+        </div>
+      `).join('');
+      dropdown.classList.remove("hidden");
+    }
+
+    function selectTrieWord(word) {
+      document.getElementById("trieSearchInput").value = word;
+      document.getElementById("trieDropdown").classList.add("hidden");
+      applyFilters();
+    }
+
+    function updateRadiusLabel(val) {
+      document.getElementById("radiusLabel").textContent = `${val} km`;
+      applyFilters();
+    }
+
+    function resetFilters() {
+      document.getElementById("trieSearchInput").value = "";
+      document.getElementById("filterMinPrice").value = "";
+      document.getElementById("filterMaxPrice").value = "";
+      document.getElementById("filterRadius").value = 5;
+      document.getElementById("radiusLabel").textContent = "5 km";
+      document.querySelector("input[name='categoryFilter'][value='all']").checked = true;
+      applyFilters();
+    }
+
+    function applyFilters() {
+      const query = document.getElementById("trieSearchInput").value.toLowerCase().trim();
+      const minPrice = parseFloat(document.getElementById("filterMinPrice").value) || 0;
+      const maxPrice = parseFloat(document.getElementById("filterMaxPrice").value) || 99999999;
+      const maxRadius = parseFloat(document.getElementById("filterRadius").value) || 15;
+      const category = document.querySelector("input[name='categoryFilter']:checked").value;
+      const sort = document.getElementById("sortOption").value;
+
+      // 1. ÁP DỤNG AVL TREE RANGE SEARCH CHO LỌC GIÁ IN-MEMORY
+      let avlCandidates = db.avlTree.rangeSearch(minPrice, maxPrice);
+
+      // 2. Lọc tiếp theo từ khóa Trie và danh mục & khoảng cách
+      let filtered = avlCandidates.filter(p => {
+        if (p.status !== "active") return false;
+        const matchTitle = query === "" || p.title.toLowerCase().includes(query);
+        const matchCategory = category === 'all' || p.category === category;
+        const matchDistance = p.distance <= maxRadius;
+        return matchTitle && matchCategory && matchDistance;
+      });
+
+      // Sắp xếp
+      if (sort === 'priceAsc') filtered.sort((a, b) => a.price - b.price);
+      else if (sort === 'distanceAsc') filtered.sort((a, b) => a.distance - b.distance);
+      else if (sort === 'reputationDesc') filtered.sort((a, b) => b.sellerReputation - a.sellerReputation);
+      else filtered.sort((a, b) => b.createdAt - a.createdAt);
+
+      const dsaStat = document.getElementById("dsaFilterStat");
+      if (dsaStat) {
+        dsaStat.textContent = `AVL Tree lọc được ${avlCandidates.length} sp trong tầm giá [${minPrice.toLocaleString()} - ${maxPrice === 99999999 ? '∞' : maxPrice.toLocaleString()} đ].`;
+      }
+
+      renderProductGrid(filtered);
+    }
+
+    function renderProducts() {
+      applyFilters();
+    }
+
+    function renderProductGrid(list) {
+      const grid = document.getElementById("productGrid");
+      document.getElementById("productCount").textContent = list.length;
+
+      if (list.length === 0) {
+        grid.innerHTML = `
+          <div class="col-span-full py-12 text-center text-slate-400 bg-white rounded-3xl border border-slate-200 p-8">
+            <i class="ph ph-bag text-5xl block mb-2 text-slate-300 mx-auto"></i>
+            <p class="text-sm font-bold text-slate-600">Không tìm thấy món đồ phù hợp quanh UTC2</p>
+            <p class="text-xs text-slate-400 mt-1">Thử nới rộng khoảng giá hoặc khoảng cách tìm kiếm</p>
+          </div>
+        `;
+        return;
+      }
+
+      grid.innerHTML = list.map(item => `
+        <div class="bg-white rounded-3xl border border-slate-200 p-3 shadow-sm hover:shadow-md transition flex flex-col justify-between group overflow-hidden">
+          <div>
+            <div class="relative w-full h-44 rounded-2xl overflow-hidden bg-slate-100 mb-3">
+              <img src="${item.imageUrl}" alt="${item.title}" class="w-full h-full object-cover group-hover:scale-105 transition duration-300" onerror="this.src='https://images.unsplash.com/photo-1544716278-ca5e3f4abd8c?auto=format&fit=crop&w=600&q=80'" />
+              
+              <!-- Tag TimeMark chống lừa đảo -->
+              <span class="absolute top-2.5 right-2.5 text-[10px] font-mono font-black text-white bg-black/75 backdrop-blur-md px-2 py-0.5 rounded-lg border border-white/20 flex items-center gap-1 shadow-sm">
+                <i class="ph-bold ph-shield-check text-emerald-400"></i> ${item.timeMarkCode}
+              </span>
+
+              <span class="absolute top-2.5 left-2.5 text-[10px] font-black px-2 py-0.5 rounded-md ${item.category === 'book' ? 'bg-indigo-600 text-white' : item.category === 'tech' ? 'bg-blue-600 text-white' : 'bg-emerald-600 text-white'}">
+                ${item.getCategoryBadge ? item.getCategoryBadge() : (item.category === 'book' ? 'Giáo trình' : item.category === 'tech' ? 'Điện tử' : 'Đồ dùng')}
+              </span>
+            </div>
+
+            <h4 class="font-extrabold text-sm text-slate-900 group-hover:text-indigo-600 transition line-clamp-2 px-1 leading-snug">${item.title}</h4>
+            <div class="text-base font-black text-indigo-600 mt-1.5 px-1">${item.price.toLocaleString()} VNĐ</div>
+            
+            <div class="mt-2.5 pt-2.5 border-t border-slate-100 space-y-1 text-[11px] text-slate-500 px-1">
+              <div class="flex items-center justify-between">
+                <span>Người pass: <b>${item.sellerName}</b></span>
+                <span class="text-emerald-600 font-black">⭐ ${item.sellerReputation}/100</span>
+              </div>
+              <div class="flex items-center gap-1 text-slate-400 truncate">
+                <i class="ph ph-map-pin text-indigo-600"></i> ${item.location} (${item.distance} km)
+              </div>
+              <div class="text-[10px] text-rose-500 font-semibold flex items-center gap-1">
+                <i class="ph ph-clock"></i> Tự hết hạn sau: ${item.daysRemaining} ngày
+              </div>
+            </div>
+          </div>
+
+          <div class="mt-3 pt-1">
+            <button onclick="openProductModal('${item.id}')" class="w-full py-2 bg-slate-900 hover:bg-indigo-600 text-white rounded-xl text-xs font-bold transition flex items-center justify-center gap-1.5 shadow-sm">
+              <span>Xem & Đặt Cọc Giữ Chỗ</span>
+              <i class="ph-bold ph-arrow-right"></i>
+            </button>
+          </div>
+        </div>
+      `).join('');
+    }
+
+    // D. ĐỀ XUẤT SẢN PHẨM SHOPEE (MAX-HEAP ALGORITHM)
+    function renderRecommendedShopee() {
+      const container = document.getElementById("recommendedGrid");
+      if (!container) return;
+
+      const heap = new MaxHeap();
+      db.products.forEach(p => {
+        if (p.status === "active") {
+          // Trọng số = Điểm uy tín (40%) + Lượt xem (30%) + Khoảng cách gần (30%)
+          const distScore = Math.max(0, 15 - p.distance) * 2;
+          const totalScore = (p.sellerReputation * 0.4) + (p.views * 0.3) + distScore;
+          heap.insert(p, totalScore);
+        }
+      });
+
+      const topProducts = [];
+      while (heap.size() > 0 && topProducts.length < 8) {
+        topProducts.push(heap.extractMax());
+      }
+
+      container.innerHTML = topProducts.map((item, idx) => `
+        <div class="bg-white rounded-3xl border border-slate-200 p-3 shadow-sm hover:shadow-md transition flex flex-col justify-between group overflow-hidden relative">
+          <div class="absolute top-2 left-2 z-10 bg-gradient-to-r from-amber-500 to-orange-500 text-white text-[10px] font-black px-2 py-0.5 rounded-lg shadow-md flex items-center gap-1">
+            <i class="ph-fill ph-fire text-amber-200"></i> Top #${idx + 1} Gợi ý
+          </div>
+
+          <div>
+            <div class="relative w-full h-40 rounded-2xl overflow-hidden bg-slate-100 mb-3 mt-4">
+              <img src="${item.imageUrl}" alt="${item.title}" class="w-full h-full object-cover group-hover:scale-105 transition duration-300" onerror="this.src='https://images.unsplash.com/photo-1544716278-ca5e3f4abd8c?auto=format&fit=crop&w=600&q=80'" />
+              <span class="absolute bottom-2 right-2 text-[9px] font-mono font-bold text-white bg-black/75 px-1.5 py-0.5 rounded border border-white/20">
+                ${item.timeMarkCode}
+              </span>
+            </div>
+
+            <h4 class="font-extrabold text-xs text-slate-900 line-clamp-2 px-1 leading-snug">${item.title}</h4>
+            <div class="text-sm font-black text-indigo-600 mt-1 px-1">${item.price.toLocaleString()} VNĐ</div>
+            
+            <div class="mt-2 pt-2 border-t border-slate-100 text-[10px] text-slate-500 space-y-0.5 px-1">
+              <div class="flex justify-between">
+                <span>Uy tín: <b class="text-amber-600">⭐ ${item.sellerReputation}</b></span>
+                <span>Gần: <b>${item.distance} km</b></span>
+              </div>
+            </div>
+          </div>
+
+          <div class="mt-2.5">
+            <button onclick="openProductModal('${item.id}')" class="w-full py-1.5 bg-indigo-50 hover:bg-indigo-600 hover:text-white text-indigo-700 rounded-xl text-xs font-bold transition flex items-center justify-center gap-1">
+              <span>Xem chi tiết</span>
+            </button>
+          </div>
+        </div>
+      `).join('');
+    }
+
+    // E. MODAL SẢN PHẨM & ĐẶT CỌC GIỮ CHỖ (STRATEGY PATTERN)
+    function openProductModal(productId) {
+      const item = db.products.find(p => p.id === productId);
+      if (!item) return;
+      selectedModalProduct = item;
+      item.views = (item.views || 0) + 1;
+      db.save();
+
+      document.getElementById("modalItemTitle").textContent = item.title;
+      document.getElementById("modalItemPrice").textContent = item.price.toLocaleString() + " VNĐ";
+      document.getElementById("modalItemSeller").textContent = item.sellerName;
+      document.getElementById("modalItemReputation").textContent = `⭐ ${item.sellerReputation}/100`;
+      document.getElementById("modalItemLocation").textContent = `${item.location} (${item.distance} km)`;
+      document.getElementById("modalItemImage").src = item.imageUrl;
+      document.getElementById("modalItemTimeMarkTag").textContent = item.timeMarkCode;
+      document.getElementById("modalItemDaysTag").textContent = `Hết hạn sau: ${item.daysRemaining} ngày`;
+
+      // TÍNH TOÁN CỌC THEO STRATEGY PATTERN
+      updateModalDepositDisplay();
+
+      const btnDeposit = document.getElementById("modalBtnDeposit");
+      if (db.currentUser && item.sellerId === db.currentUser.id) {
+        btnDeposit.disabled = true;
+        btnDeposit.classList.add("opacity-50", "cursor-not-allowed");
+        btnDeposit.textContent = "Món đồ của chính bạn";
+      } else {
+        btnDeposit.disabled = false;
+        btnDeposit.classList.remove("opacity-50", "cursor-not-allowed");
+        btnDeposit.textContent = "Đặt cọc giữ món đồ";
+      }
+
+      document.getElementById("productDetailModal").classList.remove("hidden");
+    }
+
+    function closeProductModal() {
+      document.getElementById("productDetailModal").classList.add("hidden");
+    }
+
+    function updateModalDepositDisplay() {
+      if (!selectedModalProduct) return;
+      const baseDeposit = StandardDepositStrategy.calculate(selectedModalProduct.price, selectedModalProduct.sellerReputation);
+      const isUseCoin = document.getElementById("modalUseCoinCheck").checked;
+      
+      let finalDeposit = baseDeposit;
+      if (isUseCoin && db.currentUser) {
+        const discounted = CoinDiscountStrategy.applyDiscount(baseDeposit, db.currentUser.coins);
+        finalDeposit = discounted.finalDeposit;
+      }
+
+      document.getElementById("modalDepositAmount").textContent = finalDeposit.toLocaleString() + " VNĐ";
+      const rateText = selectedModalProduct.sellerReputation >= 95 ? "10% cọc (Uy tín cao)" : "15% cọc";
+      document.getElementById("modalDepositRateLabel").textContent = rateText;
+    }
+
+    function handleToggleCoinDiscount() {
+      updateModalDepositDisplay();
+    }
+
+    function confirmDepositItem() {
+      if (!selectedModalProduct || !db.currentUser) return;
+      const baseDeposit = StandardDepositStrategy.calculate(selectedModalProduct.price, selectedModalProduct.sellerReputation);
+      const isUseCoin = document.getElementById("modalUseCoinCheck").checked;
+      
+      let finalDeposit = baseDeposit;
+      let usedCoins = 0;
+      if (isUseCoin) {
+        const discounted = CoinDiscountStrategy.applyDiscount(baseDeposit, db.currentUser.coins);
+        finalDeposit = discounted.finalDeposit;
+        usedCoins = discounted.usedCoins;
+        db.currentUser.coins -= usedCoins;
+      }
+
+      const order = {
+        id: "ord_" + Date.now(),
+        productId: selectedModalProduct.id,
+        productTitle: selectedModalProduct.title,
+        productPrice: selectedModalProduct.price,
+        imageUrl: selectedModalProduct.imageUrl,
+        buyerId: db.currentUser.id,
+        buyerName: db.currentUser.name,
+        sellerId: selectedModalProduct.sellerId,
+        sellerName: selectedModalProduct.sellerName,
+        depositAmount: finalDeposit,
+        usedCoins: usedCoins,
+        timeMarkCode: selectedModalProduct.timeMarkCode,
+        createdAt: new Date().toLocaleString(),
+        status: "deposited"
+      };
+
+      db.orders.unshift(order);
+      db.save();
+      updateUserUI();
+
+      if (typeof confetti === 'function') {
+        confetti({ particleCount: 100, spread: 70, origin: { y: 0.6 } });
+      }
+
+      alert(`✅ Đặt cọc thành công ${finalDeposit.toLocaleString()} VNĐ!\nĐơn đặt cọc đã được lưu vào hệ thống bảo vệ hợp đồng sinh viên.\nMở khung chat để hẹn giờ giao nhận trực tiếp tại trường.`);
+      closeProductModal();
+      openChatWithUser(selectedModalProduct.sellerId, selectedModalProduct.sellerName, selectedModalProduct);
+    }
+
+    // F. QUẢN LÝ ĐƠN ĐẶT CỌC (TAB ORDERS)
+    function renderOrders() {
+      const container = document.getElementById("ordersListContainer");
+      if (!container || !db.currentUser) return;
+
+      const myOrders = db.orders.filter(o => o.buyerId === db.currentUser.id || o.sellerId === db.currentUser.id);
+      if (myOrders.length === 0) {
+        container.innerHTML = `
+          <div class="py-12 text-center text-slate-400 bg-slate-50 rounded-2xl border border-slate-200">
+            <i class="ph ph-receipt text-4xl block mb-2 opacity-50 mx-auto"></i>
+            <p class="text-xs font-bold text-slate-600">Bạn chưa có đơn đặt cọc giữ đồ nào</p>
+          </div>
+        `;
+        return;
+      }
+
+      container.innerHTML = myOrders.map(o => {
+        const isBuyer = o.buyerId === db.currentUser.id;
+        const roleText = isBuyer ? "Đơn bạn cọc mua" : "Người khác cọc món đồ của bạn";
+        return `
+          <div class="p-4 bg-slate-50 border border-slate-200 rounded-2xl flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+            <div class="flex items-center gap-3">
+              <img src="${o.imageUrl}" class="w-14 h-14 rounded-xl object-cover border border-slate-200" onerror="this.src='https://images.unsplash.com/photo-1544716278-ca5e3f4abd8c?auto=format&fit=crop&w=600&q=80'" />
+              <div>
+                <span class="text-[10px] font-black uppercase tracking-wider px-2 py-0.5 rounded-full ${isBuyer ? 'bg-indigo-100 text-indigo-700' : 'bg-amber-100 text-amber-800'}">
+                  ${roleText}
+                </span>
+                <h4 class="text-xs font-black text-slate-800 mt-1">${o.productTitle}</h4>
+                <div class="text-[11px] text-slate-500">
+                  Tiền cọc: <b class="text-indigo-600">${o.depositAmount.toLocaleString()} đ</b> | Mã TimeMark: <b>${o.timeMarkCode}</b>
+                </div>
+              </div>
+            </div>
+
+            <div class="flex items-center gap-2 w-full sm:w-auto">
+              <button onclick="openChatFromOrderId('${o.id}')" class="flex-1 sm:flex-none px-3.5 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl text-xs font-bold transition flex items-center justify-center gap-1">
+                <i class="ph-bold ph-chat-teardrop-dots"></i> Nhắn tin hẹn gặp
+              </button>
+              <button onclick="handleCancelDeposit('${o.id}')" class="px-3.5 py-2 bg-slate-200 hover:bg-rose-100 hover:text-rose-700 text-slate-700 rounded-xl text-xs font-bold transition" title="Báo cáo sai hẹn hoặc hủy cọc">
+                Hủy / Báo cáo
+              </button>
+            </div>
+          </div>
+        `;
+      }).join('');
+    }
+
+    function openChatFromOrderId(orderId) {
+      const order = db.orders.find(o => o.id === orderId);
+      if (!order) return;
+      const partnerId = order.buyerId === db.currentUser.id ? order.sellerId : order.buyerId;
+      const partnerName = order.buyerId === db.currentUser.id ? order.sellerName : order.buyerName;
+      openChatWithUser(partnerId, partnerName, { id: order.productId, title: order.productTitle });
+    }
+
+    function handleCancelDeposit(orderId) {
+      if (confirm("⚠️ Bạn có chắc muốn hủy đơn đặt cọc này?\nNếu một bên bùng hẹn không lý do chính đáng, hệ thống sẽ trừ 10 điểm uy tín của bên vi phạm!")) {
+        db.orders = db.orders.filter(o => o.id !== orderId);
+        db.save();
+        renderOrders();
+        alert("Đã xử lý hủy đơn đặt cọc thành công.");
+      }
+    }
+
+    // G. HỆ THỐNG TIN NHẮN TRỰC TIẾP & XÁC NHẬN HOÀN THÀNH (TỰ ĐỘNG XÓA BÀI)
+    function openChatFromProduct() {
+      if (!selectedModalProduct) return;
+      closeProductModal();
+      openChatWithUser(selectedModalProduct.sellerId, selectedModalProduct.sellerName, selectedModalProduct);
+    }
+
+    function openChatWithUser(partnerId, partnerName, product) {
+      if (!db.currentUser) return;
+      if (db.currentUser.id === partnerId) {
+        alert("Đây là bài đăng của chính bạn!");
+        return;
+      }
+
+      let thread = db.chats.find(c => 
+        (c.userA_id === db.currentUser.id && c.userB_id === partnerId) ||
+        (c.userB_id === db.currentUser.id && c.userA_id === partnerId)
+      );
+
+      if (!thread) {
+        thread = {
+          id: "chat_" + Date.now(),
+          productId: product ? product.id : null,
+          productTitle: product ? product.title : "Trao đổi đồ dùng UTC2",
+          userA_id: db.currentUser.id,
+          userB_id: partnerId,
+          messages: [
+            {
+              senderId: db.currentUser.id,
+              senderName: db.currentUser.name,
+              text: `Chào bạn, mình quan tâm món: ${product ? product.title : 'đồ bạn đăng'}. Hẹn bạn gặp ở đâu tiện?`,
+              time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+            }
+          ]
+        };
+        db.chats.unshift(thread);
+        db.save();
+      }
+
+      switchTab('chat');
+      selectChatThread(thread.id);
+    }
+
+    function renderChatThreads() {
+      if (!db.currentUser) return;
+      const listContainer = document.getElementById("chatThreadsList");
+      const userThreads = db.chats.filter(c => c.userA_id === db.currentUser.id || c.userB_id === db.currentUser.id);
+
+      if (userThreads.length === 0) {
+        listContainer.innerHTML = `<div class="p-4 text-center text-xs text-slate-400">Chưa có hội thoại nào</div>`;
+        return;
+      }
+
+      listContainer.innerHTML = userThreads.map(t => {
+        const isUserA = t.userA_id === db.currentUser.id;
+        const partnerName = isUserA ? (t.userB_id === 'user_b' ? "Phúc Lâm" : "Sinh viên B") : (t.userA_id === 'user_a' ? "Lê Thị Ngọc Tuyết" : "Sinh viên A");
+        const lastMsg = t.messages[t.messages.length - 1];
+        const isActive = t.id === activeChatThreadId;
+
+        return `
+          <div onclick="selectChatThread('${t.id}')" class="p-3 cursor-pointer hover:bg-indigo-50/50 transition ${isActive ? 'bg-indigo-50 border-l-4 border-indigo-600' : ''}">
+            <div class="flex justify-between items-center mb-1">
+              <span class="text-xs font-bold text-slate-800 truncate">${partnerName}</span>
+              <span class="text-[10px] text-slate-400">${lastMsg ? lastMsg.time : ''}</span>
+            </div>
+            <div class="text-[11px] font-semibold text-indigo-600 truncate mb-0.5">${t.productTitle}</div>
+            <div class="text-xs text-slate-500 truncate">${lastMsg ? lastMsg.text : ''}</div>
+          </div>
+        `;
+      }).join('');
+
+      if (!activeChatThreadId && userThreads.length > 0) {
+        selectChatThread(userThreads[0].id);
+      }
+    }
+
+    function selectChatThread(threadId) {
+      activeChatThreadId = threadId;
+      const thread = db.chats.find(t => t.id === threadId);
+      if (!thread || !db.currentUser) return;
+
+      const isBuyer = thread.userA_id === db.currentUser.id;
+      const partnerName = isBuyer ? "Phúc Lâm (Người Bán)" : "Lê Thị Ngọc Tuyết (Người Mua)";
+
+      document.getElementById("chatPartnerName").textContent = partnerName;
+      document.getElementById("chatProductContext").textContent = `Mặt hàng: ${thread.productTitle}`;
+      document.getElementById("chatPartnerAvatar").textContent = partnerName.charAt(0);
+      document.getElementById("btnCompleteTrade").classList.remove("hidden");
+
+      const box = document.getElementById("chatMessagesBox");
+      box.innerHTML = thread.messages.map(m => {
+        const isMe = m.senderId === db.currentUser.id;
+        return `
+          <div class="flex flex-col ${isMe ? 'items-end' : 'items-start'}">
+            <div class="max-w-[75%] rounded-2xl px-4 py-2.5 text-xs ${isMe ? 'bg-indigo-600 text-white rounded-tr-none' : 'bg-white border border-slate-200 text-slate-800 rounded-tl-none shadow-sm'}">
+              <div class="text-[10px] font-bold opacity-75 mb-0.5">${m.senderName}</div>
+              <div>${m.text}</div>
+            </div>
+            <span class="text-[9px] text-slate-400 mt-1 px-1">${m.time}</span>
+          </div>
+        `;
+      }).join('');
+
+      box.scrollTop = box.scrollHeight;
+    }
+
+    function handleSendMessage(e) {
+      e.preventDefault();
+      if (!activeChatThreadId || !db.currentUser) return;
+
+      const input = document.getElementById("chatInputMessage");
+      const text = input.value.trim();
+      if (!text) return;
+
+      const thread = db.chats.find(t => t.id === activeChatThreadId);
+      if (!thread) return;
+
+      const now = new Date();
+      const timeStr = now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+
+      thread.messages.push({
+        senderId: db.currentUser.id,
+        senderName: db.currentUser.name,
+        text: text,
+        time: timeStr
+      });
+
+      db.save();
+      input.value = "";
+      selectChatThread(activeChatThreadId);
+      renderChatThreads();
+    }
+
+    // TÍNH NĂNG THEO YÊU CẦU ĐỀ BÀI: SAU KHI TRAO HÀNG XONG -> TỰ ĐỘNG XÓA BÀI ĐĂNG
+    function confirmCompleteTrade() {
+      if (!activeChatThreadId) return;
+      const thread = db.chats.find(t => t.id === activeChatThreadId);
+      if (!thread) return;
+
+      if (confirm(`🎉 Xác nhận 2 bạn đã gặp mặt và trao đồ thành công?\n\nHệ thống sẽ:\n1. Hoàn trả tiền cọc an toàn về ví người mua.\n2. Tăng +5 điểm uy tín cho cả hai bạn.\n3. TỰ ĐỘNG XÓA BÀI ĐĂNG khỏi sàn để tránh làm phiền.`)) {
+        
+        // 1. Tự động xóa bài đăng khỏi sàn
+        if (thread.productId) {
+          db.products = db.products.filter(p => p.id !== thread.productId);
+          db.orders = db.orders.filter(o => o.productId !== thread.productId);
+        }
+
+        // 2. Thêm vào lịch sử giao dịch
+        db.tradeHistory.unshift({
+          id: "hist_" + Date.now(),
+          title: thread.productTitle,
+          completedAt: new Date().toLocaleDateString('vi-VN') + " " + new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+          note: "Giao nhận trực tiếp thành công tại UTC2"
+        });
+
+        // 3. Tăng điểm uy tín
+        db.currentUser.reputation = Math.min(100, (db.currentUser.reputation || 90) + 5);
+        db.currentUser.coins += 10; // Thưởng thêm xu
+        db.save();
+
+        if (typeof confetti === 'function') {
+          confetti({ particleCount: 150, spread: 80, origin: { y: 0.6 } });
+        }
+
+        alert(`✅ Giao dịch hoàn tất trọn vẹn!\nBài đăng đã được TỰ ĐỘNG XÓA khỏi sàn.\nĐiểm uy tín của bạn được nâng lên: ⭐ ${db.currentUser.reputation}/100.`);
+        updateUserUI();
+        renderProducts();
+        renderRecommendedShopee();
+        renderMyPosts();
+        switchTab('market');
+      }
+    }
+
+    // H. QUY TRÌNH TIMEMARK XÁC MINH HÌNH ẢNH & ĐĂNG BÀI
+    function generateNewOTP() {
+      const rand = Math.floor(1000 + Math.random() * 9000);
+      const code = `UTC2-${rand}`;
+      document.getElementById("currentOTPCode").textContent = code;
+      document.getElementById("previewWatermarkCode").textContent = code;
+      document.getElementById("currentOTPTime").textContent = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+    }
+
+    function previewUploadImage(input) {
+      if (input.files && input.files[0]) {
+        const reader = new FileReader();
+        reader.onload = function(e) {
+          currentUploadedImageData = e.target.result;
+          document.getElementById("imagePreviewElement").src = currentUploadedImageData;
+          document.getElementById("imagePreviewContainer").classList.remove("hidden");
+        };
+        reader.readAsDataURL(input.files[0]);
+      }
+    }
+
+    function verifyImageCodeOnly() {
+      const currentCode = document.getElementById("currentOTPCode").textContent.trim();
+      const inputCode = document.getElementById("verifyCodeInput").value.trim();
+
+      if (!inputCode) {
+        alert("Vui lòng nhập mã xác nhận!");
+        return false;
+      }
+
+      if (inputCode.toUpperCase() !== currentCode.toUpperCase()) {
+        alert(`❌ Mã xác minh không khớp!\nMã hệ thống yêu cầu: ${currentCode}\nMã bạn nhập: ${inputCode.toUpperCase()}\nVui lòng viết đúng mã trên giấy để đối soát ảnh.`);
+        return false;
+      }
+
+      alert("✅ Khớp mã xác nhận thành công! Hình ảnh đã được đóng dấu TimeMark chính chủ UTC2.");
+      return true;
+    }
+
+    function handleCreatePost() {
+      if (!db.currentUser) return;
+      const title = document.getElementById("postTitle").value.trim();
+      const category = document.getElementById("postCategory").value;
+      const price = parseFloat(document.getElementById("postPrice").value);
+      const location = document.getElementById("postLocationSelect").value;
+      const distance = parseFloat(document.getElementById("postDistance").value) || 0.5;
+      const currentCode = document.getElementById("currentOTPCode").textContent.trim();
+      const inputCode = document.getElementById("verifyCodeInput").value.trim();
+
+      if (!title || isNaN(price) || price <= 0) {
+        alert("Vui lòng điền tên món đồ và mức giá pass hợp lệ!");
+        return;
+      }
+
+      if (!currentUploadedImageData) {
+        alert("Vui lòng tải ảnh món đồ có chụp kèm mẩu giấy ghi mã xác minh TimeMark!");
+        return;
+      }
+
+      if (inputCode.toUpperCase() !== currentCode.toUpperCase()) {
+        alert(`❌ Xác minh ảnh thất bại: Bạn chưa nhập đúng mã [${currentCode}] đã ghi trên giấy!`);
+        return;
+      }
+
+      const newPost = ProductFactory.createProduct({
+        id: "p_" + Date.now(),
+        title: title,
+        price: price,
+        category: category,
+        sellerId: db.currentUser.id,
+        sellerName: db.currentUser.name,
+        sellerReputation: db.currentUser.reputation,
+        location: location,
+        distance: distance,
+        timeMarkCode: currentCode,
+        imageUrl: currentUploadedImageData,
+        daysRemaining: 7, // Hạn 7 ngày theo yêu cầu đề bài
+        status: "active",
+        createdAt: Date.now(),
+        views: 1
+      });
+
+      db.products.unshift(newPost);
+      db.save();
+
+      document.getElementById("postTitle").value = "";
+      document.getElementById("postPrice").value = "";
+      document.getElementById("verifyCodeInput").value = "";
+      document.getElementById("postImageInput").value = "";
+      document.getElementById("imagePreviewContainer").classList.add("hidden");
+      currentUploadedImageData = null;
+      generateNewOTP();
+
+      alert(`✅ Đăng bài thành công! Ảnh đã đóng dấu TimeMark [${currentCode}] và sẽ tự động hết hạn sau 7 ngày.`);
+      switchTab('market');
+      renderProducts();
+      renderRecommendedShopee();
+      renderMyPosts();
+    }
+
+    // I. QUẢN LÝ BÀI ĐĂNG CỦA TÔI & GIA HẠN 7 NGÀY
+    function renderMyPosts() {
+      const container = document.getElementById("myPostsList");
+      const historyContainer = document.getElementById("tradeHistoryList");
+      if (!container || !db.currentUser) return;
+
+      const myPosts = db.products.filter(p => p.sellerId === db.currentUser.id);
+      if (myPosts.length === 0) {
+        container.innerHTML = `<div class="p-4 text-center text-xs text-slate-400 bg-slate-50 rounded-2xl">Bạn chưa đăng bài pass đồ nào</div>`;
+      } else {
+        container.innerHTML = myPosts.map(p => `
+          <div class="p-3 bg-slate-50 border border-slate-200 rounded-2xl flex items-center justify-between gap-3">
+            <div class="flex items-center gap-3">
+              <img src="${p.imageUrl}" class="w-12 h-12 rounded-xl object-cover" onerror="this.src='https://images.unsplash.com/photo-1544716278-ca5e3f4abd8c?auto=format&fit=crop&w=600&q=80'" />
+              <div>
+                <h4 class="text-xs font-black text-slate-800">${p.title}</h4>
+                <div class="text-[11px] text-slate-500">
+                  Giá: <b class="text-indigo-600">${p.price.toLocaleString()} đ</b> | 
+                  <span class="text-rose-500 font-bold">Còn ${p.daysRemaining} ngày</span> | Lượt xem: <b>${p.views}</b>
+                </div>
+              </div>
+            </div>
+
+            <div class="flex items-center gap-2">
+              <button onclick="extendPost('${p.id}')" class="px-3 py-1.5 bg-indigo-50 hover:bg-indigo-100 text-indigo-700 font-bold rounded-xl text-xs transition" title="Gia hạn thêm 7 ngày">
+                <i class="ph-bold ph-clock-countdown"></i> Gia Hạn 7 Ngày
+              </button>
+              <button onclick="deleteMyPost('${p.id}')" class="px-3 py-1.5 bg-rose-50 hover:bg-rose-100 text-rose-600 font-bold rounded-xl text-xs transition" title="Gỡ bài">
+                Gỡ bài
+              </button>
+            </div>
+          </div>
+        `).join('');
+      }
+
+      if (historyContainer) {
+        if (db.tradeHistory.length === 0) {
+          historyContainer.innerHTML = `<div class="p-3 text-center text-xs text-slate-400">Chưa có giao dịch hoàn tất nào</div>`;
+        } else {
+          historyContainer.innerHTML = db.tradeHistory.map(h => `
+            <div class="p-2.5 bg-slate-50 rounded-xl flex items-center justify-between text-xs">
+              <div class="flex items-center gap-2">
+                <i class="ph-bold ph-check-circle text-emerald-500 text-base"></i>
+                <span class="font-bold text-slate-800">${h.title}</span>
+              </div>
+              <span class="text-[10px] text-slate-400">${h.completedAt}</span>
+            </div>
+          `).join('');
+        }
+      }
+    }
+
+    function extendPost(productId) {
+      const p = db.products.find(item => item.id === productId);
+      if (p) {
+        p.daysRemaining = 7;
+        db.save();
+        renderMyPosts();
+        renderProducts();
+        alert(`✅ Đã gia hạn bài đăng "${p.title}" thêm 7 ngày!`);
+      }
+    }
+
+    function deleteMyPost(productId) {
+      if (confirm("Bạn có chắc chắn muốn gỡ bài đăng này khỏi hệ thống?")) {
+        db.products = db.products.filter(item => item.id !== productId);
+        db.save();
+        renderMyPosts();
+        renderProducts();
+        renderRecommendedShopee();
+      }
+    }
+
+    /* ==========================================================================
+       IV. GAME BLOCK BLAST 8X8 HỖ TRỢ KÉO THẢ TRỰC THỤ (DRAG & DROP SĂN XU)
+       ========================================================================== */
+    const GRID_SIZE = 8;
+    let board = [];
+    let gameScore = 0;
+    let gameHighScore = parseInt(localStorage.getItem("unipass_block_highscore") || "0");
+    let currentTrayShapes = [];
+    let selectedShapeIndex = null;
+    let hasAwardedCoinThisGame = false;
+
+    let isDragging = false;
+    let draggedShapeIndex = null;
+    let currentHoverR = -1;
+    let currentHoverC = -1;
+
+    const SHAPE_PATTERNS = [
+      { name: "Single", matrix: [[1]], color: "bg-amber-400" },
+      { name: "I2", matrix: [[1, 1]], color: "bg-indigo-400" },
+      { name: "I3", matrix: [[1, 1, 1]], color: "bg-indigo-500" },
+      { name: "I4", matrix: [[1, 1, 1, 1]], color: "bg-indigo-600" },
+      { name: "Square2x2", matrix: [[1, 1], [1, 1]], color: "bg-emerald-400" },
+      { name: "L-Shape", matrix: [[1, 0], [1, 0], [1, 1]], color: "bg-violet-500" },
+      { name: "T-Shape", matrix: [[1, 1, 1], [0, 1, 0]], color: "bg-rose-400" },
+      { name: "Small-L", matrix: [[1, 0], [1, 1]], color: "bg-cyan-400" }
+    ];
+
+    function initBlockBlastGame() {
+      board = Array(GRID_SIZE).fill(null).map(() => Array(GRID_SIZE).fill(null));
+      gameScore = 0;
+      hasAwardedCoinThisGame = false;
+      document.getElementById("gameCurrentScore").textContent = gameScore;
+      document.getElementById("gameHighScore").textContent = gameHighScore;
+      generateTrayShapes();
+      renderBoard();
+      setupGlobalDragListeners();
+    }
+
+    function renderBoard(highlightCells = []) {
+      const grid = document.getElementById("blockBlastGrid");
+      grid.innerHTML = "";
+
+      for (let r = 0; r < GRID_SIZE; r++) {
+        for (let c = 0; c < GRID_SIZE; c++) {
+          const cell = document.createElement("div");
+          const isHighlighted = highlightCells.some(h => h.r === r && h.c === c);
+          
+          let cellClass = `grid-cell rounded-lg flex items-center justify-center border border-slate-700/50 `;
+          if (isHighlighted) {
+            cellClass += `bg-white/40 ring-2 ring-white scale-95 `;
+          } else if (board[r][c]) {
+            cellClass += board[r][c] + ' ';
+          } else {
+            cellClass += `bg-slate-700/40 hover:bg-slate-700/70 `;
+          }
+
+          cell.className = cellClass;
+          cell.dataset.row = r;
+          cell.dataset.col = c;
+          
+          cell.onclick = () => handleBoardCellClick(r, c);
+          grid.appendChild(cell);
+        }
+      }
+    }
+
+    function generateTrayShapes() {
+      currentTrayShapes = [];
+      for (let i = 0; i < 3; i++) {
+        const rand = SHAPE_PATTERNS[Math.floor(Math.random() * SHAPE_PATTERNS.length)];
+        currentTrayShapes.push(rand);
+      }
+      renderTray();
+    }
+
+    function renderTray() {
+      const tray = document.getElementById("shapesTray");
+      tray.innerHTML = "";
+
+      currentTrayShapes.forEach((shape, index) => {
+        if (!shape) {
+          const emptySlot = document.createElement("div");
+          emptySlot.className = "w-24 h-24 border-2 border-dashed border-slate-200 rounded-2xl flex items-center justify-center text-slate-300";
+          emptySlot.innerHTML = `<i class="ph ph-check text-2xl opacity-40"></i>`;
+          tray.appendChild(emptySlot);
+          return;
+        }
+
+        const shapeBox = document.createElement("div");
+        const isSelected = selectedShapeIndex === index;
+        shapeBox.className = `p-3 rounded-2xl cursor-grab transition-all flex flex-col items-center justify-center draggable-shape ${isSelected ? 'bg-indigo-100 ring-2 ring-indigo-500 scale-105' : 'bg-white hover:bg-slate-100 border border-slate-200 shadow-sm'}`;
+        
+        shapeBox.onmousedown = (e) => startDragShape(e, index);
+        shapeBox.ontouchstart = (e) => startDragShape(e, index);
+        shapeBox.onclick = () => selectTrayShape(index);
+
+        const rows = shape.matrix.length;
+        const cols = shape.matrix[0].length;
+        const miniGrid = document.createElement("div");
+        miniGrid.className = `grid gap-1`;
+        miniGrid.style.gridTemplateColumns = `repeat(${cols}, minmax(0, 1fr))`;
+
+        for (let r = 0; r < rows; r++) {
+          for (let c = 0; c < cols; c++) {
+            const block = document.createElement("div");
+            block.className = `w-5 h-5 rounded-md ${shape.matrix[r][c] ? shape.color : 'opacity-0'}`;
+            miniGrid.appendChild(block);
+          }
+        }
+
+        shapeBox.appendChild(miniGrid);
+        tray.appendChild(shapeBox);
+      });
+    }
+
+    function selectTrayShape(index) {
+      if (isDragging) return;
+      selectedShapeIndex = (selectedShapeIndex === index) ? null : index;
+      renderTray();
+    }
+
+    function startDragShape(e, index) {
+      if (!currentTrayShapes[index]) return;
+      isDragging = true;
+      draggedShapeIndex = index;
+      selectedShapeIndex = index;
+
+      const clientX = e.touches ? e.touches[0].clientX : e.clientX;
+      const clientY = e.touches ? e.touches[0].clientY : e.clientY;
+
+      createDragGhost(currentTrayShapes[index], clientX, clientY);
+      renderTray();
+    }
+
+    function createDragGhost(shape, x, y) {
+      const ghost = document.getElementById("dragGhost");
+      ghost.innerHTML = "";
+      
+      const rows = shape.matrix.length;
+      const cols = shape.matrix[0].length;
+      const miniGrid = document.createElement("div");
+      miniGrid.className = `grid gap-1.5 p-2 bg-slate-900/70 backdrop-blur-md rounded-2xl border border-white/20`;
+      miniGrid.style.gridTemplateColumns = `repeat(${cols}, minmax(0, 1fr))`;
+
+      for (let r = 0; r < rows; r++) {
+        for (let c = 0; c < cols; c++) {
+          const block = document.createElement("div");
+          block.className = `w-8 h-8 rounded-lg shadow-lg ${shape.matrix[r][c] ? shape.color : 'opacity-0'}`;
+          miniGrid.appendChild(block);
+        }
+      }
+
+      ghost.appendChild(miniGrid);
+      ghost.style.left = `${x}px`;
+      ghost.style.top = `${y}px`;
+      ghost.classList.remove("hidden");
+    }
+
+    function setupGlobalDragListeners() {
+      window.addEventListener("mousemove", handleGlobalDragMove);
+      window.addEventListener("touchmove", handleGlobalDragMove, { passive: false });
+      window.addEventListener("mouseup", handleGlobalDragEnd);
+      window.addEventListener("touchend", handleGlobalDragEnd);
+    }
+
+    function handleGlobalDragMove(e) {
+      if (!isDragging || draggedShapeIndex === null) return;
+      if (e.touches) e.preventDefault();
+
+      const clientX = e.touches ? e.touches[0].clientX : e.clientX;
+      const clientY = e.touches ? e.touches[0].clientY : e.clientY;
+
+      const ghost = document.getElementById("dragGhost");
+      ghost.style.left = `${clientX}px`;
+      ghost.style.top = `${clientY}px`;
+
+      const hoveredCell = getCellUnderCoordinates(clientX, clientY);
+      if (hoveredCell) {
+        const r = parseInt(hoveredCell.dataset.row);
+        const c = parseInt(hoveredCell.dataset.col);
+
+        if (r !== currentHoverR || c !== currentHoverC) {
+          currentHoverR = r;
+          currentHoverC = c;
+          const shape = currentTrayShapes[draggedShapeIndex];
+          if (shape && canPlaceShape(shape.matrix, r, c)) {
+            const highlightCells = [];
+            for (let i = 0; i < shape.matrix.length; i++) {
+              for (let j = 0; j < shape.matrix[0].length; j++) {
+                if (shape.matrix[i][j]) highlightCells.push({ r: r + i, c: c + j });
+              }
+            }
+            renderBoard(highlightCells);
+            return;
+          }
+        }
+      } else {
+        if (currentHoverR !== -1 || currentHoverC !== -1) {
+          currentHoverR = -1;
+          currentHoverC = -1;
+          renderBoard([]);
+        }
+      }
+    }
+
+    function handleGlobalDragEnd(e) {
+      if (!isDragging || draggedShapeIndex === null) return;
+
+      const ghost = document.getElementById("dragGhost");
+      ghost.classList.add("hidden");
+
+      if (currentHoverR !== -1 && currentHoverC !== -1) {
+        const shape = currentTrayShapes[draggedShapeIndex];
+        if (shape && canPlaceShape(shape.matrix, currentHoverR, currentHoverC)) {
+          placeShapeOnBoard(shape, currentHoverR, currentHoverC, draggedShapeIndex);
+        }
+      }
+
+      isDragging = false;
+      draggedShapeIndex = null;
+      currentHoverR = -1;
+      currentHoverC = -1;
+      renderBoard([]);
+      renderTray();
+    }
+
+    function getCellUnderCoordinates(x, y) {
+      const elements = document.elementsFromPoint(x, y);
+      for (let el of elements) {
+        if (el.classList && el.classList.contains("grid-cell")) {
+          return el;
+        }
+      }
+      return null;
+    }
+
+    function placeShapeOnBoard(shape, r, c, shapeIndex) {
+      const rows = shape.matrix.length;
+      const cols = shape.matrix[0].length;
+      let placedBlocksCount = 0;
+
+      for (let i = 0; i < rows; i++) {
+        for (let j = 0; j < cols; j++) {
+          if (shape.matrix[i][j]) {
+            board[r + i][c + j] = shape.color;
+            placedBlocksCount++;
+          }
+        }
+      }
+
+      gameScore += (placedBlocksCount * 10);
+      currentTrayShapes[shapeIndex] = null;
+      selectedShapeIndex = null;
+
+      checkAndClearLines();
+
+      if (currentTrayShapes.every(s => s === null)) {
+        generateTrayShapes();
+      } else {
+        renderTray();
+      }
+
+      renderBoard([]);
+      updateScoreUI();
+    }
+
+    function canPlaceShape(matrix, startR, startC) {
+      const rows = matrix.length;
+      const cols = matrix[0].length;
+      if (startR + rows > GRID_SIZE || startC + cols > GRID_SIZE) return false;
+
+      for (let r = 0; r < rows; r++) {
+        for (let c = 0; c < cols; c++) {
+          if (matrix[r][c] && board[startR + r][startC + c] !== null) {
+            return false;
+          }
+        }
+      }
+      return true;
+    }
+
+    function handleBoardCellClick(r, c) {
+      if (selectedShapeIndex === null) return;
+      const shape = currentTrayShapes[selectedShapeIndex];
+      if (!shape) return;
+
+      if (canPlaceShape(shape.matrix, r, c)) {
+        placeShapeOnBoard(shape, r, c, selectedShapeIndex);
+      }
+    }
+
+    function checkAndClearLines() {
+      const fullRows = [];
+      const fullCols = [];
+
+      for (let r = 0; r < GRID_SIZE; r++) {
+        if (board[r].every(cell => cell !== null)) fullRows.push(r);
+      }
+
+      for (let c = 0; c < GRID_SIZE; c++) {
+        let isColFull = true;
+        for (let r = 0; r < GRID_SIZE; r++) {
+          if (board[r][c] === null) {
+            isColFull = false;
+            break;
+          }
+        }
+        if (isColFull) fullCols.push(c);
+      }
+
+      const totalLines = fullRows.length + fullCols.length;
+      if (totalLines > 0) {
+        fullRows.forEach(r => {
+          for (let c = 0; c < GRID_SIZE; c++) board[r][c] = null;
+        });
+        fullCols.forEach(c => {
+          for (let r = 0; r < GRID_SIZE; r++) board[r][c] = null;
+        });
+
+        const comboBonus = totalLines * 150 * totalLines;
+        gameScore += comboBonus;
+      }
+    }
+
+    function updateScoreUI() {
+      document.getElementById("gameCurrentScore").textContent = gameScore;
+      if (gameScore > gameHighScore) {
+        gameHighScore = gameScore;
+        localStorage.setItem("unipass_block_highscore", gameHighScore.toString());
+        document.getElementById("gameHighScore").textContent = gameHighScore;
+      }
+
+      // THƯỞNG XU KHI ĐẠT MỐC 2000 ĐIỂM
+      if (gameScore >= 2000 && !hasAwardedCoinThisGame) {
+        hasAwardedCoinThisGame = true;
+        if (db.currentUser) {
+          db.currentUser.coins += 50;
+          if (db.currentUser.id === 'user_a') {
+            localStorage.setItem("unipass_coins_a", db.currentUser.coins.toString());
+          } else {
+            localStorage.setItem("unipass_coins_b", db.currentUser.coins.toString());
+          }
+          db.save();
+          updateUserUI();
+
+          if (typeof confetti === 'function') {
+            confetti({ particleCount: 130, spread: 85, origin: { y: 0.6 } });
+          }
+          alert(`🎉 Chúc mừng! Bạn đã đạt ${gameScore} điểm Block Blast và nhận ngay +50 UniCoins vào ví để giảm tiền cọc!`);
+        }
+      }
+    }
+
+    window.onload = function() {
+      checkAuthOnLoad();
+      generateNewOTP();
+    };
+  </script>
+</body>
+</html>
