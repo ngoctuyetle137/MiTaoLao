@@ -168,6 +168,12 @@
 
             <!-- Nhóm Tài Khoản & Chuyển Đổi Nhanh -->
             <div class="user-actions">
+                <!-- Huy hiệu Trực Tuyến Đa Máy Realtime -->
+                <div id="onlineSyncIndicator" class="online-share-btn" style="background:#f0fdf4; border-color:#86efac; cursor:default;" title="Đồng bộ đa máy đang hoạt động">
+                    <span style="display:inline-block; width:8px; height:8px; background:#10b981; border-radius:50%; margin-right:4px;"></span>
+                    <span style="font-size:11.5px; font-weight:700; color:#15803d;">Online Đa Máy</span>
+                </div>
+
                 <!-- Nút Cấu Hình Supabase Cloud Database -->
                 <button class="online-share-btn" id="supabaseStatusNavBtn" onclick="openSupabaseModal()" title="Cài đặt & kiểm tra CSDL Supabase PostgreSQL">
                     <span>⚡</span> <span id="supabaseStatusNavText">Supabase DB</span>
@@ -824,34 +830,35 @@
                 </div>
             </div>
 
-            <!-- Cách 1: Mạng Wi-Fi / LAN -->
-            <div style="background:#f0f9ff; border:1px solid #bae6fd; border-radius:10px; padding:14px; margin-bottom:14px;">
-                <div style="font-size:13px; font-weight:800; color:#0369a1; margin-bottom:4px;">
-                    📶 CÁCH 1: TRUY CẬP TRỰC TIẾP CÙNG WI-FI PHÒNG HỌC (LAN)
+            <!-- Cách 1: Truy Cập Trực Tuyến Toàn Cầu (GitHub Pages) -->
+            <div style="background:#f0fdf4; border:1px solid #86efac; border-radius:10px; padding:14px; margin-bottom:14px;">
+                <div style="font-size:13.5px; font-weight:800; color:#15803d; margin-bottom:4px; display:flex; align-items:center; gap:6px;">
+                    <span style="display:inline-block; width:9px; height:9px; background:#10b981; border-radius:50%; box-shadow:0 0 8px #10b981;"></span>
+                    🚀 LINK CHẠY ONLINE TOÀN CẦU (4G / WIFI MỌI NƠI)
                 </div>
-                <div style="font-size:12px; color:#475569; margin-bottom:8px;">
-                    Thầy cô và các bạn sinh viên kết nối cùng Wi-Fi mở link sau trên điện thoại:
+                <div style="font-size:12px; color:#334155; margin-bottom:8px; line-height:1.5;">
+                    Trang web đang chạy trực tiếp trên Internet. Mọi thiết bị (Máy A, B, C, D... trên điện thoại/laptop) chỉ cần mở link hoặc quét mã QR là thấy nhau tức thì:
                 </div>
-                <div style="display:flex; gap:8px; align-items:center;">
-                    <input type="text" id="lanUrlInput" value="http://192.168.1.25:8080" readonly style="flex:1; background:#ffffff; border:1px solid #7dd3fc; border-radius:6px; padding:8px 12px; font-size:13px; font-weight:700; color:#0284c7; font-family:monospace;">
-                    <button class="apply-filter-btn" style="background:#0284c7; width:auto; padding:8px 14px; margin-top:0;" onclick="copyLanUrl()">
-                        📋 Sao Chép
+                <div style="display:flex; gap:8px; align-items:center; margin-bottom:12px;">
+                    <input type="text" id="liveOnlineUrlInput" value="https://ngoctuyetle137.github.io/MiTaoLao/" readonly style="flex:1; background:#ffffff; border:1px solid #86efac; border-radius:6px; padding:8px 12px; font-size:13px; font-weight:700; color:#15803d; font-family:monospace;">
+                    <button class="apply-filter-btn" style="background:#16a34a; width:auto; padding:8px 14px; margin-top:0;" onclick="navigator.clipboard.writeText('https://ngoctuyetle137.github.io/MiTaoLao/'); showToast('✓ Đã sao chép link Online: https://ngoctuyetle137.github.io/MiTaoLao/', 'success');">
+                        📋 Sao Chép Link
                     </button>
                 </div>
-                <div style="margin-top:12px; text-align:center;">
-                    <div style="font-size:11.5px; color:#64748b; margin-bottom:6px;">Hoặc quét mã QR bằng Camera điện thoại để vào ngay:</div>
-                    <img src="https://api.qrserver.com/v1/create-qr-code/?size=140x140&data=http%3A%2F%2F192.168.1.25%3A8080" alt="QR Code LAN" style="border:1px solid #cbd5e1; border-radius:8px; padding:4px; background:#fff;" width="140" height="140">
+                <div style="text-align:center;">
+                    <div style="font-size:11.5px; color:#475569; margin-bottom:6px;">Quét mã QR bằng Camera điện thoại để vào trực tiếp:</div>
+                    <img src="https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=https%3A%2F%2Fngoctuyetle137.github.io%2FMiTaoLao%2F" alt="QR Code Online" style="border:1px solid #86efac; border-radius:8px; padding:6px; background:#fff;" width="150" height="150">
                 </div>
             </div>
 
-            <!-- Cách 2: Triển khai Online Internet toàn cầu -->
+            <!-- Cách 2: Mạng Nội Bộ (Wi-Fi LAN / Localhost) -->
             <div style="background:#f8fafc; border:1px solid #e2e8f0; border-radius:10px; padding:14px;">
                 <div style="font-size:13px; font-weight:800; color:#0f172a; margin-bottom:4px;">
-                    🚀 CÁCH 2: CHẠY ONLINE TOÀN CẦU (4G / INTERNET MỌI NƠI)
+                    📶 CÁCH 2: MẠNG NỘI BỘ PHÒNG HỌC (LAN / LOCALHOST)
                 </div>
                 <div style="font-size:12px; color:#64748b; line-height:1.5;">
-                    • <strong>Netlify Drop (15 giây có link):</strong> Mở <a href="https://app.netlify.com/drop" target="_blank" style="color:#0284c7; font-weight:700;">app.netlify.com/drop</a>, kéo thả thư mục dự án vào là có link online ngay.<br>
-                    • <strong>GitHub Pages:</strong> Đưa lên GitHub Pages tại <code>https://ngoctuyetle137.github.io/unipass-utc2</code>.
+                    • <strong>Máy cá nhân (Localhost):</strong> <code>http://localhost:8080/</code><br>
+                    • <strong>Wi-Fi cùng phòng (LAN IP):</strong> <code>http://192.168.1.25:8080</code> (hoặc IP máy tính của bạn khi phát Wi-Fi).
                 </div>
             </div>
         </div>
@@ -929,6 +936,7 @@
     <!-- SCRIPTS -->
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <script src="supabase-client.js"></script>
+    <script src="online-sync.js"></script>
     <script src="dsa.js"></script>
     <script src="audio.js"></script>
     <script src="game.js"></script>

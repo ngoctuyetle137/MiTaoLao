@@ -247,6 +247,7 @@ class AppController {
         this.updateDepositBadge();
         this.updateChatUnreadBadge();
         this.initSupabaseSync();
+        this.initOnlineSync();
     }
 
     async initSupabaseSync() {
@@ -397,6 +398,85 @@ class AppController {
         }
     }
 
+    initOnlineSync() {
+        if (!window.UniPassOnlineSync) return;
+
+        // 1. Nhận bài đăng mới từ Máy B, C, D... tức thì
+        window.UniPassOnlineSync.on('NEW_POST', (post) => {
+            if (!post || !post.id) return;
+            const exists = this.products.some(p => p.id === post.id);
+            if (!exists) {
+                this.products.unshift(post);
+                localStorage.setItem('unipass_products', JSON.stringify(this.products));
+                this.rebuildDSACache();
+                this.renderProducts();
+                this.renderAdminDashboard();
+
+                if (window.sound) window.sound.playNotification();
+                showToast(`📦 [MÁY KHÁC VỪA ĐĂNG] ${post.seller} pass: "${post.title}"!`, 'info');
+            }
+        });
+
+        // 2. Nhận lệnh xóa bài đăng trên mạng đa máy
+        window.UniPassOnlineSync.on('DELETE_POST', (postId) => {
+            if (!postId) return;
+            const prevLen = this.products.length;
+            this.products = this.products.filter(p => p.id !== postId);
+            if (this.products.length !== prevLen) {
+                localStorage.setItem('unipass_products', JSON.stringify(this.products));
+                this.rebuildDSACache();
+                this.renderProducts();
+                this.renderAdminDashboard();
+                showToast(`🗑️ Bài đăng vi phạm vừa bị Admin gỡ trên toàn hệ thống.`, 'info');
+            }
+        });
+
+        // 3. Nhận tin nhắn chat trực tiếp từ máy khác
+        window.UniPassOnlineSync.on('CHAT_MESSAGE', (msg) => {
+            if (!msg || !msg.id) return;
+            const exists = this.chatMessages.some(m => m.id === msg.id);
+            if (!exists) {
+                this.chatMessages.push(msg);
+                localStorage.setItem('unipass_shared_messages', JSON.stringify(this.chatMessages));
+                this.renderChatMessages();
+                this.updateChatUnreadBadge();
+
+                if (msg.receiver === this.user.name) {
+                    this.currentChatPartner = msg.sender;
+                    this.renderChatMessages();
+                    if (window.sound) window.sound.playNotification();
+                    showToast(`💬 [TIN NHẮN MỚI] ${msg.sender}: "${msg.text}"`, 'success');
+                }
+            }
+        });
+
+        // 4. Nhận đơn đặt cọc giữ chỗ từ máy khác
+        window.UniPassOnlineSync.on('DEPOSIT_ORDER', (order) => {
+            if (!order || !order.id) return;
+            const exists = this.depositOrders.some(o => o.id === order.id);
+            if (!exists) {
+                this.depositOrders.unshift(order);
+                localStorage.setItem('unipass_deposit_orders', JSON.stringify(this.depositOrders));
+                this.updateDepositBadge();
+                if (order.seller === this.user.name) {
+                    if (window.sound) window.sound.playSuccess();
+                    showToast(`🤝 [ĐẶT CỌC MỚI] ${order.buyer} vừa đặt cọc món "${order.productTitle}"!`, 'success');
+                }
+            }
+        });
+
+        // 5. Nhận cảnh cáo xử phạt từ Admin
+        window.UniPassOnlineSync.on('ADMIN_WARNING', (warning) => {
+            if (!warning) return;
+            if (warning.targetName === this.user.name || warning.targetEmail === this.user.email) {
+                if (window.sound) window.sound.playWarning();
+                showToast(`⚠️ CẢNH CÁO TỪ ADMIN: ${warning.reason} (-${warning.penaltyPoints || 2} điểm)`, 'danger');
+                this.user.reputation = Math.max(0, (this.user.reputation || 95) - (warning.penaltyPoints || 2));
+                this.updateUserUI();
+            }
+        });
+    }
+
     saveUsers() {
         localStorage.setItem('unipass_registered_users', JSON.stringify(this.registeredUsers));
         if (this.syncChannel) {
@@ -510,6 +590,9 @@ updateDepositBadge() {
     }
 
     getChatPartnerName() {
+        if (this.currentChatPartner && this.currentChatPartner !== this.user.name) {
+            return this.currentChatPartner;
+        }
         // Tìm bạn chat mặc định: ưu tiên người khác mình trong danh sách
         const otherUser = this.registeredUsers.find(u => u.name !== this.user.name && u.role !== 'admin');
         if (otherUser) return otherUser.name;
@@ -1103,7 +1186,10 @@ function logoutToAuthScreen() {
 // ==========================================
 // 5. CHAT GIỮA CÁC TÀI KHOẢN (THỦ CÔNG, KHÔNG CÓ BOT)
 // ==========================================
-function openChatBetweenUsers() {
+function openChatBetweenUsers(targetPartnerName) {
+    if (targetPartnerName && targetPartnerName !== window.app.user.name) {
+        window.app.currentChatPartner = targetPartnerName;
+    }
     const partner = window.app.getChatPartnerName();
     const chatHeader = document.getElementById('chatHeaderName');
     if (chatHeader) chatHeader.innerText = `Trò chuyện: ${partner}`;
@@ -1143,6 +1229,11 @@ function sendManualMessage() {
     window.app.saveChats();
     window.app.renderChatMessages();
 
+    // Đồng bộ tức thì lên mạng đa máy (Máy A ➔ Máy B, C, D...)
+    if (window.UniPassOnlineSync) {
+        window.UniPassOnlineSync.broadcastChatMessage(newMsg);
+    }
+
     // Đồng bộ tức thì lên Supabase Cloud nếu đã cấu hình
     if (window.UniPassSupabase && window.UniPassSupabase.isConfigured()) {
         window.UniPassSupabase.sendChatMessage({
@@ -1161,7 +1252,7 @@ function sendManualMessage() {
 
 function openChatFromModal() {
     if (!currentCheckoutProduct) return;
-    openChatBetweenUsers();
+    openChatBetweenUsers(currentCheckoutProduct.seller);
 }
 
 // ==========================================
@@ -1178,6 +1269,11 @@ function adminDeletePost(postId) {
     window.app.saveProducts();
     window.app.renderProducts();
     window.app.renderAdminDashboard();
+
+    // Đồng bộ xóa bài lên mạng đa máy
+    if (window.UniPassOnlineSync) {
+        window.UniPassOnlineSync.broadcastDeletePost(postId);
+    }
 
     // Đồng bộ xóa lên Supabase Cloud
     if (window.UniPassSupabase && window.UniPassSupabase.isConfigured()) {
@@ -1223,6 +1319,16 @@ function adminWarnUser(userName) {
         window.UniPassSupabase.addWarning({
             targetName: userName,
             targetEmail: targetEmail,
+            reason: warningMsg,
+            penaltyPoints: 2
+        });
+    }
+
+    // Đồng bộ cảnh cáo lên mạng đa máy (Máy B, C, D...)
+    if (window.UniPassOnlineSync) {
+        window.UniPassOnlineSync.broadcastWarning({
+            targetName: userName,
+            targetEmail: (userToWarn && userToWarn.email) || 'student@st.utc2.edu.vn',
             reason: warningMsg,
             penaltyPoints: 2
         });
@@ -1427,6 +1533,11 @@ function confirmDepositOrder() {
     // Đồng bộ đơn cọc lên Supabase Cloud
     if (window.UniPassSupabase && window.UniPassSupabase.isConfigured()) {
         window.UniPassSupabase.createOrder(newOrderData);
+    }
+
+    // Đồng bộ đơn cọc lên mạng đa máy (Máy B, C, D...)
+    if (window.UniPassOnlineSync) {
+        window.UniPassOnlineSync.broadcastDepositOrder(newOrderData);
     }
 
     closeCheckoutModal();
@@ -1644,8 +1755,8 @@ function handlePostImageFileSelect(event) {
         const img = new Image();
         img.onload = function() {
             const canvas = document.createElement('canvas');
-            const MAX_WIDTH = 800;
-            const MAX_HEIGHT = 800;
+            const MAX_WIDTH = 480;
+            const MAX_HEIGHT = 480;
             let width = img.width;
             let height = img.height;
 
@@ -1666,7 +1777,7 @@ function handlePostImageFileSelect(event) {
             const ctx = canvas.getContext('2d');
             ctx.drawImage(img, 0, 0, width, height);
 
-            const compressedDataUrl = canvas.toDataURL('image/jpeg', 0.82);
+            const compressedDataUrl = canvas.toDataURL('image/jpeg', 0.68);
             pendingUploadedImageDataUrl = compressedDataUrl;
 
             const previewWrap = document.getElementById('fileImagePreviewWrap');
@@ -1750,6 +1861,11 @@ function confirmPublishPost() {
         window.UniPassSupabase.addProduct(pendingNewPost);
     }
 
+    // Đồng bộ bài đăng mới lên mạng đa máy (Máy B, C, D...)
+    if (window.UniPassOnlineSync) {
+        window.UniPassOnlineSync.broadcastNewPost(pendingNewPost);
+    }
+
     closeModal('timemarkCodeModal');
     removeSelectedPostImage();
 
@@ -1768,6 +1884,11 @@ function removePost(id) {
         // Đồng bộ xóa lên Supabase Cloud
         if (window.UniPassSupabase && window.UniPassSupabase.isConfigured()) {
             window.UniPassSupabase.deleteProduct(id);
+        }
+
+        // Đồng bộ xóa bài lên mạng đa máy (Máy B, C, D...)
+        if (window.UniPassOnlineSync) {
+            window.UniPassOnlineSync.broadcastDeletePost(id);
         }
 
         showToast('Đã xóa bài đăng!', 'success');
