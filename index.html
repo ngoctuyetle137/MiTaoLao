@@ -1,0 +1,948 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title> UTC2 - Hệ Thống Pass Đồ Sinh Viên</title>
+    <link rel="stylesheet" href="styles.css">
+    <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🎓</text></svg>">
+</head>
+<body>
+
+    <!-- ===================================================================
+         TRANG ĐẦU TIÊN: ĐĂNG KÝ / ĐĂNG NHẬP GMAIL TRƯỜNG UTC2 & XÁC THỰC OTP
+         Theo đúng yêu cầu tài liệu:
+         "Ở trang đầu sẽ là trang đăng nhập/đăng ký tài khoản bằng gmail trường,
+          có nhập mật khẩu và xác nhận mã otp qua gmail vừa đăng ký tránh trường
+          hợp sử dụng bừa gmail của người khác."
+         =================================================================== -->
+    <div class="auth-page-container" id="authPageContainer">
+        <div class="auth-page-card">
+            <div class="auth-brand-center">
+                <div class="auth-logo-badge">🎓</div>
+                <h2>UniPass UTC2</h2>
+                <p>Cổng đăng nhập/đăng kí</p>
+            </div>
+
+            <!-- Tabs Chuyển Đổi: Đăng Ký Mới / Đăng Nhập -->
+            <div class="auth-tabs-toggle">
+                <button class="auth-tab-btn active" id="tabRegisterBtn" onclick="switchAuthMode('register')">
+                    Đăng Ký Tài Khoản
+                </button>
+                <button class="auth-tab-btn" id="tabLoginBtn" onclick="switchAuthMode('login')">
+                    Đăng Nhập
+                </button>
+            </div>
+
+            <!-- FORM ĐĂNG KÝ / ĐĂNG NHẬP -->
+           <!-- FORM ĐĂNG KÝ / ĐĂNG NHẬP -->
+            <form onsubmit="handleAuthSubmitForm(event)">
+                <!-- 1. Họ và Tên -->
+                <div class="auth-form-group" id="authNameField">
+                    <label class="auth-label">Họ và tên sinh viên *</label>
+                    <div class="auth-input-wrap">
+                        <span class="auth-input-icon">👤</span>
+                        <input type="text" id="authFullNameInput" class="auth-input" 
+                               placeholder="Ví dụ: Lê Thị Ngọc Tuyết, Nguyễn Văn An..." value="Lê Thị Ngọc Tuyết">
+                    </div>
+                </div>
+
+                <!-- 2. Gmail Trường UTC2 -->
+                <div class="auth-form-group">
+                    <label class="auth-label">Gmail trường UTC2 (@st.utc2.edu.vn) *</label>
+                    <div class="auth-input-wrap">
+                        <span class="auth-input-icon">✉️️</span>
+                        <input type="email" id="authEmailInput" class="auth-input" 
+                               placeholder="vidu: tuyetltn.st@st.utc2.edu.vn" value="tuyetltn.st@st.utc2.edu.vn" required>
+                    </div>
+                    <div style="font-size:11px; color:#0284c7; margin-top:4px;">
+                        * Bắt buộc đuôi @st.utc2.edu.vn hoặc @utc2.edu.vn để chống tài khoản rác/spam.
+                    </div>
+                </div>
+
+                <!-- 3. Mật Khẩu -->
+                <div class="auth-form-group">
+                    <label class="auth-label">Mật khẩu *</label>
+                    <div class="auth-input-wrap">
+                        <span class="auth-input-icon">🔒</span>
+                        <input type="password" id="authPasswordInput" class="auth-input" 
+                               placeholder="Nhập mật khẩu của bạn..." value="123456" required>
+                    </div>
+                </div>
+
+                <!-- 4. Gửi & Nhập Mã OTP Xác Nhận Qua Gmail -->
+                <div class="auth-form-group" id="authOtpSection">
+                    <label class="auth-label">Mã OTP xác nhận qua Gmail *</label>
+                    <div class="auth-otp-row">
+                        <div class="auth-input-wrap" style="flex:1;">
+                            <span class="auth-input-icon">🔑</span>
+                            <input type="text" id="authOtpInput" class="auth-input" 
+                                   placeholder="Nhập mã 6 số OTP..." maxlength="6" autocomplete="off" style="letter-spacing:2px; font-weight:700;">
+                        </div>
+                        <button type="button" class="btn-get-otp" id="sendOtpBtn" onclick="requestOtpCode(event)">
+                            📩 Gửi Mã OTP
+                        </button>
+                    </div>
+                </div>
+
+                <!-- HỘP MÔ PHỎNG HỘP THƯ GMAIL UTC2 NHẬN OTP -->
+                <div class="mock-email-box" id="mockEmailNotification">
+                    <div class="mock-email-title">
+                        <span>📬</span> [Hộp Thư Đến UTC2 Mail] Mã xác thực của bạn:
+                    </div>
+                    <div>Mã OTP xác nhận tài khoản: <span class="mock-otp-code-highlight" id="displayGeneratedOtp">894215</span></div>
+                    <div style="font-size:11px; color:#166534; margin-top:4px;">
+                        Đã gửi đến: <strong id="mockTargetEmail">tuyetltn.st@st.utc2.edu.vn</strong> (Hiệu lực 5 phút).
+                    </div>
+                </div>
+
+                <!-- Nút Xác Nhận Đăng Ký / Đăng Nhập -->
+                <button type="submit" class="auth-submit-btn" id="authSubmitButton">
+                    ✓ Hoàn Tất Đăng Ký & Nhận 500 Xu
+                </button>
+            </form>
+
+            <!-- Lối vào nhanh bằng tài khoản mẫu -->
+            <div class="auth-quick-skip">
+                <span>Hoặc vào nhanh: </span>
+                <span class="auth-quick-link" onclick="quickLoginDemoUser('userA')">TK A (Tuyết)</span>
+                <span> | </span>
+                <span class="auth-quick-link" onclick="quickLoginDemoUser('userB')">TK B (Lâm)</span>
+                <span> | </span>
+                <span class="auth-quick-link" onclick="quickLoginDemoUser('admin')">🛡 TK Admin (6651071091)</span>
+            </div>
+
+            <!-- Phúc lợi khởi tạo tài khoản -->
+            <div class="auth-benefit-pills">
+                <div class="benefit-pill-item">
+                    <span>🪙</span> <strong>+500 Xu</strong> chào mừng tân thủ
+                </div>
+                <div class="benefit-pill-item">
+                    <span>🛡️</span> Mặc định <strong>95 điểm uy tín</strong>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- ===================================================================
+         GIAO DIỆN CHÍNH (XUẤT HIỆN SAU KHI ĐĂNG NHẬP / ĐĂNG KÝ THÀNH CÔNG)
+         =================================================================== -->
+    <div id="mainAppInterface" style="display:none;">
+        <!-- ==========================================
+             TOP NAVBAR
+             ========================================== -->
+        <header class="navbar">
+            <!-- Logo UniPass UTC2 -->
+            <a class="brand" onclick="switchNavTab('home')">
+                <div class="brand-icon">🎓</div>
+                <div class="brand-text">
+                    <h1>UTC2HAND</h1>
+                    <span>tiện lợi UTC2</span>
+                </div>
+            </a>
+
+            <!-- Menu Điều Hướng Chính -->
+            <nav class="header-nav">
+                <button class="nav-item-btn active" data-tab="home" onclick="switchNavTab('home')">
+                    <span></span> Săn Đồ
+                </button>
+                <button class="nav-item-btn" data-tab="post" onclick="openModal('createPostModal')">
+                    <span></span> Đăng Bài & TimeMark
+                </button>
+                <button class="nav-item-btn" data-tab="chat" onclick="openChatBetweenUsers()">
+                    <span></span> Tin Nhắn <span class="badge-count" id="unreadChatBadge" style="display:none;">1</span>
+                </button>
+                <button class="nav-item-btn" data-tab="orders" onclick="openDepositOrders()">
+                    <span></span> Đơn Cọc <span class="badge-count" id="depositOrderCount">0</span>
+                </button>
+                <button class="nav-item-btn" data-tab="game" onclick="switchNavTab('game')">
+                    <span></span> Kéo Thả Săn Xu
+                </button>
+                <button class="nav-item-btn admin-tab" data-tab="admin" onclick="switchNavTab('admin')">
+                    <span></span> Quản Trị Admin
+                </button>
+                <button class="nav-item-btn" data-tab="profile" onclick="switchNavTab('profile')">
+                    <span></span> Cá Nhân
+                </button>
+            </nav>
+
+            <!-- Nhóm Tài Khoản & Chuyển Đổi Nhanh -->
+            <div class="user-actions">
+                <!-- Nút Cấu Hình Supabase Cloud Database -->
+                <button class="online-share-btn" id="supabaseStatusNavBtn" onclick="openSupabaseModal()" title="Cài đặt & kiểm tra CSDL Supabase PostgreSQL">
+                    <span>⚡</span> <span id="supabaseStatusNavText">Supabase DB</span>
+                </button>
+
+                <!-- Nút Mở Hướng Dẫn Trình Bày Online & Mạng LAN -->
+                <button class="online-share-btn" onclick="openOnlinePresentationModal()" title="Kết nối trình bày Online & Mạng Wi-Fi">
+                    <span>🌐</span> Trình Bày Online
+                </button>
+
+                <!-- Nút Đổi Tài Khoản Sinh Viên A ⇄ B (Lâm) -->
+                <button class="switch-user-btn" id="quickSwitchUserBtn" onclick="toggleQuickAccount()">
+                    Đổi sang TK giả định (An)
+                </button>
+
+                <!-- Huy hiệu Sinh viên & Số Xu -->
+                <div class="user-profile-badge" onclick="switchNavTab('profile')">
+                    <div class="user-avatar-circle" id="userAvatarText">T</div>
+                    <div style="font-size:12px; line-height:1.2;">
+                        <div id="navUserName" style="font-weight:700;">Lê Thị Ngọc Tuyết</div>
+                        <div style="color:var(--gold); font-size:11px;">🪙 <span id="navUserCoins">170</span> Xu</div>
+                    </div>
+                </div>
+
+                <!-- Bật / Tắt âm thanh -->
+                <button class="sound-btn" id="soundToggleBtn" title="Bật/Tắt âm thanh" onclick="toggleSound()">
+                    <span id="soundIcon">🔊</span>
+                </button>
+
+                <!-- Nút Đăng Xuất quay lại Trang Đăng Nhập -->
+                <button class="logout-icon-btn" title="Đăng Xuất / Đổi Gmail" onclick="logoutToAuthScreen()">
+                    <span></span> Thoát
+                </button>
+            </div>
+        </header>
+
+        <!-- ==========================================
+             HERO SEARCH BANNER (THEO HÌNH ẢNH MẪU)
+             ========================================== -->
+        <div class="hero-search-wrapper" id="heroBannerSection">
+            <div class="hero-search-card">
+                <!-- Badges Thuật toán nhỏ gọn -->
+                <div class="hero-badges-row">
+                    <span class="hero-mini-badge">⚡Nhanh Tiện An toàn dành cho sinh viên</span>
+                    <span class="hero-mini-badge">⚖️ Rẻ,Uy tín,Chân thật</span>
+                </div>
+
+                <h2 class="hero-title">Tìm giáo trình, mã môn & đồ dùng UTC2</h2>
+                <p class="hero-subtitle">Hệ thống gợi ý từ khóa hoàn thành tức thì dựa trên tần suất tra cứu thực tế</p>
+
+                <!-- Ô Tìm Kiếm với nút Tìm kiếm bên trong -->
+                <div class="hero-input-box">
+                    <span class="hero-input-icon">🔍</span>
+                    <input type="text" id="mainSearchInput" class="hero-search-input" 
+                           placeholder="Thử gõ: VL101, casio, toán, c++, nồi cơm, máy sấy, lap trinh..." autocomplete="off">
+                    <button class="hero-submit-btn" onclick="executeSearch()">
+                        Tìm kiếm ➔
+                    </button>
+
+                    <!-- Trie Autocomplete Dropdown -->
+                    <div class="autocomplete-dropdown" id="searchAutocompleteDropdown"></div>
+                </div>
+            </div>
+        </div>
+
+        <!-- ==========================================
+             MÀN HÌNH 1: SĂN ĐỒ (HOME VIEW)
+             ========================================== -->
+        <main class="main-content-layout" id="mainHomeView">
+            <!-- CỘT BÊN TRÁI: BỘ LỌC CHỌN LỌC -->
+<aside id="filterSidebarAside" style="display:none;">                <div class="sidebar-filter-card">
+                  <div class="filter-header">
+                        <span>⚡ Bộ Lọc Chọn Lọc</span>
+                        <button class="reset-filter-btn" onclick="resetFilters()">Đặt lại</button>
+                    </div>
+
+                    <!-- 1. Khoảng giá mong muốn (AVL Tree) -->
+                    <div>
+                        <div class="filter-section-title">
+                            <span>Khoảng Giá Mong Muốn</span>
+                            <span class="mini-tag-info">AVL Tree</span>
+                        </div>
+                        <div class="price-range-inputs">
+                            <input type="text" id="filterPriceMin" value="Từ: 0 đ" readonly>
+                            <input type="text" id="filterPriceMax" value="Đến: 300k" readonly>
+                        </div>
+                        <input type="range" class="price-slider-bar" id="priceRangeSlider" min="20000" max="650000" step="10000" value="350000">
+                        <div style="font-size:11px; color:#94a3b8; margin-top:4px;">
+                            Lọc nhị phân tự cân bằng O(log N + K)
+                        </div>
+                    </div>
+
+                    <!-- 2. Khoảng cách quanh UTC2 -->
+                    <div>
+                        <div class="filter-section-title">
+                            <span>Khoảng cách quanh UTC2</span>
+                            <span id="distanceDisplayVal" style="color:var(--primary); font-weight:700;">5 km</span>
+                        </div>
+                        <div class="distance-slider-box">
+                            <input type="range" class="price-slider-bar" id="distanceRangeSlider" min="1" max="10" step="1" value="5">
+                            <div class="distance-labels-row">
+                                <span>Cổng trường (0.5km)</span>
+                                <span>KTX Khu B (1.5km)</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- 3. Danh mục mặt hàng -->
+                    <div>
+                        <div class="filter-section-title">
+                            <span>Danh mục mặt hàng</span>
+                        </div>
+                        <div class="category-filter-list">
+                            <label class="category-radio-item">
+                                <input type="radio" name="catFilter" value="ALL" checked onchange="filterCategory('ALL')">
+                                <span>Tất cả sản phẩm</span>
+                            </label>
+                            <label class="category-radio-item">
+                                <input type="radio" name="catFilter" value="GiaoTrinh" onchange="filterCategory('GiaoTrinh')">
+                                <span>📚 Giáo trình & Sách học</span>
+                            </label>
+                            <label class="category-radio-item">
+                                <input type="radio" name="catFilter" value="DoDienTu" onchange="filterCategory('DoDienTu')">
+                                <span>💻 Thiết bị điện tử, Casio</span>
+                            </label>
+                            <label class="category-radio-item">
+                                <input type="radio" name="catFilter" value="DoGiaDung" onchange="filterCategory('DoGiaDung')">
+                                <span>🍳 Đồ dùng sinh viên, KTX</span>
+                            </label>
+                        </div>
+                    </div>
+
+                    <!-- Thông tin DSA Engine (gọn nhẹ) -->
+                    <div style="background:#f8fafc; border:1px solid #e2e8f0; border-radius:10px; padding:12px; font-size:11.5px; color:#64748b;">
+                        <div style="font-weight:700; color:#334155; margin-bottom:4px;">Thông tin DSA Engine:</div>
+                        <div id="dsaEngineInfoText">AVL Tree lọc được 4 sp trong tầm giá [0 - 350.000 đ].</div>
+                    </div>
+
+                    <!-- Nút áp dụng bộ lọc -->
+                    <button class="apply-filter-btn" onclick="applyFilters()">
+                        ✓ Áp dụng bộ lọc
+                    </button>
+                </div>
+            </aside>
+
+            <!-- CỘT BÊN PHẢI: FEED SẢN PHẨM -->
+            <section>
+                <div class="feed-top-bar">
+    <div style="display:flex; align-items:center; gap:12px;">
+        <button type="button" id="btnToggleFilterMode" class="btn-outline-chat" style="padding:6px 14px; font-size:12.5px; font-weight:700;" onclick="toggleSidebarFilter()">
+            🎛️ Bộ Lọc: Đang Tắt (Hiện tất cả đồ)
+        </button>
+        <div class="feed-count-text" id="feedCountDisplay">
+            Hiển thị <strong>5 món đồ</strong> sẵn sàng pass
+        </div>
+    </div>
+
+    </div>
+    <!-- giữ nguyên phần sắp xếp bên phải -->
+                    <div style="display:flex; align-items:center; gap:8px;">
+                        <span style="font-size:12.5px; color:#64748b;">Sắp xếp:</span>
+                        <select class="feed-sort-select" id="sortSelect" onchange="handleSortChange(this.value)">
+                            <option value="newest">Mới đăng nhất</option>
+                            <option value="priceAsc">Giá thấp đến cao</option>
+                            <option value="priceDesc">Giá cao đến thấp</option>
+                            <option value="distance">Gần tôi nhất (KD-Tree)</option>
+                        </select>
+                    </div>
+                </div>
+
+                <!-- Lưới Sản Phẩm -->
+                <div class="product-cards-grid" id="productGridContainer">
+                    <!-- Cards rendered dynamically via JS -->
+                </div>
+            </section>
+        </main>
+
+        <!-- ==========================================
+             MÀN HÌNH 2: QUẢN TRỊ ADMIN (THEO FILE WORD)
+             Admin có quyền: Cảnh cáo tài khoản, Xóa bài rác/phá giá, Nhắc nhở, Duyệt kiểm chứng uy tín
+             Admin KHÔNG có quyền truy cập tin nhắn riêng tư sinh viên
+             ========================================== -->
+        <div class="admin-dashboard-container" id="adminDashboardSection">
+            <!-- Header Huy Hiệu Quản Trị Viên Cấp Cao -->
+            <div style="background: linear-gradient(135deg, #0284c7 0%, #0369a1 100%); color:#ffffff; border-radius:12px; padding:16px 22px; display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:12px; box-shadow:0 8px 24px rgba(2, 132, 199, 0.25);">
+                <div style="display:flex; align-items:center; gap:14px;">
+                    <div style="width:46px; height:46px; border-radius:50%; background:#ffffff; color:#0284c7; font-size:22px; font-weight:900; display:flex; align-items:center; justify-content:center; box-shadow:0 4px 10px rgba(0,0,0,0.1);">👑</div>
+                    <div>
+                        <div style="font-size:16.5px; font-weight:800; letter-spacing:0.3px;">PHÂN HỆ QUẢN TRỊ VIÊN HỆ THỐNG UNIPASS UTC2</div>
+                        <div style="font-size:13px; opacity:0.95; margin-top:2px;">
+                            Tài khoản quản trị được ủy quyền duy nhất: <strong style="background:rgba(255,255,255,0.25); padding:2px 8px; border-radius:6px; font-family:monospace; font-size:13.5px;">6651071091@st.utc2.edu.vn</strong>
+                        </div>
+                    </div>
+                </div>
+                <div style="display:flex; align-items:center; gap:10px;">
+                    <span style="background:rgba(255,255,255,0.2); padding:6px 14px; border-radius:20px; font-size:12px; font-weight:700;">🛡️ Toàn Quyền Điều Hành</span>
+                    <button onclick="switchNavTab('home')" style="background:#ffffff; color:#0284c7; border:none; padding:8px 16px; border-radius:8px; font-size:12.5px; font-weight:700; cursor:pointer;">🛍️ Về Săn Đồ</button>
+                </div>
+            </div>
+
+            <!-- Banner Cam Kết Bảo Mật Quyền Riêng Tư -->
+            <div class="admin-privacy-banner">
+                <strong>🛡️ QUY ĐỊNH BẢO MẬT & PHÂN QUYỀN ADMIN UTC2HAND:</strong><br>
+                Admin KHÔNG có quyền truy cập tin nhắn riêng tư của sinh viên hay can thiệp giao dịch nhạy cảm. 
+                Admin có quyền: <strong>Cảnh cáo tài khoản vi phạm</strong>, <strong>Xóa bài đăng rác / phá giá</strong>, 
+                <strong>Nhắc nhở người dùng</strong>, và <strong>Duyệt kiểm chứng kháng nghị uy tín</strong> để ngăn chặn hành vi chơi xấu dìm điểm rèn luyện!
+            </div>
+
+            <!-- Thống Kê Tổng Quan Hệ Thống -->
+            <div class="admin-stats-grid">
+                <div class="admin-stat-card">
+                    <div class="admin-stat-label">Tổng bài đăng hoạt động</div>
+                    <div class="admin-stat-number" id="adminTotalPosts">4</div>
+                </div>
+                <div class="admin-stat-card">
+                    <div class="admin-stat-label">Tài khoản sinh viên đã xác thực</div>
+                    <div class="admin-stat-number">2</div>
+                </div>
+                <div class="admin-stat-card">
+                    <div class="admin-stat-label">Kháng nghị điểm uy tín chờ duyệt</div>
+                    <div class="admin-stat-number" style="color:#f59e0b;" id="adminPendingDisputes">1</div>
+                </div>
+                <div class="admin-stat-card">
+                    <div class="admin-stat-label">Cảnh cáo vi phạm đã phát ra</div>
+                    <div class="admin-stat-number" style="color:#ef4444;" id="adminWarningsCount">0</div>
+                </div>
+            </div>
+
+            <!-- Panel 1: Quản Lý & Xóa Bài Đăng Rác / Phá Giá -->
+            <div class="admin-panel-card">
+                <div class="admin-panel-header">
+                    <div class="admin-panel-title">
+                        <span>📦</span> Quản Lý Bài Đăng & Xử Lý Tin Rác / Phá Giá
+                    </div>
+                    <span style="font-size:12px; color:#64748b;">Admin có quyền xóa bài đăng vi phạm TimeMark hoặc phá giá</span>
+                </div>
+
+                <div style="overflow-x:auto;">
+                    <table class="admin-table">
+                        <thead>
+                            <tr>
+                                <th>Tên Sản Phẩm</th>
+                                <th>Giá Pass</th>
+                                <th>Người Đăng</th>
+                                <th>Mã TimeMark</th>
+                                <th>Hạn Còn</th>
+                                <th>Hành Động Admin</th>
+                            </tr>
+                        </thead>
+                        <tbody id="adminPostsTableBody">
+                            <!-- Rendered by JS -->
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <!-- Panel 2: Quản Lý Tài Khoản, Cảnh Cáo & Nhắc Nhở -->
+            <div class="admin-panel-card">
+                <div class="admin-panel-header">
+                    <div class="admin-panel-title">
+                        <span>👥</span> Danh Sách Tài Khoản Sinh Viên (Cảnh Cáo & Nhắc Nhở)
+                    </div>
+                    <span style="font-size:12px; color:#64748b;">Nhắc nhở hoặc cảnh cáo tài khoản có dấu hiệu bùng hàng / spam</span>
+                </div>
+
+                <div style="overflow-x:auto;">
+                    <table class="admin-table">
+                        <thead>
+                            <tr>
+                                <th>Sinh Viên</th>
+                                <th>Email Trường</th>
+                                <th>Điểm Uy Tín</th>
+                                <th>Số Xu</th>
+                                <th>Trạng Thái</th>
+                                <th>Hành Động Admin</th>
+                            </tr>
+                        </thead>
+                        <tbody id="adminUsersTableBody">
+                            <!-- Rendered by JS -->
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <!-- Panel 3: Duyệt Kiểm Chứng Kháng Nghị Điểm Uy Tín -->
+            <div class="admin-panel-card">
+                <div class="admin-panel-header">
+                    <div class="admin-panel-title">
+                        <span>⚖️</span> Duyệt Kiểm Chứng Kháng Nghị Điểm Uy Tín (Chống Ganh Ghét Hạ Điểm)
+                    </div>
+                    <span style="font-size:12px; color:#64748b;">Xem xét bằng chứng để khôi phục điểm cho sinh viên bị báo cáo oan</span>
+                </div>
+
+                <div style="overflow-x:auto;">
+                    <table class="admin-table">
+                        <thead>
+                            <tr>
+                                <th>Sinh Viên Khiếu Nại</th>
+                                <th>Lý Do Khiếu Nại</th>
+                                <th>Bằng Chứng / Tình Tiết</th>
+                                <th>Thời Gian</th>
+                                <th>Hành Động Kiểm Chứng</th>
+                            </tr>
+                        </thead>
+                        <tbody id="adminDisputesTableBody">
+                            <!-- Rendered by JS -->
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        <!-- ==========================================
+             MÀN HÌNH 3: MINI-GAME SĂN XU BLOCKLASH
+             ========================================== -->
+        <div class="game-tab-view" id="gameSectionView">
+            <div style="text-align:center;">
+                <h2 style="font-size:24px; font-weight:800; color:#0284c7;">
+                    🎮 KÉO THẢ SĂN XU "BLOCKLASH"
+                </h2>
+                <p style="font-size:13.5px; color:#64748b; margin-top:4px;">
+                    Chơi game phá gạch: Đạt <strong>trên 1000 điểm</strong> nhận ngay <strong>10 xu</strong>. 
+                    Tỷ lệ quy đổi: <strong>1000 xu = 1.000 VNĐ</strong> giảm trực tiếp tiền đặt mua pass đồ!
+                </p>
+            </div>
+
+            <div class="game-canvas-wrap">
+                <canvas id="gameCanvas"></canvas>
+            </div>
+
+            <div style="display:flex; gap:12px;">
+                <button class="apply-filter-btn" style="background:#0284c7; width:auto; padding:10px 24px;" onclick="if(window.game) window.game.startGame()">
+                    ▶ Bắt Đầu Chơi / Chơi Lại
+                </button>
+                <button class="btn-outline-chat" style="padding:10px 20px;" onclick="switchNavTab('home')">
+                    🛍 Quay Lại Mua Đồ
+                </button>
+            </div>
+        </div>
+
+        <!-- ==========================================
+             MÀN HÌNH 4: CÁ NHÂN & ĐIỂM UY TÍN
+             ========================================== -->
+        <div class="game-tab-view" id="profileSectionView" style="max-width:800px;">
+            <div style="width:100%;">
+                <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:16px;">
+                    <div style="display:flex; align-items:center; gap:14px;">
+                        <div class="user-avatar-circle" style="width:52px; height:52px; font-size:22px;" id="profileAvatarCircle">T</div>
+                        <div>
+                            <h3 id="profileFullName" style="font-size:18px; color:#0f172a;">Lê Thị Ngọc Tuyết</h3>
+                            <div style="font-size:12.5px; color:#64748b;" id="profileEmail">tuyetltn.st@st.utc2.edu.vn</div>
+                            <div style="margin-top:4px; font-size:12.5px; color:#16a34a; font-weight:700;">
+                                🛡 Điểm Uy Tín: <span id="profileRepScore">98</span>/100 (Uy tín cao)
+                            </div>
+                        </div>
+                    </div>
+
+                    <div style="display:flex; gap:10px;">
+                        <button class="btn-outline-chat" style="font-size:12px; padding:8px 14px;" onclick="openReputationRules()">
+                            Quy chế uy tín
+                        </button>
+                        <button class="apply-filter-btn" style="background:#0284c7; width:auto; font-size:12px; padding:8px 16px;" onclick="openModal('createPostModal')">
+                            + Đăng Đồ Pass
+                        </button>
+                    </div>
+                </div>
+
+                <hr style="border:none; border-top:1px solid #e2e8f0; margin:18px 0;">
+
+                <div style="display:grid; grid-template-columns:1fr 1fr; gap:16px;">
+                    <div>
+                        <h4 style="font-size:14px; color:#0284c7; margin-bottom:10px;">📦 Bài đăng của tôi</h4>
+                        <div id="myPostsListContainer"></div>
+                    </div>
+                    <div>
+                        <h4 style="font-size:14px; color:#d97706; margin-bottom:10px;">📜 Lịch sử cọc & pass đồ</h4>
+                        <div id="purchaseHistoryContainer"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- ==========================================
+         CỬA SỔ CHAT GIỮA TÀI KHOẢN A VÀ B (THỜI GIAN THỰC, KHÔNG CÓ BOT TỰ ĐỘNG)
+         ========================================== -->
+    <div class="chat-window-container" id="chatWindow">
+        <div class="chat-header">
+            <div>
+                <h4 id="chatHeaderName" style="font-size:14px; font-weight:700;">Hội thoại trực tiếp</h4>
+                <div class="chat-partner-sub" id="chatHeaderSubtitle">Bạn đang nhắn tin với Phúc Lâm</div>
+            </div>
+            <button class="checkout-close-btn" style="position:static; width:28px; height:28px; background:rgba(255,255,255,0.2); color:#fff;" onclick="closeChatWindow()">✕</button>
+        </div>
+
+        <!-- Vùng hiển thị tin nhắn -->
+        <div class="chat-messages-area" id="chatMessagesArea">
+            <!-- Messages rendered dynamically -->
+        </div>
+
+        <!-- Khung nhập tin nhắn thủ công -->
+        <div class="chat-input-bar">
+            <input type="text" id="chatInputText" placeholder="Nhập tin nhắn trao đổi đồ..." onkeydown="if(event.key==='Enter') sendManualMessage()">
+            <button class="apply-filter-btn" style="background:#0284c7; width:auto; padding:6px 14px; margin-top:0;" onclick="sendManualMessage()">Gửi</button>
+        </div>
+    </div>
+
+    <!-- ==========================================
+         MODAL THANH TOÁN & ĐẶT CỌC GIỮ CHỖ
+         ========================================== -->
+    <div class="checkout-modal-overlay" id="checkoutOrderModal">
+        <div class="checkout-modal-card">
+            <button class="checkout-close-btn" onclick="closeCheckoutModal()">✕</button>
+
+            <div class="checkout-image-preview">
+                <img id="modalProductImage" src="" alt="Sản phẩm">
+                <span class="checkout-image-timemark" id="modalProductTimeMark">
+                    ✓ Xác minh TimeMark: UTC2 - 8924
+                </span>
+            </div>
+
+            <div class="checkout-tags-row">
+                <span class="tag-blue" id="modalProductCategory">Giáo trình</span>
+                <span class="tag-green">✓ Đã kiểm duyệt ảnh thật</span>
+                <span class="tag-orange" id="modalProductExpiry">Hết hạn sau: 6 ngày</span>
+            </div>
+
+            <h3 class="checkout-title" id="modalProductTitle">
+                Giáo trình Vật Lý Đại Cương 1 (VL101) – Tái bản mới
+            </h3>
+            <div class="checkout-price" id="modalProductPrice">
+                35.000 VNĐ
+            </div>
+
+            <div class="checkout-info-grid">
+                <div class="checkout-info-row">
+                    <span>Người đăng pass:</span>
+                    <strong id="modalSellerName" style="color:#0f172a;">Lê Thị Ngọc Tuyết</strong>
+                </div>
+                <div class="checkout-info-row">
+                    <span>Điểm uy tín người bán:</span>
+                    <span id="modalSellerRep" style="color:#16a34a; font-weight:700;">★ 98/100</span>
+                </div>
+                <div class="checkout-info-row">
+                    <span>Địa điểm hẹn giao nhận:</span>
+                    <strong id="modalSellerLocation" style="color:#0f172a;">Ký túc xá Cỏ May UTC2 (0.5 km)</strong>
+                </div>
+            </div>
+
+            <!-- Khung đặt cọc & tiền ship & giảm tiền xu -->
+            <div class="checkout-deposit-box">
+                <div class="deposit-box-header">
+                    <span class="deposit-title">
+                        🛡 Đặt cọc chống bùng hẹn (OOP Strategy)
+                    </span>
+                    <span class="deposit-pill">10% cọc (Uy tín cao)</span>
+                </div>
+
+                <div class="deposit-row">
+                    <span>Tiền cọc giữ đồ:</span>
+                    <span class="deposit-amount" id="depositAmountText">3.000 VNĐ</span>
+                </div>
+
+                <div class="shipping-options-row">
+                    <span>Hình thức giao & Tiền ship:</span>
+                    <select class="shipping-select" id="shippingSelectOption" onchange="updateCheckoutCalculations()">
+                        <option value="0">Gặp tại điểm hẹn campus (+0 đ)</option>
+                        <option value="5000">Mang tận phòng KTX/trọ Man Thiện (+5.000 đ)</option>
+                        <option value="10000">Giao nhanh ngoài giờ (+10.000 đ)</option>
+                    </select>
+                </div>
+
+                <label class="coin-discount-checkbox-row">
+                    <input type="checkbox" id="useCoinDiscountCheckbox" checked onchange="updateCheckoutCalculations()">
+                    <span id="coinDiscountLabelText">
+                        Dùng 20 UniCoins săn được để giảm 2.000 đ
+                    </span>
+                </label>
+
+                <div class="deposit-note-text">
+                    * Tiền cọc được bảo vệ tự động và hoàn trả 100% về ví khi 2 bạn gặp nhau trao đồ thành công.
+                </div>
+            </div>
+
+            <!-- Tổng thanh toán -->
+            <div class="checkout-total-banner">
+                <div class="checkout-total-label">
+                    Tổng số tiền thanh toán / cọc:
+                    <div style="font-size:11px; font-weight:normal; color:#64748b;" id="calculationBreakdownText">
+                        (Giá đồ + Ship - Giảm xu)
+                    </div>
+                </div>
+                <div class="checkout-total-number" id="finalTotalPaymentText">
+                    38.000 VNĐ
+                </div>
+            </div>
+
+            <div class="checkout-actions-row">
+                <button class="btn-outline-chat" onclick="openChatFromModal()">
+                    💬 Nhắn tin hẹn gặp
+                </button>
+                <button class="btn-primary-confirm" id="confirmDepositBtn" onclick="confirmDepositOrder()">
+                    🤝 Đặt Cọc & Giữ Chỗ
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- ==========================================
+         MODAL ĐĂNG BÀI PASS ĐỒ (TIMEMARK)
+         ========================================== -->
+    <div class="checkout-modal-overlay" id="createPostModal">
+        <div class="checkout-modal-card" style="max-width:520px;">
+            <button class="checkout-close-btn" onclick="closeModal('createPostModal')">✕</button>
+            <h3 style="font-size:18px; font-weight:800; color:#0f172a; margin-bottom:4px;">✨ Đăng Bài Pass Đồ Mới</h3>
+            <p style="font-size:12.5px; color:#64748b; margin-bottom:16px;">Nhập thông tin món đồ cần pass tại campus UTC2.</p>
+
+            <form onsubmit="handlePostSubmit(event)">
+                <div style="margin-bottom:12px;">
+                    <label style="display:block; font-size:12.5px; font-weight:600; color:#334155; margin-bottom:4px;">Tên món đồ / Giáo trình *</label>
+                    <input type="text" id="newPostTitle" class="hero-search-input" style="padding:10px 14px; border:1px solid #cbd5e1; box-shadow:none;" placeholder="Ví dụ: Giáo trình Vật Lý Đại Cương 1 (VL101)..." required>
+                </div>
+
+                <div style="display:grid; grid-template-columns:1fr 1fr; gap:12px; margin-bottom:12px;">
+                    <div>
+                        <label style="display:block; font-size:12.5px; font-weight:600; color:#334155; margin-bottom:4px;">Giá pass (VNĐ) *</label>
+                        <input type="number" id="newPostPrice" class="hero-search-input" style="padding:10px 14px; border:1px solid #cbd5e1; box-shadow:none;" placeholder="35000" min="5000" required>
+                    </div>
+                    <div>
+                        <label style="display:block; font-size:12.5px; font-weight:600; color:#334155; margin-bottom:4px;">Danh mục *</label>
+                        <select id="newPostCategory" class="feed-sort-select" style="width:100%; padding:10px;">
+                            <option value="GiaoTrinh">Giáo trình & Sách học</option>
+                            <option value="DoDienTu">Thiết bị điện tử, Casio</option>
+                            <option value="DoGiaDung">Đồ dùng sinh viên, KTX</option>
+                        </select>
+                    </div>
+                </div>
+
+                <div style="margin-bottom:12px;">
+                    <label style="display:block; font-size:12.5px; font-weight:600; color:#334155; margin-bottom:4px;">Địa điểm hẹn gặp tại UTC2 *</label>
+                    <input type="text" id="newPostLocation" class="hero-search-input" style="padding:10px 14px; border:1px solid #cbd5e1; box-shadow:none;" value="Ký túc xá Cỏ May UTC2 (0.5 km)" required>
+                </div>
+
+                <!-- Tải ảnh từ tệp file hoặc dán URL -->
+                <div style="margin-bottom:16px;">
+                    <label style="display:block; font-size:12.5px; font-weight:600; color:#334155; margin-bottom:6px;">
+                        Hình ảnh sản phẩm kèm TimeMark *
+                    </label>
+
+                    <!-- Khung tải ảnh từ tệp máy tính / điện thoại -->
+                    <div class="file-upload-box" id="postImageUploadBox">
+                        <input type="file" id="postImageFileInput" accept="image/*" onchange="handlePostImageFileSelect(event)">
+                        <div id="fileUploadPromptContent">
+                            <div class="file-upload-icon">📷</div>
+                            <div class="file-upload-text">Bấm vào đây để chọn ảnh từ máy / điện thoại</div>
+                            <div class="file-upload-subtext">Hỗ trợ JPG, PNG, WebP (Tự động nén và tải ảnh thật có mã TimeMark)</div>
+                        </div>
+                        <div class="file-image-preview-wrap" id="fileImagePreviewWrap">
+                            <img id="fileImagePreviewElement" src="" alt="Ảnh sản phẩm tải lên">
+                            <button type="button" class="btn-remove-preview-img" title="Xóa & chọn lại ảnh" onclick="event.stopPropagation(); removeSelectedPostImage();">✕</button>
+                        </div>
+                    </div>
+
+                    <!-- Lựa chọn dự phòng dán URL ảnh -->
+                    <div style="display:flex; align-items:center; gap:8px;">
+                        <span style="font-size:11.5px; color:#64748b; white-space:nowrap;">Hoặc dán URL:</span>
+                        <input type="url" id="newPostImage" class="hero-search-input" style="padding:6px 12px; font-size:12px; border:1px solid #cbd5e1; box-shadow:none;" placeholder="https://... (nếu không chọn từ tệp)">
+                    </div>
+                </div>
+
+                <div style="display:flex; justify-content:flex-end; gap:10px;">
+                    <button type="button" class="btn-outline-chat" onclick="closeModal('createPostModal')">Hủy</button>
+                    <button type="submit" class="btn-primary-confirm" style="background:#0284c7;">
+                        Tiếp Tục Nhận Mã TimeMark ➔
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- MODAL XÁC THỰC MÃ TIMEMARK TRÊN GIẤY -->
+    <div class="checkout-modal-overlay" id="timemarkCodeModal">
+        <div class="checkout-modal-card" style="max-width:480px; text-align:center;">
+            <button class="checkout-close-btn" onclick="closeModal('timemarkCodeModal')">✕</button>
+            <h3 style="font-size:18px; font-weight:800; color:#0f172a; margin-bottom:6px;">📷 Mã Xác Thực TimeMark Chống Lừa Đảo</h3>
+            <p style="font-size:12.5px; color:#64748b; margin-bottom:14px;">Hệ thống cấp mã định danh ngẫu nhiên cho bài đăng của bạn:</p>
+
+            <div style="background:#f0fdf4; border:2px dashed #86efac; border-radius:12px; padding:16px; margin-bottom:16px;">
+                <div style="font-size:11px; color:#16a34a; font-weight:700;">MÃ XÁC THỰC TIMEMARK:</div>
+                <div id="generatedTimeMarkCode" style="font-size:24px; font-weight:900; letter-spacing:2px; color:#15803d; margin:6px 0;">
+                    UTC2 - 8924
+                </div>
+                <div style="font-size:12px; color:#475569; line-height:1.4;">
+                    ✍️ Hãy viết mã này ra mẩu giấy đặt bên cạnh món đồ khi chụp ảnh để người mua yên tâm 100% không phải ảnh mạng!
+                </div>
+            </div>
+
+            <button class="btn-primary-confirm" style="background:#0284c7; width:100%;" onclick="confirmPublishPost()">
+                ✓ Xác Nhận & Đăng Lên Bảng Tin
+            </button>
+        </div>
+    </div>
+
+    <!-- ==========================================
+         MODAL TRUY CẬP BỊ TỪ CHỐI DÀNH CHO ADMIN
+         ========================================== -->
+    <div class="checkout-modal-overlay" id="adminAccessDeniedModal">
+        <div class="checkout-modal-card" style="max-width:480px; text-align:center;">
+            <button class="checkout-close-btn" onclick="closeModal('adminAccessDeniedModal')">✕</button>
+            <div style="font-size:48px; margin-bottom:10px;">⛔</div>
+            <h3 style="font-size:19px; font-weight:800; color:#dc2626; margin-bottom:8px;">Truy Cập Bị Từ Chối!</h3>
+            <p style="font-size:13px; color:#475569; line-height:1.5; margin-bottom:16px;">
+                Phân hệ Quản Trị Hệ Thống UniPass chỉ cấp quyền duy nhất cho tài khoản:<br>
+                <strong style="color:#0284c7; font-size:14.5px;">6651071091@st.utc2.edu.vn</strong>
+            </p>
+            <div style="background:#fef2f2; border:1px solid #fecaca; border-radius:10px; padding:12px 16px; margin-bottom:18px; font-size:12.5px; color:#991b1b; text-align:left;">
+                <div style="margin-bottom:4px;">• Tài khoản đang dùng: <strong id="deniedCurrentUserName">Lê Thị Ngọc Tuyết</strong></div>
+                <div style="margin-bottom:4px;">• Email đăng nhập: <span id="deniedCurrentUserEmail" style="font-family:monospace; font-weight:700;">tuyetltn.st@st.utc2.edu.vn</span></div>
+                <div>• Thẩm quyền: <strong>Tài khoản Sinh viên (Không được phép truy cập Admin)</strong></div>
+            </div>
+            <div style="margin-bottom:16px; text-align:left;">
+                <label style="display:block; font-size:12px; font-weight:700; color:#334155; margin-bottom:4px;">
+                    🔑 Nhập Mật Khẩu Quản Trị Viên (6651071091@st.utc2.edu.vn):
+                </label>
+                <input type="password" id="adminDeniedModalPassword" class="hero-search-input" 
+                       placeholder="Nhập mật khẩu Admin..." style="padding:10px 14px; border:1px solid #cbd5e1; box-shadow:none; width:100%;"
+                       onkeydown="if(event.key==='Enter') loginAsOfficialAdmin()">
+                <div id="adminDeniedErrorMsg" style="color:#ef4444; font-size:11.5px; font-weight:700; margin-top:4px; display:none;">
+                    ⚠ Mật khẩu Quản trị viên không chính xác!
+                </div>
+            </div>
+            <div style="display:flex; flex-direction:column; gap:10px;">
+                <button class="btn-primary-confirm" style="background:#0284c7;" onclick="loginAsOfficialAdmin()">
+                    🛡️ Xác Nhận Mật Khẩu & Vào Phân Hệ Admin
+                </button>
+                <button class="btn-outline-chat" onclick="closeModal('adminAccessDeniedModal')">
+                    Quay Lại Săn Đồ
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- ==========================================
+         MODAL HƯỚNG DẪN TRÌNH BÀY & KẾT NỐI ONLINE / LAN
+         ========================================== -->
+    <div class="checkout-modal-overlay" id="onlinePresentationModal">
+        <div class="checkout-modal-card" style="max-width:540px;">
+            <button class="checkout-close-btn" onclick="closeModal('onlinePresentationModal')">✕</button>
+            <div style="display:flex; align-items:center; gap:10px; margin-bottom:14px;">
+                <div style="font-size:28px;">🌐</div>
+                <div>
+                    <h3 style="font-size:18px; font-weight:800; color:#0f172a; margin:0;">Kết Nối Trình Bày Online & Mạng Nội Bộ</h3>
+                    <div style="font-size:12px; color:#64748b;">Hỗ trợ nhiều người cùng truy cập trên điện thoại & laptop</div>
+                </div>
+            </div>
+
+            <!-- Cách 1: Mạng Wi-Fi / LAN -->
+            <div style="background:#f0f9ff; border:1px solid #bae6fd; border-radius:10px; padding:14px; margin-bottom:14px;">
+                <div style="font-size:13px; font-weight:800; color:#0369a1; margin-bottom:4px;">
+                    📶 CÁCH 1: TRUY CẬP TRỰC TIẾP CÙNG WI-FI PHÒNG HỌC (LAN)
+                </div>
+                <div style="font-size:12px; color:#475569; margin-bottom:8px;">
+                    Thầy cô và các bạn sinh viên kết nối cùng Wi-Fi mở link sau trên điện thoại:
+                </div>
+                <div style="display:flex; gap:8px; align-items:center;">
+                    <input type="text" id="lanUrlInput" value="http://192.168.1.25:8080" readonly style="flex:1; background:#ffffff; border:1px solid #7dd3fc; border-radius:6px; padding:8px 12px; font-size:13px; font-weight:700; color:#0284c7; font-family:monospace;">
+                    <button class="apply-filter-btn" style="background:#0284c7; width:auto; padding:8px 14px; margin-top:0;" onclick="copyLanUrl()">
+                        📋 Sao Chép
+                    </button>
+                </div>
+                <div style="margin-top:12px; text-align:center;">
+                    <div style="font-size:11.5px; color:#64748b; margin-bottom:6px;">Hoặc quét mã QR bằng Camera điện thoại để vào ngay:</div>
+                    <img src="https://api.qrserver.com/v1/create-qr-code/?size=140x140&data=http%3A%2F%2F192.168.1.25%3A8080" alt="QR Code LAN" style="border:1px solid #cbd5e1; border-radius:8px; padding:4px; background:#fff;" width="140" height="140">
+                </div>
+            </div>
+
+            <!-- Cách 2: Triển khai Online Internet toàn cầu -->
+            <div style="background:#f8fafc; border:1px solid #e2e8f0; border-radius:10px; padding:14px;">
+                <div style="font-size:13px; font-weight:800; color:#0f172a; margin-bottom:4px;">
+                    🚀 CÁCH 2: CHẠY ONLINE TOÀN CẦU (4G / INTERNET MỌI NƠI)
+                </div>
+                <div style="font-size:12px; color:#64748b; line-height:1.5;">
+                    • <strong>Netlify Drop (15 giây có link):</strong> Mở <a href="https://app.netlify.com/drop" target="_blank" style="color:#0284c7; font-weight:700;">app.netlify.com/drop</a>, kéo thả thư mục dự án vào là có link online ngay.<br>
+                    • <strong>GitHub Pages:</strong> Đưa lên GitHub Pages tại <code>https://ngoctuyetle137.github.io/unipass-utc2</code>.
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- ==========================================
+         MODAL CẤU HÌNH & KẾT NỐI SUPABASE DATABASE
+         ========================================== -->
+    <div class="checkout-modal-overlay" id="supabaseConfigModal">
+        <div class="checkout-modal-card" style="max-width:580px;">
+            <button class="checkout-close-btn" onclick="closeModal('supabaseConfigModal')">✕</button>
+            <div style="display:flex; align-items:center; gap:10px; margin-bottom:6px;">
+                <span style="font-size:24px;">⚡</span>
+                <h3 style="font-size:18px; font-weight:800; color:#0f172a; margin:0;">Cơ Sở Dữ Liệu Supabase Cloud (PostgreSQL)</h3>
+            </div>
+            <p style="font-size:12.5px; color:#64748b; margin-bottom:14px; line-height:1.5;">
+                Đồng bộ bài đăng, tin nhắn, đơn hàng và tài khoản sinh viên thời gian thực (Realtime) qua Supabase Cloud.
+            </p>
+
+            <!-- Trạng thái kết nối hiện tại -->
+            <div id="supabaseConnectionStatusBox" style="background:#f0fdf4; border:1px solid #bbf7d0; border-radius:8px; padding:10px 14px; margin-bottom:14px; font-size:12.5px;">
+                <div style="display:flex; justify-content:space-between; align-items:center;">
+                    <span id="supabaseStatusBadge" style="font-weight:700; color:#15803d;">🟢 Trạng thái: Bộ nhớ đệm cục bộ (Sẵn sàng đồng bộ Cloud)</span>
+                    <span id="supabasePingTime" style="font-size:11.5px; color:#64748b;">Ping: -- ms</span>
+                </div>
+                <div id="supabaseDetailText" style="font-size:11.5px; color:#475569; margin-top:4px;">
+                    Nhập Supabase Project URL và Anon Key bên dưới để kết nối Database đám mây.
+                </div>
+            </div>
+
+            <!-- Form cấu hình URL & Key -->
+            <div style="margin-bottom:12px;">
+                <label style="display:block; font-size:12px; font-weight:700; color:#334155; margin-bottom:4px;">
+                    1. Supabase Project URL *
+                </label>
+                <input type="text" id="supabaseUrlInput" class="hero-search-input" style="padding:8px 12px; border:1px solid #cbd5e1; box-shadow:none; font-family:monospace; font-size:12px;" placeholder="https://xxxxxxxxxxxxxxxxxxxx.supabase.co">
+            </div>
+
+            <div style="margin-bottom:14px;">
+                <label style="display:block; font-size:12px; font-weight:700; color:#334155; margin-bottom:4px;">
+                    2. Supabase Anon Public Key (API Key) *
+                </label>
+                <input type="password" id="supabaseKeyInput" class="hero-search-input" style="padding:8px 12px; border:1px solid #cbd5e1; box-shadow:none; font-family:monospace; font-size:12px;" placeholder="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...">
+            </div>
+
+            <!-- Nhóm nút hành động -->
+            <div style="display:flex; gap:8px; flex-wrap:wrap; margin-bottom:14px;">
+                <button class="apply-filter-btn" style="background:#10b981; flex:1; min-width:140px; padding:9px 14px; margin:0;" onclick="saveAndConnectSupabase()">
+                    🚀 Lưu & Kết Nối Ngay
+                </button>
+                <button class="apply-filter-btn" style="background:#0284c7; width:auto; padding:9px 14px; margin:0;" onclick="testSupabasePing()">
+                    🧪 Kiểm Tra (Ping)
+                </button>
+                <button class="apply-filter-btn" style="background:#64748b; width:auto; padding:9px 14px; margin:0;" onclick="copySupabaseSchemaSql()">
+                    📋 Sao Chép SQL Schema
+                </button>
+                <button class="apply-filter-btn" style="background:#ef4444; width:auto; padding:9px 12px; margin:0;" onclick="disconnectSupabase()">
+                    ✕ Ngắt Kết Nối
+                </button>
+            </div>
+
+            <!-- Hướng dẫn 3 bước khởi tạo trên Supabase -->
+            <div style="background:#f8fafc; border:1px solid #e2e8f0; border-radius:8px; padding:12px; font-size:11.5px; color:#475569; line-height:1.6;">
+                <strong>📘 Hướng Dẫn 3 Bước Tạo Database Trên Supabase (Miễn Phí):</strong><br>
+                1. Mở trang <a href="https://supabase.com" target="_blank" style="color:#0284c7; font-weight:700;">supabase.com</a>, đăng nhập và nhấn <strong>New Project</strong>.<br>
+                2. Vào mục <strong>SQL Editor</strong> ở thanh menu bên trái, dán toàn bộ mã từ file <code>supabase_schema.sql</code> và nhấn <strong>RUN</strong>.<br>
+                3. Vào mục <strong>Project Settings</strong> ➔ <strong>API</strong>, sao chép <strong>Project URL</strong> và <strong>anon public key</strong> dán vào 2 ô bên trên, rồi bấm <strong>Lưu & Kết Nối</strong>.
+            </div>
+        </div>
+    </div>
+
+    <!-- TOAST CONTAINER -->
+    <div class="toast-container" id="toastContainer"></div>
+
+    <!-- SCRIPTS -->
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script src="supabase-client.js"></script>
+    <script src="dsa.js"></script>
+    <script src="audio.js"></script>
+    <script src="game.js"></script>
+    <script src="app.js"></script>
+
+    <script>
+        function toggleSound() {
+            if (window.sound) {
+                const isEnabled = window.sound.toggle();
+                const icon = document.getElementById('soundIcon');
+                if (icon) icon.innerText = isEnabled ? '🔊' : '🔇';
+                showToast(isEnabled ? 'Đã bật âm thanh!' : 'Đã tắt âm thanh.', 'info');
+            }
+        }
+    </script>
+</body>
+</html>
