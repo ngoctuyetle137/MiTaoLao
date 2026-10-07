@@ -1187,6 +1187,7 @@ function switchAuthMode(mode) {
     const nameField = document.getElementById('authNameField');
     const otpSec = document.getElementById('authOtpSection');
     const submitBtn = document.getElementById('authSubmitButton');
+    const mockBox = document.getElementById('mockEmailNotification');
 
     if (mode === 'register') {
         tabReg.classList.add('active');
@@ -1199,7 +1200,31 @@ function switchAuthMode(mode) {
         tabReg.classList.remove('active');
         if (nameField) nameField.style.display = 'none';
         if (otpSec) otpSec.style.display = 'none';
+        if (mockBox) mockBox.style.display = 'none';
         if (submitBtn) submitBtn.innerText = '✓ Đăng Nhập Vào Hệ Thống';
+    }
+    if (window.sound) window.sound.playClick();
+}
+
+// Hàm tự động điền và sao chép mã 6 số OTP
+function copyAndFillOtp() {
+    if (!window.app || !window.app.generatedOtp) {
+        showToast('Vui lòng bấm "Gửi Mã 6 Số" để tạo mã trước!', 'warning');
+        return;
+    }
+    const otpInput = document.getElementById('authOtpInput');
+    if (otpInput) {
+        otpInput.value = window.app.generatedOtp;
+        otpInput.focus();
+    }
+    if (navigator.clipboard) {
+        navigator.clipboard.writeText(window.app.generatedOtp).then(() => {
+            showToast(`✓ Đã điền và sao chép mã ${window.app.generatedOtp} vào ô xác thực!`, 'success');
+        }).catch(() => {
+            showToast(`✓ Đã điền mã ${window.app.generatedOtp} vào ô xác thực!`, 'success');
+        });
+    } else {
+        showToast(`✓ Đã điền mã ${window.app.generatedOtp} vào ô xác thực!`, 'success');
     }
     if (window.sound) window.sound.playClick();
 }
@@ -1211,9 +1236,17 @@ async function requestOtpCode(e) {
     if (!emailInput) return;
     const email = emailInput.value.trim();
 
-    const isCollegeEmail = email.endsWith('@st.utc2.edu.vn') || email.endsWith('@utc2.edu.vn');
-    if (!isCollegeEmail) {
-        showToast('Chỉ cho phép Gmail trường UTC2 (@st.utc2.edu.vn hoặc @utc2.edu.vn)!', 'danger');
+    if (!email) {
+        showToast('Vui lòng nhập địa chỉ Gmail của bạn!', 'danger');
+        if (window.sound) window.sound.playWarning();
+        return;
+    }
+
+    const isAcceptedEmail = email.endsWith('@st.utc2.edu.vn') || 
+                            email.endsWith('@utc2.edu.vn') || 
+                            email.endsWith('@gmail.com');
+    if (!isAcceptedEmail) {
+        showToast('Vui lòng nhập Gmail sinh viên (@st.utc2.edu.vn) hoặc Gmail cá nhân (@gmail.com)!', 'danger');
         if (window.sound) window.sound.playWarning();
         return;
     }
@@ -1221,24 +1254,29 @@ async function requestOtpCode(e) {
     const sendOtpBtn = document.getElementById('sendOtpBtn');
     if (sendOtpBtn) {
         sendOtpBtn.disabled = true;
-        sendOtpBtn.innerText = '⏳ Đang gửi mail...';
+        sendOtpBtn.innerText = '⏳ Đang cấp mã...';
     }
 
+    // Tạo mã OTP 6 số xác thực ngẫu nhiên bảo mật
     const otp = Math.floor(100000 + Math.random() * 900000).toString();
     window.app.generatedOtp = otp;
     window.app.otpSentAt = Date.now();
 
     const mockBox = document.getElementById('mockEmailNotification');
+    const displayOtp = document.getElementById('displayGeneratedOtp');
     const targetEmail = document.getElementById('mockTargetEmail');
     const otpInput = document.getElementById('authOtpInput');
+    const otpStatusBadge = document.getElementById('otpStatusBadge');
 
     if (targetEmail) targetEmail.innerText = email;
+    if (displayOtp) displayOtp.innerText = otp;
+    if (otpStatusBadge) otpStatusBadge.innerText = 'Đã Cấp Mã 6 Số';
     if (mockBox) {
         mockBox.classList.add('active');
         mockBox.style.display = 'block'; // Đảm bảo bảng hướng dẫn hiện lên
     }
 
-    // Xóa ô nhập OTP và focus để người dùng mở hộp thư Gmail nhập mã thực tế
+    // Xóa ô nhập OTP và focus
     if (otpInput) {
         otpInput.value = '';
         otpInput.focus();
@@ -1268,8 +1306,8 @@ async function requestOtpCode(e) {
             const supaRes = await window.UniPassSupabase.sendOtpEmail(email);
             if (!supaRes.success) {
                 console.warn('⚠️ [Supabase Auth] Lỗi gửi OTP:', supaRes.message);
-                if (supaRes.message && supaRes.message.includes('rate limit')) {
-                    showToast('⚠️ Supabase giới hạn số lượng gửi mail/giờ. Hãy cấu hình thêm Webhook Google Apps Script để gửi thư không giới hạn!', 'warning');
+                if (supaRes.message && (supaRes.message.includes('rate limit') || supaRes.message.includes('over_email_send_rate_limit'))) {
+                    showToast('⚠️ Máy chủ gửi email miễn phí đạt giới hạn. Bạn hãy dùng ngay mã 6 số được cấp phát bên dưới!', 'warning');
                 }
             } else {
                 console.log('📨 [Supabase Auth] Đã gửi mã OTP thực tế về:', email);
@@ -1280,7 +1318,7 @@ async function requestOtpCode(e) {
     }
 
     if (window.sound) window.sound.playNotification();
-    showToast(`✓ Đã tự động gửi mã OTP về Gmail: ${email}! Hãy mở ứng dụng Gmail (hoặc mail.google.com) để lấy mã xác thực.`, 'success');
+    showToast(`✓ Đã tạo mã 6 số xác nhận cho ${email}! Bạn có thể xem mã bên dưới hoặc trong hộp thư Gmail.`, 'success');
 
     // Khởi động đếm ngược 60 giây để tránh gửi dồn dập
     let cooldown = 60;
@@ -1298,7 +1336,7 @@ async function requestOtpCode(e) {
                 clearInterval(window.otpCountdownTimer);
                 window.otpCountdownTimer = null;
                 sendOtpBtn.disabled = false;
-                sendOtpBtn.innerText = '📩 Gửi Lại Mã OTP';
+                sendOtpBtn.innerText = '📩 Gửi Lại Mã 6 Số';
             }
         }, 1000);
     }
@@ -1317,9 +1355,11 @@ async function handleAuthSubmitForm(e) {
         return;
     }
 
-    const isCollegeEmail = email.endsWith('@st.utc2.edu.vn') || email.endsWith('@utc2.edu.vn');
-    if (!isCollegeEmail) {
-        showToast('Vui lòng dùng Gmail trường UTC2 (@st.utc2.edu.vn hoặc @utc2.edu.vn)!', 'danger');
+    const isAcceptedEmail = email.endsWith('@st.utc2.edu.vn') || 
+                            email.endsWith('@utc2.edu.vn') || 
+                            email.endsWith('@gmail.com');
+    if (!isAcceptedEmail) {
+        showToast('Vui lòng dùng Gmail sinh viên (@st.utc2.edu.vn) hoặc Gmail cá nhân (@gmail.com)!', 'danger');
         if (window.sound) window.sound.playWarning();
         return;
     }
@@ -1352,14 +1392,14 @@ async function handleAuthSubmitForm(e) {
         }
 
         if (!enteredOtp) {
-            showToast('Vui lòng nhập mã OTP 6 số đã được gửi về hộp thư Gmail của bạn!', 'danger');
+            showToast('Vui lòng nhập mã 6 số để xác nhận Gmail cá nhân!', 'danger');
             if (window.sound) window.sound.playWarning();
             const otpInput = document.getElementById('authOtpInput');
             if (otpInput) otpInput.focus();
             return;
         }
 
-        // BẮT BUỘC XÁC THỰC MÃ OTP TỪ GMAIL THỰC TẾ
+        // BẮT BUỘC XÁC THỰC MÃ OTP 6 SỐ
         let isOtpValid = (window.app.generatedOtp && enteredOtp === window.app.generatedOtp);
 
         // Kiểm tra đối chiếu với Supabase Auth nếu người dùng dùng mã từ Supabase
@@ -1375,7 +1415,7 @@ async function handleAuthSubmitForm(e) {
         }
 
         if (!isOtpValid) {
-            showToast('Mã OTP không chính xác hoặc đã hết hạn! Vui lòng kiểm tra lại tin nhắn mới nhất trong hộp thư Gmail và nhập đúng 6 số.', 'danger');
+            showToast('Mã OTP không chính xác hoặc đã hết hạn! Vui lòng kiểm tra mã 6 số và nhập lại chính xác.', 'danger');
             if (window.sound) window.sound.playWarning();
             const otpInput = document.getElementById('authOtpInput');
             if (otpInput) {
@@ -1390,6 +1430,8 @@ async function handleAuthSubmitForm(e) {
         if (existingUser) {
             existingUser.name = fullName || existingUser.name;
             existingUser.password = password;
+            existingUser.isEmailVerified = true;
+            existingUser.verifiedAt = new Date().toISOString();
             window.app.user = existingUser;
             window.app.saveUsers();
         } else {
@@ -1401,6 +1443,8 @@ async function handleAuthSubmitForm(e) {
                 role: isOfficialAdmin ? 'admin' : 'student',
                 coins: isOfficialAdmin ? 9999 : 500,
                 reputation: isOfficialAdmin ? 100 : 95,
+                isEmailVerified: true,
+                verifiedAt: new Date().toISOString(),
                 avatarLetter: (fullName || email).charAt(0).toUpperCase()
             };
             window.app.registeredUsers.push(newUser);

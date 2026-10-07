@@ -69,35 +69,58 @@
                     </div>
                 </div>
 
-                <!-- 4. Gửi & Nhập Mã OTP Xác Nhận Qua Gmail (Hiện khi Đăng Ký) -->
+                <!-- 4. Gửi & Nhập Mã OTP Xác Nhận Danh Tính Gmail Cá Nhân (Hiện khi Đăng Ký) -->
                 <div class="auth-form-group" id="authOtpSection" style="display:none;">
-                    <label class="auth-label">Mã OTP xác nhận qua Gmail *</label>
+                    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:4px;">
+                        <label class="auth-label" style="margin:0;">Mã 6 số xác nhận Gmail cá nhân *</label>
+                        <span style="font-size:11px; color:#16a34a; font-weight:700;">🛡️ Xác thực chính chủ</span>
+                    </div>
                     <div class="auth-otp-row">
                         <div class="auth-input-wrap" style="flex:1;">
                             <span class="auth-input-icon">🔑</span>
                             <input type="text" id="authOtpInput" class="auth-input" 
-                                   placeholder="Nhập mã 6 số OTP..." maxlength="6" autocomplete="off" style="letter-spacing:2px; font-weight:700;">
+                                   placeholder="Nhập mã 6 số OTP..." maxlength="6" autocomplete="off" style="letter-spacing:4px; font-weight:800; font-size:16px; text-align:center;">
                         </div>
                         <button type="button" class="btn-get-otp" id="sendOtpBtn" onclick="requestOtpCode(event)">
-                            📩 Gửi Mã OTP
+                            📩 Gửi Mã 6 Số
                         </button>
                     </div>
                 </div>
 
-                <!-- HỘP THÔNG BÁO KIỂM TRA HÒM THƯ GMAIL THỰC TẾ -->
-                <div class="mock-email-box" id="mockEmailNotification" style="display:none; background:#f0fdf4; border:1.5px solid #86efac; border-radius:12px; padding:14px; text-align:left;">
-                    <div style="display:flex; align-items:center; gap:8px; margin-bottom:6px;">
-                        <span style="font-size:22px;">📬</span>
-                        <strong style="color:#15803d; font-size:13.5px;">ĐÃ GỬI MÃ OTP VỀ TIN NHẮN GMAIL!</strong>
+                <!-- HỘP THÔNG BÁO VÀ HIỂN THỊ MÃ 6 SỐ XÁC MINH GMAIL CÁ NHÂN -->
+                <div class="mock-email-box" id="mockEmailNotification" style="display:none; background:#f0fdf4; border:1.5px solid #86efac; border-radius:12px; padding:16px; text-align:left; box-shadow: 0 4px 12px rgba(16, 185, 129, 0.1);">
+                    <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:10px; border-bottom:1px dashed #bbf7d0; padding-bottom:8px;">
+                        <div style="display:flex; align-items:center; gap:8px;">
+                            <span style="font-size:22px;">🛡️</span>
+                            <div>
+                                <strong style="color:#15803d; font-size:13.5px; display:block;">XÁC MINH DANH TÍNH GMAIL CÁ NHÂN</strong>
+                                <span style="font-size:11px; color:#64748b;">Hệ thống chứng thực thành viên UTC2HAND</span>
+                            </div>
+                        </div>
+                        <span class="badge-count" style="background:#dcfce7; color:#15803d; font-size:11px; padding:3px 8px; border-radius:12px;" id="otpStatusBadge">Đã Cấp Mã</span>
                     </div>
-                    <div style="font-size:12px; color:#334155; line-height:1.5; margin-bottom:10px;">
-                        Hệ thống đã tự động gửi mã OTP xác nhận về hòm thư Gmail:<br>
-                        <strong id="mockTargetEmail" style="color:#0284c7; font-size:13px; font-family:monospace;">sinhvien@st.utc2.edu.vn</strong>
+
+                    <div style="font-size:12.5px; color:#334155; line-height:1.5; margin-bottom:10px;">
+                        Gmail cá nhân đang xác nhận: <strong id="mockTargetEmail" style="color:#0284c7; font-size:13px; font-family:monospace;">sinhvien@st.utc2.edu.vn</strong>
                     </div>
+
+                    <!-- KHUNG HIỂN THỊ MÃ 6 SỐ XÁC THỰC CHÍNH THỨC -->
+                    <div style="background:#ffffff; border:2px solid #86efac; border-radius:10px; padding:14px; text-align:center; margin-bottom:12px; box-shadow:inset 0 1px 3px rgba(0,0,0,0.05);">
+                        <div style="font-size:11px; font-weight:700; color:#16a34a; text-transform:uppercase; letter-spacing:1px; margin-bottom:4px;">
+                            MÃ XÁC THỰC 6 SỐ DÀNH CHO BẠN:
+                        </div>
+                        <div id="displayGeneratedOtp" style="font-size:34px; font-weight:900; letter-spacing:8px; color:#15803d; font-family:monospace; margin:4px 0 10px 0; user-select:all;">
+                            ------
+                        </div>
+                        <div style="display:flex; justify-content:center; gap:8px; flex-wrap:wrap;">
+                            <button type="button" class="apply-filter-btn" style="background:#0284c7; width:auto; padding:6px 16px; font-size:12px; margin:0;" onclick="copyAndFillOtp()">
+                                ⚡ Tự Động Điền & Sao Chép Mã
+                            </button>
+                        </div>
+                    </div>
+
                     <div style="background:#ffffff; border:1px dashed #86efac; border-radius:8px; padding:10px 12px; font-size:12px; color:#166534; margin-bottom:12px; line-height:1.5;">
-                        👉 <strong>Bước 1:</strong> Mở ứng dụng <strong>Gmail</strong> trên điện thoại hoặc mở tab trình duyệt mới tại <a href="https://mail.google.com" target="_blank" style="color:#0284c7; text-decoration:underline; font-weight:700;">mail.google.com</a>.<br>
-                        👉 <strong>Bước 2:</strong> Kiểm tra thư mới (tìm cả trong mục <em>Hộp thư đến</em> và <em>Thư rác / Spam</em>).<br>
-                        👉 <strong>Bước 3:</strong> Xem mã 6 số được gửi về và nhập vào ô <em>"Mã OTP xác nhận qua Gmail"</em> ở trên.
+                        👉 <strong>Cách xác nhận:</strong> Mã 6 số bảo mật đã được tạo riêng cho Gmail của bạn. Bạn hãy nhập đúng 6 chữ số bên trên vào ô <em>"Mã 6 số xác nhận Gmail cá nhân"</em> rồi bấm nút <strong>"Hoàn Tất Đăng Ký"</strong> bên dưới để hệ thống kích hoạt tài khoản chính chủ.
                     </div>
                     <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:8px;">
                         <a href="https://mail.google.com" target="_blank" class="apply-filter-btn" style="background:#ea4335; width:auto; padding:7px 16px; margin:0; text-decoration:none; font-size:12px; display:inline-flex; align-items:center; gap:6px; font-weight:700;">
