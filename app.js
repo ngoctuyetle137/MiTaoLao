@@ -2075,14 +2075,14 @@ function openSupabaseModal() {
 
     if (window.UniPassSupabase && window.UniPassSupabase.isConfigured()) {
         const cfg = window.UniPassSupabase.getConfig();
-        if (urlInput) urlInput.value = cfg.url || '';
-        if (keyInput) keyInput.value = localStorage.getItem('unipass_supabase_key') || '';
+        if (urlInput) urlInput.value = cfg.url || 'https://lhlwemmpnrmlskeljniq.supabase.co';
+        if (keyInput) keyInput.value = (window.UniPassSupabase.getRawKey && window.UniPassSupabase.getRawKey()) || localStorage.getItem('unipass_supabase_key') || '';
         if (badge) {
             badge.innerText = '🟢 Trạng thái: Đã kết nối Supabase Cloud';
             badge.style.color = '#15803d';
         }
         if (detail) {
-            detail.innerText = `Đang kết nối: ${cfg.url}. Các bài đăng và tin nhắn đang được đồng bộ Realtime.`;
+            detail.innerText = `Đang kết nối: ${cfg.url}. Cơ sở dữ liệu Supabase PostgreSQL đang hoạt động.`;
         }
     } else {
         if (urlInput && !urlInput.value) urlInput.value = localStorage.getItem('unipass_supabase_url') || 'https://lhlwemmpnrmlskeljniq.supabase.co';

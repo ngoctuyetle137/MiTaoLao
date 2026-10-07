@@ -13,12 +13,13 @@
     const STORAGE_KEY_URL = 'unipass_supabase_url';
     const STORAGE_KEY_KEY = 'unipass_supabase_key';
 
-    // URL dự án Supabase chính thức của tài khoản ngoctuyetle137 (lhlwemmpnrmlskeljniq)
+    // Cấu hình dự án Supabase chính thức của tài khoản ngoctuyetle137 (lhlwemmpnrmlskeljniq)
     const DEFAULT_PROJECT_URL = 'https://lhlwemmpnrmlskeljniq.supabase.co';
+    const DEFAULT_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImxobHdlbW1wbnJtbHNrZWxqbmlxIiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTEyNzIyNTYsImV4cCI6MjEwNjg0ODI1Nn0.OBOpRm80_LZ9vmt3hgKUuDqPkeAzDHPkYS_MoacHeDo';
 
     // Cấu hình mặc định hoặc từ bộ nhớ trình duyệt
     let supabaseUrl = localStorage.getItem(STORAGE_KEY_URL) || DEFAULT_PROJECT_URL;
-    let supabaseKey = localStorage.getItem(STORAGE_KEY_KEY) || '';
+    let supabaseKey = localStorage.getItem(STORAGE_KEY_KEY) || DEFAULT_ANON_KEY;
     let supabaseClient = null;
     let realtimeChannel = null;
 
@@ -34,6 +35,11 @@
                 url: supabaseUrl,
                 key: supabaseKey ? (supabaseKey.substring(0, 10) + '...' + supabaseKey.substring(supabaseKey.length - 6)) : ''
             };
+        },
+
+        // Lấy toàn bộ key
+        getRawKey: function () {
+            return supabaseKey;
         },
 
         // Lưu cấu hình và khởi tạo client
