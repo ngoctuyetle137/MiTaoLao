@@ -15,8 +15,8 @@
     // Kênh trao đổi trực tuyến toàn cầu của UTC2Hand
     const SYNC_TOPIC = 'utc2hand_live_sync_channel_v1';
     const SYNC_ENDPOINT = `https://ntfy.sh/${SYNC_TOPIC}`;
-    const SSE_ENDPOINT = `https://ntfy.sh/${SYNC_TOPIC}/sse`;
-    const POLL_ENDPOINT = `https://ntfy.sh/${SYNC_TOPIC}/json?poll=1`;
+    const SSE_ENDPOINT = `https://ntfy.sh/${SYNC_TOPIC}/sse?since=all`;
+    const POLL_ENDPOINT = `https://ntfy.sh/${SYNC_TOPIC}/json?poll=1&since=all`;
 
     // Tạo mã định danh duy nhất cho từng máy để chống echo chính mình
     const CLIENT_ID = 'DEV_' + Math.random().toString(36).substring(2, 9) + '_' + Date.now().toString(36);
@@ -262,3 +262,4 @@
     });
 
 })(window);
+

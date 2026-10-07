@@ -28,12 +28,17 @@ Hệ thống **UniPass UTC2** (Sàn pass đồ sinh viên Trường Đại học
 3. **Kéo và thả nguyên thư mục `c:\withAI\Lần N`** vào ô tròn nét đứt trên trang web.
 4. Chờ 5 giây, Netlify sẽ cấp ngay một đường link trực tuyến công khai (ví dụ: `https://unipass-utc2.netlify.app`). Bạn có thể đổi tên miền con theo ý muốn trong phần *Site settings -> Change site name*.
 
-### ⭐ Cách B: Đưa lên GitHub Pages
-1. Truy cập GitHub của bạn (`ngoctuyetle137`).
-2. Tạo một repository mới tên là `unipass-utc2`.
-3. Tải toàn bộ các file trong thư mục lên repo.
-4. Vào **Settings -> Pages -> Branch: main -> Save**.
-5. Link trang web sẽ tự động chạy tại: **`https://ngoctuyetle137.github.io/unipass-utc2`**.
+### ⭐ Cách B: Đưa lên GitHub Pages (Miễn phí, vĩnh viễn)
+1. Mã nguồn dự án đã được đồng bộ trực tiếp lên kho GitHub: **[https://github.com/ngoctuyetle137/MiTaoLao](https://github.com/ngoctuyetle137/MiTaoLao)**
+2. Để kích hoạt GitHub Pages (chỉ cần làm 1 lần):
+   - Mở link: **[https://github.com/ngoctuyetle137/MiTaoLao/settings/pages](https://github.com/ngoctuyetle137/MiTaoLao/settings/pages)**
+   - Ở mục **Source**, chọn **Deploy from a branch** ➔ Chọn branch **main** (hoặc **gh-pages**) ➔ thư mục **/ (root)** ➔ bấm **Save**.
+   - *(Hoặc ở mục Source chọn **GitHub Actions**, file workflow tự động `.github/workflows/deploy.yml` sẽ tự động triển khai).*
+3. Đường link chính thức chạy online toàn cầu: **`https://ngoctuyetle137.github.io/MiTaoLao/`**.
+4. Bất kỳ máy nào (Máy A, B, C, D... trên điện thoại/laptop) chỉ cần mở link trên là có thể:
+   - Xem bài đăng của nhau tức thời.
+   - Nhắn tin chat qua lại giữa 2 tài khoản sinh viên theo thời gian thực.
+   - Đặt cọc giữ chỗ và Admin kiểm duyệt bài đăng.
 
 ---
 
