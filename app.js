@@ -2085,14 +2085,14 @@ function openSupabaseModal() {
             detail.innerText = `Đang kết nối: ${cfg.url}. Các bài đăng và tin nhắn đang được đồng bộ Realtime.`;
         }
     } else {
-        if (urlInput && !urlInput.value) urlInput.value = localStorage.getItem('unipass_supabase_url') || '';
+        if (urlInput && !urlInput.value) urlInput.value = localStorage.getItem('unipass_supabase_url') || 'https://lhlwemmpnrmlskeljniq.supabase.co';
         if (keyInput && !keyInput.value) keyInput.value = localStorage.getItem('unipass_supabase_key') || '';
         if (badge) {
             badge.innerText = '🟡 Trạng thái: Bộ nhớ đệm cục bộ (Chưa nối Cloud)';
             badge.style.color = '#d97706';
         }
         if (detail) {
-            detail.innerText = 'Nhập thông tin bên dưới hoặc dán Schema vào Supabase để kích hoạt đồng bộ đám mây.';
+            detail.innerText = 'Nhập Anon Key (hoặc bấm link "Lấy Key tại đây") để kích hoạt đồng bộ đám mây PostgreSQL.';
         }
     }
 }

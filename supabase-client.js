@@ -13,8 +13,11 @@
     const STORAGE_KEY_URL = 'unipass_supabase_url';
     const STORAGE_KEY_KEY = 'unipass_supabase_key';
 
+    // URL dự án Supabase chính thức của tài khoản ngoctuyetle137 (lhlwemmpnrmlskeljniq)
+    const DEFAULT_PROJECT_URL = 'https://lhlwemmpnrmlskeljniq.supabase.co';
+
     // Cấu hình mặc định hoặc từ bộ nhớ trình duyệt
-    let supabaseUrl = localStorage.getItem(STORAGE_KEY_URL) || '';
+    let supabaseUrl = localStorage.getItem(STORAGE_KEY_URL) || DEFAULT_PROJECT_URL;
     let supabaseKey = localStorage.getItem(STORAGE_KEY_KEY) || '';
     let supabaseClient = null;
     let realtimeChannel = null;
