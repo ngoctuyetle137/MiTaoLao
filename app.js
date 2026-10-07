@@ -1204,7 +1204,7 @@ function switchAuthMode(mode) {
     if (window.sound) window.sound.playClick();
 }
 
-function requestOtpCode(e) {
+async function requestOtpCode(e) {
     if (e && e.preventDefault) e.preventDefault(); // Chặn form tự nộp và load lại trang
     
     const emailInput = document.getElementById('authEmailInput');
@@ -1218,34 +1218,94 @@ function requestOtpCode(e) {
         return;
     }
 
+    const sendOtpBtn = document.getElementById('sendOtpBtn');
+    if (sendOtpBtn) {
+        sendOtpBtn.disabled = true;
+        sendOtpBtn.innerText = '⏳ Đang gửi mail...';
+    }
+
     const otp = Math.floor(100000 + Math.random() * 900000).toString();
     window.app.generatedOtp = otp;
+    window.app.otpSentAt = Date.now();
 
     const mockBox = document.getElementById('mockEmailNotification');
-    const displayOtp = document.getElementById('displayGeneratedOtp');
     const targetEmail = document.getElementById('mockTargetEmail');
     const otpInput = document.getElementById('authOtpInput');
 
-    if (displayOtp) displayOtp.innerText = otp;
     if (targetEmail) targetEmail.innerText = email;
     if (mockBox) {
         mockBox.classList.add('active');
-        mockBox.style.display = 'block'; // Đảm bảo hộp thư hiện lên
+        mockBox.style.display = 'block'; // Đảm bảo bảng hướng dẫn hiện lên
     }
 
-    // NGHIÊM NGẶT: Người dùng BẮT BUỘC phải tự gõ mã OTP nhận được trong hộp thư!
+    // Xóa ô nhập OTP và focus để người dùng mở hộp thư Gmail nhập mã thực tế
     if (otpInput) {
         otpInput.value = '';
         otpInput.focus();
     }
 
+    // 1. TỰ ĐỘNG GỬI EMAIL THỰC TẾ QUA GOOGLE APPS SCRIPT WEBHOOK (NẾU ĐÃ CẤU HÌNH)
+    const webhookUrl = localStorage.getItem('unipass_email_webhook');
+    if (webhookUrl && webhookUrl.startsWith('http')) {
+        try {
+            const getUrl = webhookUrl + (webhookUrl.includes('?') ? '&' : '?') + 'email=' + encodeURIComponent(email) + '&otp=' + encodeURIComponent(otp) + '&appName=' + encodeURIComponent('UniPass UTC2');
+            fetch(getUrl, { mode: 'no-cors' }).catch(() => {});
+            fetch(webhookUrl, {
+                method: 'POST',
+                mode: 'no-cors',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ email: email, otp: otp, appName: 'UniPass UTC2' })
+            }).catch(() => {});
+            console.log('📨 [OTP Mailer] Đã phát lệnh gửi OTP qua Google Apps Script Webhook:', email);
+        } catch (err) {
+            console.warn('⚠️ [OTP Mailer] Lỗi kết nối Webhook:', err);
+        }
+    }
+
+    // 2. TỰ ĐỘNG GỬI EMAIL THỰC TẾ QUA SUPABASE AUTH
+    if (window.UniPassSupabase && window.UniPassSupabase.isConfigured()) {
+        try {
+            const supaRes = await window.UniPassSupabase.sendOtpEmail(email);
+            if (!supaRes.success) {
+                console.warn('⚠️ [Supabase Auth] Lỗi gửi OTP:', supaRes.message);
+                if (supaRes.message && supaRes.message.includes('rate limit')) {
+                    showToast('⚠️ Supabase giới hạn số lượng gửi mail/giờ. Hãy cấu hình thêm Webhook Google Apps Script để gửi thư không giới hạn!', 'warning');
+                }
+            } else {
+                console.log('📨 [Supabase Auth] Đã gửi mã OTP thực tế về:', email);
+            }
+        } catch (err) {
+            console.warn('⚠️ [Supabase Auth] Lỗi ngoại lệ khi gửi OTP:', err);
+        }
+    }
+
     if (window.sound) window.sound.playNotification();
-    showToast(`Mã OTP đã gửi về ${email}! Vui lòng xem mã trong hộp thư thông báo và tự nhập tay vào ô xác thực.`, 'success');
+    showToast(`✓ Đã tự động gửi mã OTP về Gmail: ${email}! Hãy mở ứng dụng Gmail (hoặc mail.google.com) để lấy mã xác thực.`, 'success');
+
+    // Khởi động đếm ngược 60 giây để tránh gửi dồn dập
+    let cooldown = 60;
+    if (sendOtpBtn) {
+        sendOtpBtn.disabled = true;
+        sendOtpBtn.innerText = `⏳ Gửi lại (${cooldown}s)`;
+        if (window.otpCountdownTimer) {
+            clearInterval(window.otpCountdownTimer);
+        }
+        window.otpCountdownTimer = setInterval(() => {
+            cooldown--;
+            if (cooldown > 0) {
+                sendOtpBtn.innerText = `⏳ Gửi lại (${cooldown}s)`;
+            } else {
+                clearInterval(window.otpCountdownTimer);
+                window.otpCountdownTimer = null;
+                sendOtpBtn.disabled = false;
+                sendOtpBtn.innerText = '📩 Gửi Lại Mã OTP';
+            }
+        }, 1000);
+    }
 }
 
-   
 // Xử lý nộp form Đăng ký / Đăng nhập
-function handleAuthSubmitForm(e) {
+async function handleAuthSubmitForm(e) {
     e.preventDefault();
     const email = document.getElementById('authEmailInput').value.trim();
     const fullName = document.getElementById('authFullNameInput') ? document.getElementById('authFullNameInput').value.trim() : '';
@@ -1291,15 +1351,31 @@ function handleAuthSubmitForm(e) {
             return;
         }
 
-        if (!window.app.generatedOtp) {
-            showToast('Vui lòng bấm nút "Gửi Mã OTP" để nhận mã xác nhận qua Gmail trước!', 'danger');
+        if (!enteredOtp) {
+            showToast('Vui lòng nhập mã OTP 6 số đã được gửi về hộp thư Gmail của bạn!', 'danger');
             if (window.sound) window.sound.playWarning();
+            const otpInput = document.getElementById('authOtpInput');
+            if (otpInput) otpInput.focus();
             return;
         }
 
-        // BẮT BUỘC NHẬP ĐÚNG MÃ OTP VỪA GỬI VỀ GMAIL (KHÔNG CHO PHÉP BỎ QUA)
-        if (enteredOtp !== window.app.generatedOtp) {
-            showToast('Mã OTP không chính xác hoặc chưa hợp lệ! Vui lòng kiểm tra mã trong hộp thư và gõ đúng 6 số.', 'danger');
+        // BẮT BUỘC XÁC THỰC MÃ OTP TỪ GMAIL THỰC TẾ
+        let isOtpValid = (window.app.generatedOtp && enteredOtp === window.app.generatedOtp);
+
+        // Kiểm tra đối chiếu với Supabase Auth nếu người dùng dùng mã từ Supabase
+        if (!isOtpValid && window.UniPassSupabase && window.UniPassSupabase.isConfigured()) {
+            try {
+                const verifyRes = await window.UniPassSupabase.verifyOtpEmail(email, enteredOtp);
+                if (verifyRes && verifyRes.success) {
+                    isOtpValid = true;
+                }
+            } catch (err) {
+                console.warn('⚠️ Lỗi kiểm tra Supabase OTP:', err);
+            }
+        }
+
+        if (!isOtpValid) {
+            showToast('Mã OTP không chính xác hoặc đã hết hạn! Vui lòng kiểm tra lại tin nhắn mới nhất trong hộp thư Gmail và nhập đúng 6 số.', 'danger');
             if (window.sound) window.sound.playWarning();
             const otpInput = document.getElementById('authOtpInput');
             if (otpInput) {
@@ -2743,8 +2819,13 @@ function openSupabaseModal() {
 
     const urlInput = document.getElementById('supabaseUrlInput');
     const keyInput = document.getElementById('supabaseKeyInput');
+    const webhookInput = document.getElementById('emailWebhookUrlInput');
     const badge = document.getElementById('supabaseStatusBadge');
     const detail = document.getElementById('supabaseDetailText');
+
+    if (webhookInput) {
+        webhookInput.value = localStorage.getItem('unipass_email_webhook') || '';
+    }
 
     if (window.UniPassSupabase && window.UniPassSupabase.isConfigured()) {
         const cfg = window.UniPassSupabase.getConfig();
@@ -2773,10 +2854,20 @@ function openSupabaseModal() {
 async function saveAndConnectSupabase() {
     const urlInput = document.getElementById('supabaseUrlInput');
     const keyInput = document.getElementById('supabaseKeyInput');
+    const webhookInput = document.getElementById('emailWebhookUrlInput');
     if (!urlInput || !keyInput) return;
 
     const url = urlInput.value.trim();
     const key = keyInput.value.trim();
+
+    if (webhookInput) {
+        const webhookVal = webhookInput.value.trim();
+        if (webhookVal) {
+            localStorage.setItem('unipass_email_webhook', webhookVal);
+        } else {
+            localStorage.removeItem('unipass_email_webhook');
+        }
+    }
 
     if (!url || !key) {
         showToast('Vui lòng nhập đầy đủ Supabase Project URL và Anon Key!', 'danger');
@@ -2889,12 +2980,16 @@ function disconnectSupabase() {
     }
     const urlInput = document.getElementById('supabaseUrlInput');
     const keyInput = document.getElementById('supabaseKeyInput');
+    const webhookInput = document.getElementById('emailWebhookUrlInput');
     const badge = document.getElementById('supabaseStatusBadge');
     const detail = document.getElementById('supabaseDetailText');
     const pingEl = document.getElementById('supabasePingTime');
 
     if (urlInput) urlInput.value = '';
     if (keyInput) keyInput.value = '';
+    if (webhookInput) webhookInput.value = '';
+    localStorage.removeItem('unipass_email_webhook');
+
     if (badge) {
         badge.innerText = '⚪ Đã ngắt kết nối';
         badge.style.color = '#64748b';

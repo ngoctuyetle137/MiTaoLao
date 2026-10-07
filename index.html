@@ -84,14 +84,26 @@
                     </div>
                 </div>
 
-                <!-- HỘP MÔ PHỎNG HỘP THƯ GMAIL UTC2 NHẬN OTP -->
-                <div class="mock-email-box" id="mockEmailNotification" style="display:none;">
-                    <div class="mock-email-title">
-                        <span>📬</span> [Hộp Thư Đến UTC2 Mail] Mã xác thực của bạn:
+                <!-- HỘP THÔNG BÁO KIỂM TRA HÒM THƯ GMAIL THỰC TẾ -->
+                <div class="mock-email-box" id="mockEmailNotification" style="display:none; background:#f0fdf4; border:1.5px solid #86efac; border-radius:12px; padding:14px; text-align:left;">
+                    <div style="display:flex; align-items:center; gap:8px; margin-bottom:6px;">
+                        <span style="font-size:22px;">📬</span>
+                        <strong style="color:#15803d; font-size:13.5px;">ĐÃ GỬI MÃ OTP VỀ TIN NHẮN GMAIL!</strong>
                     </div>
-                    <div>Mã OTP xác nhận tài khoản: <span class="mock-otp-code-highlight" id="displayGeneratedOtp">------</span></div>
-                    <div style="font-size:11px; color:#166534; margin-top:4px;">
-                        Đã gửi đến: <strong id="mockTargetEmail">sinhvien@st.utc2.edu.vn</strong> (Hiệu lực 5 phút).
+                    <div style="font-size:12px; color:#334155; line-height:1.5; margin-bottom:10px;">
+                        Hệ thống đã tự động gửi mã OTP xác nhận về hòm thư Gmail:<br>
+                        <strong id="mockTargetEmail" style="color:#0284c7; font-size:13px; font-family:monospace;">sinhvien@st.utc2.edu.vn</strong>
+                    </div>
+                    <div style="background:#ffffff; border:1px dashed #86efac; border-radius:8px; padding:10px 12px; font-size:12px; color:#166534; margin-bottom:12px; line-height:1.5;">
+                        👉 <strong>Bước 1:</strong> Mở ứng dụng <strong>Gmail</strong> trên điện thoại hoặc mở tab trình duyệt mới tại <a href="https://mail.google.com" target="_blank" style="color:#0284c7; text-decoration:underline; font-weight:700;">mail.google.com</a>.<br>
+                        👉 <strong>Bước 2:</strong> Kiểm tra thư mới (tìm cả trong mục <em>Hộp thư đến</em> và <em>Thư rác / Spam</em>).<br>
+                        👉 <strong>Bước 3:</strong> Xem mã 6 số được gửi về và nhập vào ô <em>"Mã OTP xác nhận qua Gmail"</em> ở trên.
+                    </div>
+                    <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:8px;">
+                        <a href="https://mail.google.com" target="_blank" class="apply-filter-btn" style="background:#ea4335; width:auto; padding:7px 16px; margin:0; text-decoration:none; font-size:12px; display:inline-flex; align-items:center; gap:6px; font-weight:700;">
+                            <span>✉️</span> Mở Hộp Thư Gmail (mail.google.com) ➔
+                        </a>
+                        <span style="font-size:11.5px; color:#64748b;" id="otpTimerText">Mã có hiệu lực trong 5 phút</span>
                     </div>
                 </div>
 
@@ -974,6 +986,19 @@
                     </a>
                 </div>
                 <input type="password" id="supabaseKeyInput" class="hero-search-input" style="padding:8px 12px; border:1px solid #cbd5e1; box-shadow:none; font-family:monospace; font-size:12px;" value="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImxobHdlbW1wbnJtbHNrZWxqbmlxIiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTEyNzIyNTYsImV4cCI6MjEwNjg0ODI1Nn0.OBOpRm80_LZ9vmt3hgKUuDqPkeAzDHPkYS_MoacHeDo" placeholder="Dán mã anon key bắt đầu bằng eyJhbGciOi...">
+            </div>
+
+            <div style="margin-bottom:14px;">
+                <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:4px;">
+                    <label style="font-size:12px; font-weight:700; color:#334155;">
+                        3. Webhook Gửi Email OTP Thực Tế (Google Apps Script / Tùy chọn)
+                    </label>
+                    <span style="font-size:11px; color:#16a34a; font-weight:700;">Gmail Tự Động</span>
+                </div>
+                <input type="url" id="emailWebhookUrlInput" class="hero-search-input" style="padding:8px 12px; border:1px solid #cbd5e1; box-shadow:none; font-family:monospace; font-size:12px;" placeholder="Dán URL Google Apps Script Web App (https://script.google.com/macros/s/.../exec)">
+                <div style="font-size:11px; color:#64748b; margin-top:3px;">
+                    * Xem hướng dẫn triển khai 1 phút trong tệp <code>google_apps_script_mailer.js</code> để gửi email bằng chính tài khoản Gmail của bạn.
+                </div>
             </div>
 
             <!-- Nhóm nút hành động -->

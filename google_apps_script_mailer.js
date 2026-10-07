@@ -1,0 +1,107 @@
+/**
+ * ===================================================================
+ * GOOGLE APPS SCRIPT - BỘ GỬI EMAIL OTP TỰ ĐỘNG CHO UNIPASS UTC2
+ * Miễn phí 100%, gửi thư trực tiếp từ máy chủ Gmail của Google (không sợ vào spam)
+ * ===================================================================
+ * 
+ * 📘 HƯỚNG DẪN CÀI ĐẶT 3 BƯỚC NHANH TRONG 1 PHÚT:
+ * 1. Mở trang: https://script.google.com/ ➔ Bấm "Dự án mới" (New project)
+ * 2. Xóa hết mã cũ, dán toàn bộ nội dung file này vào ➔ Nhấn Ctrl + S để Lưu.
+ * 3. Bấm nút màu xanh "Triển khai" (Deploy) ở góc trên bên phải:
+ *    - Chọn "Tùy chọn triển khai mới" (New deployment).
+ *    - Bấm biểu tượng Bánh răng (⚙️) ➔ Chọn loại "Ứng dụng web" (Web app).
+ *    - Mô tả: "UniPass OTP Mailer".
+ *    - Thực thi dưới dạng (Execute as): "Tôi" (tài khoản Gmail của bạn).
+ *    - Ai có quyền truy cập (Who has access): "Bất kỳ ai" (Anyone) -> RẤT QUAN TRỌNG.
+ *    - Bấm nút "Triển khai" (Deploy) ➔ Cấp quyền truy cập cho Gmail khi Google hỏi.
+ *    - Sao chép đường dẫn "URL ứng dụng web" (Web App URL) có dạng:
+ *      https://script.google.com/macros/s/AKfycb.../exec
+ * 4. Dán URL vừa sao chép vào mục "Cấu Hình Supabase & Email OTP" trên trang web UniPass UTC2.
+ * 
+ * ===================================================================
+ */
+
+function handleSendEmail(targetEmail, otpCode, appName) {
+  try {
+    appName = appName || "UniPass UTC2";
+
+    if (!targetEmail || !otpCode) {
+      return ContentService.createTextOutput(JSON.stringify({
+        success: false,
+        message: "Thiếu địa chỉ email người nhận hoặc mã OTP!"
+      })).setMimeType(ContentService.MimeType.JSON);
+    }
+
+    var subject = "[" + appName + "] Mã OTP xác thực đăng ký tài khoản: " + otpCode;
+    
+    var htmlBody = 
+      '<div style="font-family: Arial, sans-serif; max-width: 540px; margin: 0 auto; padding: 24px; border: 1px solid #e2e8f0; border-radius: 12px; background: #ffffff;">' +
+        '<div style="text-align: center; margin-bottom: 20px;">' +
+          '<div style="font-size: 38px;">🎓</div>' +
+          '<h2 style="color: #0284c7; margin: 6px 0 0 0; font-size: 22px;">UniPass UTC2</h2>' +
+          '<div style="font-size: 13px; color: #64748b;">Hệ Thống Trao Đổi Đồ Học Tập Sinh Viên UTC2</div>' +
+        '</div>' +
+        '<div style="background: #f0fdf4; border: 2px dashed #86efac; border-radius: 10px; padding: 20px; text-align: center; margin-bottom: 20px;">' +
+          '<div style="font-size: 12px; font-weight: 700; color: #16a34a; text-transform: uppercase; letter-spacing: 1px;">MÃ OTP XÁC THỰC CỦA BẠN:</div>' +
+          '<div style="font-size: 38px; font-weight: 900; letter-spacing: 8px; color: #15803d; margin: 12px 0;">' + otpCode + '</div>' +
+          '<div style="font-size: 12.5px; color: #475569;">Mã có hiệu lực trong vòng <strong>5 phút</strong>. Tuyệt đối không chia sẻ mã này cho người khác.</div>' +
+        '</div>' +
+        '<div style="font-size: 13px; color: #334155; line-height: 1.6; margin-bottom: 20px;">' +
+          'Chào bạn sinh viên UTC2,<br>' +
+          'Bạn vừa gửi yêu cầu đăng ký tài khoản trên nền tảng <strong>UniPass UTC2</strong>. Vui lòng mở tin nhắn này, ghi nhớ 6 chữ số bên trên và quay lại ứng dụng để nhập vào ô xác thực.' +
+        '</div>' +
+        '<div style="border-top: 1px solid #e2e8f0; padding-top: 14px; font-size: 11.5px; color: #94a3b8; text-align: center; line-height: 1.4;">' +
+          'Trường Đại Học Giao Thông Vận Tải - Phân Hiệu Tại TP. Hồ Chí Minh (UTC2)<br>' +
+          'Thư này được tạo tự động bởi hệ thống bảo mật UniPass, vui lòng không trả lời thư này.' +
+        '</div>' +
+      '</div>';
+
+    // Gửi email chính thức qua Gmail API của Google
+    MailApp.sendEmail({
+      to: targetEmail,
+      subject: subject,
+      htmlBody: htmlBody
+    });
+
+    return ContentService.createTextOutput(JSON.stringify({
+      success: true,
+      message: "Đã gửi mã OTP thành công về Gmail " + targetEmail
+    })).setMimeType(ContentService.MimeType.JSON);
+
+  } catch (error) {
+    return ContentService.createTextOutput(JSON.stringify({
+      success: false,
+      error: error.toString()
+    })).setMimeType(ContentService.MimeType.JSON);
+  }
+}
+
+function doPost(e) {
+  try {
+    var raw = e && e.postData && e.postData.contents ? e.postData.contents : "{}";
+    var data = JSON.parse(raw);
+    return handleSendEmail(data.email, data.otp, data.appName);
+  } catch (err) {
+    return ContentService.createTextOutput(JSON.stringify({
+      success: false,
+      error: err.toString()
+    })).setMimeType(ContentService.MimeType.JSON);
+  }
+}
+
+function doGet(e) {
+  try {
+    if (e && e.parameter && e.parameter.email && e.parameter.otp) {
+      return handleSendEmail(e.parameter.email, e.parameter.otp, e.parameter.appName);
+    }
+    return ContentService.createTextOutput(JSON.stringify({
+      status: "active",
+      service: "UniPass UTC2 Real Email OTP Dispatcher"
+    })).setMimeType(ContentService.MimeType.JSON);
+  } catch (err) {
+    return ContentService.createTextOutput(JSON.stringify({
+      success: false,
+      error: err.toString()
+    })).setMimeType(ContentService.MimeType.JSON);
+  }
+}

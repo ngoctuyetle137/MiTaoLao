@@ -133,6 +133,62 @@
         },
 
         // =======================================================
+        // GỬI VÀ XÁC THỰC MÃ OTP THẬT VỀ GMAIL QUA SUPABASE AUTH
+        // =======================================================
+        sendOtpEmail: async function (email) {
+            const client = this.getClient();
+            if (!client) {
+                return { success: false, message: 'Chưa khởi tạo Supabase Client' };
+            }
+
+            try {
+                const { data, error } = await client.auth.signInWithOtp({
+                    email: email,
+                    options: {
+                        shouldCreateUser: true
+                    }
+                });
+
+                if (error) {
+                    console.warn('⚠️ [Supabase Auth] Lỗi gửi email OTP:', error.message);
+                    return { success: false, error: error, message: error.message };
+                }
+
+                console.log('✅ [Supabase Auth] Đã gửi mã OTP thực tế về hòm thư:', email);
+                return { success: true, data: data, message: 'Đã gửi mã OTP về Gmail' };
+            } catch (err) {
+                console.error('❌ [Supabase Auth] Lỗi kết nối khi gửi OTP:', err);
+                return { success: false, error: err, message: err.message };
+            }
+        },
+
+        verifyOtpEmail: async function (email, token) {
+            const client = this.getClient();
+            if (!client) {
+                return { success: false, message: 'Chưa khởi tạo Supabase Client' };
+            }
+
+            try {
+                const { data, error } = await client.auth.verifyOtp({
+                    email: email,
+                    token: token,
+                    type: 'email'
+                });
+
+                if (error) {
+                    console.warn('⚠️ [Supabase Auth] Mã OTP không khớp hoặc đã hết hạn:', error.message);
+                    return { success: false, error: error, message: error.message };
+                }
+
+                console.log('✅ [Supabase Auth] Xác thực OTP trên Cloud thành công:', data);
+                return { success: true, data: data, user: data.user, session: data.session };
+            } catch (err) {
+                console.error('❌ [Supabase Auth] Lỗi xác thực OTP:', err);
+                return { success: false, error: err, message: err.message };
+            }
+        },
+
+        // =======================================================
         // 1. QUẢN LÝ SẢN PHẨM (PRODUCTS)
         // =======================================================
         getProducts: async function () {
