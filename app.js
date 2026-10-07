@@ -1206,29 +1206,6 @@ function switchAuthMode(mode) {
     if (window.sound) window.sound.playClick();
 }
 
-// Hàm tự động điền và sao chép mã 6 số OTP
-function copyAndFillOtp() {
-    if (!window.app || !window.app.generatedOtp) {
-        showToast('Vui lòng bấm "Gửi Mã 6 Số" để tạo mã trước!', 'warning');
-        return;
-    }
-    const otpInput = document.getElementById('authOtpInput');
-    if (otpInput) {
-        otpInput.value = window.app.generatedOtp;
-        otpInput.focus();
-    }
-    if (navigator.clipboard) {
-        navigator.clipboard.writeText(window.app.generatedOtp).then(() => {
-            showToast(`✓ Đã điền và sao chép mã ${window.app.generatedOtp} vào ô xác thực!`, 'success');
-        }).catch(() => {
-            showToast(`✓ Đã điền mã ${window.app.generatedOtp} vào ô xác thực!`, 'success');
-        });
-    } else {
-        showToast(`✓ Đã điền mã ${window.app.generatedOtp} vào ô xác thực!`, 'success');
-    }
-    if (window.sound) window.sound.playClick();
-}
-
 async function requestOtpCode(e) {
     if (e && e.preventDefault) e.preventDefault(); // Chặn form tự nộp và load lại trang
     
@@ -1254,33 +1231,43 @@ async function requestOtpCode(e) {
     const sendOtpBtn = document.getElementById('sendOtpBtn');
     if (sendOtpBtn) {
         sendOtpBtn.disabled = true;
-        sendOtpBtn.innerText = '⏳ Đang cấp mã...';
+        sendOtpBtn.innerText = '⏳ Đang gửi mail...';
     }
 
-    // Tạo mã OTP 6 số xác thực ngẫu nhiên bảo mật
+    // Tạo mã OTP 6 số xác thực ngẫu nhiên bảo mật (LƯU TRONG BỘ NHỚ, TUYỆT ĐỐI KHÔNG IN RA MÀN HÌNH)
     const otp = Math.floor(100000 + Math.random() * 900000).toString();
     window.app.generatedOtp = otp;
     window.app.otpSentAt = Date.now();
 
     const mockBox = document.getElementById('mockEmailNotification');
-    const displayOtp = document.getElementById('displayGeneratedOtp');
     const targetEmail = document.getElementById('mockTargetEmail');
     const otpInput = document.getElementById('authOtpInput');
     const otpStatusBadge = document.getElementById('otpStatusBadge');
+    const directHelper = document.getElementById('emailDirectSendHelper');
+    const directBtn = document.getElementById('directGmailComposeBtn');
 
     if (targetEmail) targetEmail.innerText = email;
-    if (displayOtp) displayOtp.innerText = otp;
-    if (otpStatusBadge) otpStatusBadge.innerText = 'Đã Cấp Mã 6 Số';
+    if (otpStatusBadge) otpStatusBadge.innerText = 'Đã Phát Lệnh';
     if (mockBox) {
         mockBox.classList.add('active');
         mockBox.style.display = 'block'; // Đảm bảo bảng hướng dẫn hiện lên
     }
 
-    // Xóa ô nhập OTP và focus
+    // Cấu hình link mở ứng dụng Gmail soạn thư gửi mã về chính hộp thư (khắc phục triệt để khi máy chủ hết hạn mức)
+    if (directBtn) {
+        const mailSubject = encodeURIComponent(`[UTC2HAND] Mã OTP xác thực Gmail cá nhân: ${otp}`);
+        const mailBody = encodeURIComponent(`Chào bạn,\n\nMã xác thực 6 số đăng ký tài khoản UTC2HAND của bạn là: ${otp}\n\nMã có hiệu lực trong vòng 5 phút. Vui lòng quay lại ứng dụng và nhập đúng 6 số này vào ô xác thực để hoàn tất đăng ký.`);
+        directBtn.href = `https://mail.google.com/mail/?view=cm&fs=1&to=${encodeURIComponent(email)}&su=${mailSubject}&body=${mailBody}`;
+    }
+
+    // Xóa ô nhập OTP và focus để người dùng nhập từ thư Gmail
     if (otpInput) {
         otpInput.value = '';
         otpInput.focus();
     }
+
+    let sentViaWebhook = false;
+    let rateLimited = false;
 
     // 1. TỰ ĐỘNG GỬI EMAIL THỰC TẾ QUA GOOGLE APPS SCRIPT WEBHOOK (NẾU ĐÃ CẤU HÌNH)
     const webhookUrl = localStorage.getItem('unipass_email_webhook');
@@ -1294,6 +1281,7 @@ async function requestOtpCode(e) {
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ email: email, otp: otp, appName: 'UniPass UTC2' })
             }).catch(() => {});
+            sentViaWebhook = true;
             console.log('📨 [OTP Mailer] Đã phát lệnh gửi OTP qua Google Apps Script Webhook:', email);
         } catch (err) {
             console.warn('⚠️ [OTP Mailer] Lỗi kết nối Webhook:', err);
@@ -1305,9 +1293,9 @@ async function requestOtpCode(e) {
         try {
             const supaRes = await window.UniPassSupabase.sendOtpEmail(email);
             if (!supaRes.success) {
-                console.warn('⚠️ [Supabase Auth] Lỗi gửi OTP:', supaRes.message);
+                console.warn('⚠️ [Supabase Auth] Phản hồi OTP:', supaRes.message);
                 if (supaRes.message && (supaRes.message.includes('rate limit') || supaRes.message.includes('over_email_send_rate_limit'))) {
-                    showToast('⚠️ Máy chủ gửi email miễn phí đạt giới hạn. Bạn hãy dùng ngay mã 6 số được cấp phát bên dưới!', 'warning');
+                    rateLimited = true;
                 }
             } else {
                 console.log('📨 [Supabase Auth] Đã gửi mã OTP thực tế về:', email);
@@ -1317,8 +1305,17 @@ async function requestOtpCode(e) {
         }
     }
 
+    // Xử lý thông báo theo tình trạng gửi
+    if (rateLimited && !sentViaWebhook) {
+        if (directHelper) directHelper.style.display = 'block';
+        if (otpStatusBadge) otpStatusBadge.innerText = 'Máy Chủ Giới Hạn';
+        showToast('⚠️ Máy chủ gửi email miễn phí đạt giới hạn (3 thư/giờ)! Bạn có thể bấm nút "Mở Gmail Tự Gửi Mã" bên dưới để nhận mã ngay.', 'warning');
+    } else {
+        if (directHelper) directHelper.style.display = 'none';
+        showToast(`✓ Đã phát lệnh gửi mã OTP về Gmail: ${email}! Vui lòng mở tin nhắn hộp thư Gmail để lấy mã 6 số.`, 'success');
+    }
+
     if (window.sound) window.sound.playNotification();
-    showToast(`✓ Đã tạo mã 6 số xác nhận cho ${email}! Bạn có thể xem mã bên dưới hoặc trong hộp thư Gmail.`, 'success');
 
     // Khởi động đếm ngược 60 giây để tránh gửi dồn dập
     let cooldown = 60;
@@ -1336,7 +1333,7 @@ async function requestOtpCode(e) {
                 clearInterval(window.otpCountdownTimer);
                 window.otpCountdownTimer = null;
                 sendOtpBtn.disabled = false;
-                sendOtpBtn.innerText = '📩 Gửi Lại Mã 6 Số';
+                sendOtpBtn.innerText = '📩 Gửi Mã Về Gmail';
             }
         }, 1000);
     }
