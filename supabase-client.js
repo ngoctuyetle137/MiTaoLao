@@ -94,21 +94,23 @@
             }
         },
 
-        // Kiểm tra kết nối đến cơ sở dữ liệu Supabase (Ping Test)
-        testConnection: async function () {
-            if (!this.isConfigured()) {
-                return { success: false, message: 'Chưa nhập URL hoặc Anon Key' };
-            }
+        getClient: function () {
             if (!supabaseClient) {
                 this.init();
             }
-            if (!supabaseClient) {
-                return { success: false, message: 'Không thể tạo Supabase Client' };
+            return supabaseClient;
+        },
+
+        // Kiểm tra kết nối đến cơ sở dữ liệu Supabase (Ping Test)
+        testConnection: async function () {
+            const client = this.getClient();
+            if (!client) {
+                return { success: false, message: 'Chưa khởi tạo được Supabase Client (kiểm tra mạng hoặc key)' };
             }
 
             try {
                 const startTime = performance.now();
-                const { data, error, count } = await supabaseClient
+                const { data, error, count } = await client
                     .from('products')
                     .select('id, title', { count: 'exact', head: false })
                     .limit(1);
@@ -134,9 +136,10 @@
         // 1. QUẢN LÝ SẢN PHẨM (PRODUCTS)
         // =======================================================
         getProducts: async function () {
-            if (!this.isConfigured() || !supabaseClient) return null;
+            const client = this.getClient();
+            if (!client) return null;
             try {
-                const { data, error } = await supabaseClient
+                const { data, error } = await client
                     .from('products')
                     .select('*')
                     .neq('status', 'deleted')
@@ -171,7 +174,8 @@
         },
 
         addProduct: async function (product) {
-            if (!this.isConfigured() || !supabaseClient) return false;
+            const client = this.getClient();
+            if (!client) return false;
             try {
                 const record = {
                     id: product.id || ('P' + Date.now()),
@@ -192,7 +196,7 @@
                     status: 'available'
                 };
 
-                const { data, error } = await supabaseClient
+                const { data, error } = await client
                     .from('products')
                     .insert([record]);
 
@@ -206,10 +210,11 @@
         },
 
         deleteProduct: async function (productId) {
-            if (!this.isConfigured() || !supabaseClient) return false;
+            const client = this.getClient();
+            if (!client) return false;
             try {
                 // Xóa mềm: đánh dấu status = 'deleted'
-                const { error } = await supabaseClient
+                const { error } = await client
                     .from('products')
                     .update({ status: 'deleted' })
                     .eq('id', productId);
@@ -227,9 +232,10 @@
         // 2. QUẢN LÝ TIN NHẮN CHAT (CHAT_MESSAGES)
         // =======================================================
         getChatMessages: async function () {
-            if (!this.isConfigured() || !supabaseClient) return null;
+            const client = this.getClient();
+            if (!client) return null;
             try {
-                const { data, error } = await supabaseClient
+                const { data, error } = await client
                     .from('chat_messages')
                     .select('*')
                     .order('created_at', { ascending: true });
@@ -251,7 +257,8 @@
         },
 
         sendChatMessage: async function (msg) {
-            if (!this.isConfigured() || !supabaseClient) return false;
+            const client = this.getClient();
+            if (!client) return false;
             try {
                 const record = {
                     id: msg.id || ('M_' + Date.now()),
@@ -265,7 +272,7 @@
                     is_read: false
                 };
 
-                const { error } = await supabaseClient
+                const { error } = await client
                     .from('chat_messages')
                     .insert([record]);
 
@@ -282,9 +289,10 @@
         // 3. QUẢN LÝ ĐƠN CỌC & GIAO DỊCH (ORDERS)
         // =======================================================
         getOrders: async function () {
-            if (!this.isConfigured() || !supabaseClient) return null;
+            const client = this.getClient();
+            if (!client) return null;
             try {
-                const { data, error } = await supabaseClient
+                const { data, error } = await client
                     .from('orders')
                     .select('*')
                     .order('created_at', { ascending: false });
@@ -298,7 +306,8 @@
         },
 
         createOrder: async function (order) {
-            if (!this.isConfigured() || !supabaseClient) return false;
+            const client = this.getClient();
+            if (!client) return false;
             try {
                 const record = {
                     id: order.id || ('ORD_' + Date.now()),
@@ -320,14 +329,14 @@
                     notes: order.notes || ''
                 };
 
-                const { error } = await supabaseClient
+                const { error } = await client
                     .from('orders')
                     .insert([record]);
 
                 if (error) throw error;
 
                 // Cập nhật trạng thái sản phẩm sang deposited
-                await supabaseClient
+                await client
                     .from('products')
                     .update({ status: 'deposited' })
                     .eq('id', order.productId);
@@ -344,9 +353,10 @@
         // 4. QUẢN LÝ TÀI KHOẢN PROFILES (USERS)
         // =======================================================
         getProfiles: async function () {
-            if (!this.isConfigured() || !supabaseClient) return null;
+            const client = this.getClient();
+            if (!client) return null;
             try {
-                const { data, error } = await supabaseClient
+                const { data, error } = await client
                     .from('profiles')
                     .select('*')
                     .order('created_at', { ascending: true });
@@ -360,7 +370,8 @@
         },
 
         upsertProfile: async function (user) {
-            if (!this.isConfigured() || !supabaseClient) return false;
+            const client = this.getClient();
+            if (!client) return false;
             try {
                 const record = {
                     id: user.id || ('U_' + Date.now()),
@@ -374,7 +385,7 @@
                     avatar_letter: user.avatarLetter || user.name.charAt(0).toUpperCase()
                 };
 
-                const { error } = await supabaseClient
+                const { error } = await client
                     .from('profiles')
                     .upsert([record], { onConflict: 'email' });
 
@@ -391,7 +402,8 @@
         // 5. QUẢN LÝ CẢNH CÁO ADMIN (ADMIN_WARNINGS)
         // =======================================================
         addWarning: async function (warning) {
-            if (!this.isConfigured() || !supabaseClient) return false;
+            const client = this.getClient();
+            if (!client) return false;
             try {
                 const record = {
                     id: 'WARN_' + Date.now(),
@@ -402,7 +414,7 @@
                     admin_email: '6651071091@st.utc2.edu.vn'
                 };
 
-                const { error } = await supabaseClient
+                const { error } = await client
                     .from('admin_warnings')
                     .insert([record]);
 
@@ -419,14 +431,15 @@
         // 6. ĐỒNG BỘ REALTIME QUA WEBSOCKET SUPABASE
         // =======================================================
         subscribeRealtime: function (onEventCallback) {
-            if (!this.isConfigured() || !supabaseClient) return null;
+            const client = this.getClient();
+            if (!client) return null;
 
             try {
                 if (realtimeChannel) {
-                    supabaseClient.removeChannel(realtimeChannel);
+                    client.removeChannel(realtimeChannel);
                 }
 
-                realtimeChannel = supabaseClient
+                realtimeChannel = client
                     .channel('unipass_realtime_stream')
                     .on('postgres_changes', { event: '*', schema: 'public', table: 'products' }, payload => {
                         console.log('🔔 [Supabase Realtime] Sản phẩm thay đổi:', payload);

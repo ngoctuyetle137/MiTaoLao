@@ -255,8 +255,19 @@ class AppController {
             updateSupabaseNavIndicator();
         }
 
+        // Đợi Supabase SDK CDN sẵn sàng (tối đa 3 giây nếu mạng di động 4G tải chậm)
+        let attempts = 0;
+        while ((!window.supabase || !window.UniPassSupabase || !window.UniPassSupabase.getClient()) && attempts < 15) {
+            await new Promise(r => setTimeout(r, 200));
+            attempts++;
+        }
+
         if (!window.UniPassSupabase || !window.UniPassSupabase.isConfigured()) {
             return;
+        }
+
+        if (typeof updateSupabaseNavIndicator === 'function') {
+            updateSupabaseNavIndicator();
         }
 
         console.log('🔄 Đang đồng bộ dữ liệu từ Supabase Cloud...');
