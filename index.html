@@ -447,24 +447,24 @@
                 </div>
             </div>
 
-            <!-- Panel 3: Duyệt Kiểm Chứng Kháng Nghị Điểm Uy Tín -->
+            <!-- Panel 3: Xét Duyệt Khiếu Nại Giao Dịch & Trừ Điểm Uy Tín -->
             <div class="admin-panel-card">
                 <div class="admin-panel-header">
                     <div class="admin-panel-title">
-                        <span>⚖️</span> Duyệt Kiểm Chứng Kháng Nghị Điểm Uy Tín (Chống Ganh Ghét Hạ Điểm)
+                        <span>⚖️</span> Xét Duyệt Khiếu Nại Giao Dịch & Trừ Điểm Uy Tín (Boom Hàng, Hàng Lỗi, Không Xác Nhận)
                     </div>
-                    <span style="font-size:12px; color:#64748b;">Xem xét bằng chứng để khôi phục điểm cho sinh viên bị báo cáo oan</span>
+                    <span style="font-size:12px; color:#64748b;">Xem xét bằng chứng để trừ điểm uy tín người vi phạm hoặc khôi phục điểm cho sinh viên</span>
                 </div>
 
                 <div style="overflow-x:auto;">
                     <table class="admin-table">
                         <thead>
                             <tr>
-                                <th>Sinh Viên Khiếu Nại</th>
-                                <th>Lý Do Khiếu Nại</th>
-                                <th>Bằng Chứng / Tình Tiết</th>
-                                <th>Thời Gian</th>
-                                <th>Hành Động Kiểm Chứng</th>
+                                <th>Người Báo Cáo / Bị Báo Cáo</th>
+                                <th>Loại Vi Phạm & Đơn Hàng</th>
+                                <th>Lý Do & Bằng Chứng Cụ Thể</th>
+                                <th>Mức Phạt / Thời Gian</th>
+                                <th>Hành Động Xét Duyệt</th>
                             </tr>
                         </thead>
                         <tbody id="adminDisputesTableBody">
@@ -816,6 +816,70 @@
                     Quay Lại Săn Đồ
                 </button>
             </div>
+        </div>
+    </div>
+
+    <!-- ==========================================
+         MODAL KHIẾU NẠI GIAO DỊCH (BOOM HÀNG, HÀNG LỖI, KHÔNG XÁC NHẬN)
+         ========================================== -->
+    <div class="checkout-modal-overlay" id="orderDisputeModal">
+        <div class="checkout-modal-card" style="max-width:520px;">
+            <button class="checkout-close-btn" onclick="closeModal('orderDisputeModal')">✕</button>
+            <div style="display:flex; align-items:center; gap:8px; margin-bottom:6px;">
+                <span style="font-size:24px;">🚨</span>
+                <h3 style="font-size:18px; font-weight:800; color:#dc2626; margin:0;">Khiếu Nại Giao Dịch Gửi Admin</h3>
+            </div>
+            <p style="font-size:12.5px; color:#64748b; margin-bottom:14px; line-height:1.5;">
+                Hệ thống bảo vệ quyền lợi sinh viên UTC2. Admin sẽ xét duyệt bằng chứng và trừ điểm uy tín của đối phương nếu vi phạm.
+            </p>
+
+            <form onsubmit="handleOrderDisputeSubmit(event)">
+                <input type="hidden" id="disputeOrderId" value="">
+                
+                <div style="background:#fef2f2; border:1px solid #fecaca; border-radius:8px; padding:10px 14px; margin-bottom:12px; font-size:12.5px; color:#991b1b;">
+                    <div style="margin-bottom:3px;">• <strong>Đơn hàng:</strong> <span id="disputeProductTitle">Casio fx-580</span> (<span id="disputeOrderCode" style="font-family:monospace;">UTC2-12345</span>)</div>
+                    <div>• <strong>Người bị khiếu nại:</strong> <strong id="disputeTargetUser">Phúc Lâm</strong> (<span id="disputeTargetEmail">lamnp.st@st.utc2.edu.vn</span>)</div>
+                </div>
+
+                <div style="margin-bottom:12px;">
+                    <label style="display:block; font-size:12.5px; font-weight:700; color:#334155; margin-bottom:4px;">
+                        Lý do khiếu nại vi phạm *
+                    </label>
+                    <select id="disputeReasonSelect" class="feed-sort-select" style="width:100%; padding:10px;">
+                        <option value="BOOM_HANG">🚫 Boom hàng / Bỏ hẹn (Không đến điểm hẹn, không nghe máy, trễ quá 30p)</option>
+                        <option value="HANG_LOI">📦 Hàng lỗi / Gian dối mô tả (Đồ hư hỏng, rách nát, khác ảnh TimeMark)</option>
+                        <option value="KHONG_XAC_NHAN">❌ Không chịu xác nhận giao dịch sau khi đã trao đổi đồ</option>
+                        <option value="HANH_VI_XAU">🤬 Thái độ thô lỗ, ép giá tại điểm hẹn, hành vi không đúng mực</option>
+                    </select>
+                </div>
+
+                <div style="margin-bottom:12px;">
+                    <label style="display:block; font-size:12.5px; font-weight:700; color:#334155; margin-bottom:4px;">
+                        Mức trừ điểm uy tín đề xuất Admin áp dụng *
+                    </label>
+                    <select id="disputePenaltyPointsSelect" class="feed-sort-select" style="width:100%; padding:10px;">
+                        <option value="5">Trừ 5 điểm uy tín (Vi phạm nhẹ / Trễ hẹn có lý do)</option>
+                        <option value="10" selected>Trừ 10 điểm uy tín (Boom hàng / Hàng lỗi không dùng được)</option>
+                        <option value="15">Trừ 15 điểm uy tín & Khóa quyền đặt cọc (Gian lận cố ý)</option>
+                    </select>
+                </div>
+
+                <div style="margin-bottom:16px;">
+                    <label style="display:block; font-size:12.5px; font-weight:700; color:#334155; margin-bottom:4px;">
+                        Chi tiết sự việc & Bằng chứng cụ thể *
+                    </label>
+                    <textarea id="disputeEvidenceText" class="hero-search-input" rows="4" 
+                              style="padding:10px 14px; border:1px solid #cbd5e1; box-shadow:none; resize:vertical; font-family:inherit; width:100%; box-sizing:border-box;"
+                              placeholder="Mô tả chi tiết: Thời gian hẹn gặp, số phút chờ đợi, cuộc gọi không bắt máy, tình trạng món đồ lỗi như thế nào..." required></textarea>
+                </div>
+
+                <div style="display:flex; justify-content:flex-end; gap:10px;">
+                    <button type="button" class="btn-outline-chat" onclick="closeModal('orderDisputeModal')">Hủy</button>
+                    <button type="submit" class="btn-primary-confirm" style="background:#dc2626;">
+                        🚀 Gửi Hồ Sơ Khiếu Nại Lên Admin
+                    </button>
+                </div>
+            </form>
         </div>
     </div>
 

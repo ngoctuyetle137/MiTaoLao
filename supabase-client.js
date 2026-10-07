@@ -349,6 +349,24 @@
             }
         },
 
+        updateOrder: async function (orderId, updates) {
+            const client = this.getClient();
+            if (!client) return false;
+            try {
+                const { error } = await client
+                    .from('orders')
+                    .update(updates)
+                    .eq('id', orderId);
+
+                if (error) throw error;
+                console.log('✅ [Supabase] Đã cập nhật trạng thái đơn hàng:', orderId);
+                return true;
+            } catch (err) {
+                console.error('❌ [Supabase] Lỗi cập nhật đơn hàng:', err);
+                return false;
+            }
+        },
+
         // =======================================================
         // 4. QUẢN LÝ TÀI KHOẢN PROFILES (USERS)
         // =======================================================
@@ -423,6 +441,54 @@
                 return true;
             } catch (err) {
                 console.error('❌ [Supabase] Lỗi ghi nhận cảnh cáo:', err);
+                return false;
+            }
+        },
+
+        // =======================================================
+        // 5b. QUẢN LÝ KHIẾU NẠI & TRANH CHẤP (REPUTATION_DISPUTES)
+        // =======================================================
+        createDispute: async function (dispute) {
+            const client = this.getClient();
+            if (!client) return false;
+            try {
+                const record = {
+                    id: dispute.id || ('DISP_' + Date.now()),
+                    user_name: dispute.accusedName || dispute.userName,
+                    user_email: dispute.accusedEmail || dispute.userEmail || 'student@st.utc2.edu.vn',
+                    current_rep: dispute.currentRep || 90,
+                    reason: `[${dispute.orderCode || 'ĐƠN HÀNG'}] ${dispute.reason}`,
+                    evidence: `[Báo cáo bởi: ${dispute.reporterName || 'Sinh viên'}] ${dispute.evidence}`,
+                    status: 'pending'
+                };
+
+                const { error } = await client
+                    .from('reputation_disputes')
+                    .insert([record]);
+
+                if (error) throw error;
+                console.log('✅ [Supabase] Đã ghi nhận hồ sơ khiếu nại lên Cloud:', record.id);
+                return true;
+            } catch (err) {
+                console.error('❌ [Supabase] Lỗi gửi hồ sơ khiếu nại:', err);
+                return false;
+            }
+        },
+
+        updateDisputeStatus: async function (disputeId, status, notes) {
+            const client = this.getClient();
+            if (!client) return false;
+            try {
+                const { error } = await client
+                    .from('reputation_disputes')
+                    .update({ status: status, admin_notes: notes || '' })
+                    .eq('id', disputeId);
+
+                if (error) throw error;
+                console.log('✅ [Supabase] Đã cập nhật khiếu nại:', disputeId);
+                return true;
+            } catch (err) {
+                console.error('❌ [Supabase] Lỗi cập nhật khiếu nại:', err);
                 return false;
             }
         },

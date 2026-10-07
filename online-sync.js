@@ -170,6 +170,15 @@
                 case 'DEPOSIT_ORDER':
                     this.emit('DEPOSIT_ORDER', payload.order);
                     break;
+                case 'ORDER_UPDATED':
+                    this.emit('ORDER_UPDATED', payload.order);
+                    break;
+                case 'NEW_DISPUTE':
+                    this.emit('NEW_DISPUTE', payload.dispute);
+                    break;
+                case 'DISPUTE_RESOLVED':
+                    this.emit('DISPUTE_RESOLVED', payload);
+                    break;
                 case 'ADMIN_WARNING':
                     this.emit('ADMIN_WARNING', payload.warning);
                     break;
@@ -231,6 +240,21 @@
         // Phát đơn đặt cọc giữ chỗ
         broadcastDepositOrder: function (order) {
             return this.broadcast('DEPOSIT_ORDER', { order: order });
+        },
+
+        // Phát cập nhật đơn hàng (người bán xác nhận / 2 bên hoàn thành giao dịch)
+        broadcastOrderUpdate: function (order) {
+            return this.broadcast('ORDER_UPDATED', { order: order });
+        },
+
+        // Phát hồ sơ khiếu nại giao dịch (Boom hàng, Hàng lỗi) gửi Admin
+        broadcastDispute: function (dispute) {
+            return this.broadcast('NEW_DISPUTE', { dispute: dispute });
+        },
+
+        // Phát kết quả xử phạt khiếu nại từ Admin
+        broadcastDisputeResolved: function (resolution) {
+            return this.broadcast('DISPUTE_RESOLVED', resolution);
         },
 
         // Phát cảnh cáo xử phạt từ Admin

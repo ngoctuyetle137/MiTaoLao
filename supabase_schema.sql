@@ -83,7 +83,7 @@ CREATE TABLE IF NOT EXISTS public.orders (
     total_payment NUMERIC NOT NULL CHECK (total_payment >= 0),
     shipping_option TEXT NOT NULL DEFAULT 'pickup',
     meet_location TEXT NOT NULL,
-    status TEXT NOT NULL DEFAULT 'deposited' CHECK (status IN ('pending', 'deposited', 'completed', 'cancelled')),
+    status TEXT NOT NULL DEFAULT 'deposited' CHECK (status IN ('pending', 'deposited', 'pending_seller', 'in_trade', 'pending_mutual', 'completed', 'cancelled', 'closed_penalized')),
     notes TEXT,
     created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
     updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
@@ -107,7 +107,7 @@ CREATE TABLE IF NOT EXISTS public.chat_messages (
 );
 
 -- ===================================================================
--- 7. BẢNG REPUTATION_DISPUTES (KHÁNG NGHỊ ĐIỂM UY TÍN GỬI ADMIN)
+-- 7. BẢNG REPUTATION_DISPUTES (KHÁNG NGHỊ & KHIẾU NẠI GIAO DỊCH GỬI ADMIN)
 -- ===================================================================
 CREATE TABLE IF NOT EXISTS public.reputation_disputes (
     id TEXT PRIMARY KEY,
@@ -116,7 +116,7 @@ CREATE TABLE IF NOT EXISTS public.reputation_disputes (
     current_rep INTEGER NOT NULL DEFAULT 90,
     reason TEXT NOT NULL,
     evidence TEXT,
-    status TEXT NOT NULL DEFAULT 'pending' CHECK (status IN ('pending', 'approved', 'rejected')),
+    status TEXT NOT NULL DEFAULT 'pending' CHECK (status IN ('pending', 'penalized', 'approved', 'rejected')),
     admin_notes TEXT,
     created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
     updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()

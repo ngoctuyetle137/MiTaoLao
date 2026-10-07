@@ -82,26 +82,8 @@ const INITIAL_PRODUCTS = [
     }
 ];
 
-// Tài khoản khởi tạo mặc định ban đầu
+// Tài khoản quản trị viên chính thức ban đầu (Không có tài khoản sinh viên có sẵn)
 const DEFAULT_USERS = [
-    {
-        id: 'UA',
-        name: 'Lê Thị Ngọc Tuyết',
-        email: 'tuyetltn.st@st.utc2.edu.vn',
-        role: 'student',
-        reputation: 98,
-        coins: 170,
-        avatarLetter: 'T'
-    },
-    {
-        id: 'UB',
-        name: 'Phúc Lâm',
-        email: 'lamnp.st@st.utc2.edu.vn',
-        role: 'student',
-        reputation: 92,
-        coins: 250,
-        avatarLetter: 'L'
-    },
     {
         id: 'ADMIN',
         name: 'Quản Trị Viên UTC2 (6651071091)',
@@ -120,9 +102,7 @@ const ADMIN_CREDENTIALS = {
 };
 
 const USERS_REGISTRY = {
-    userA: DEFAULT_USERS[0],
-    userB: DEFAULT_USERS[1],
-    admin: DEFAULT_USERS[2]
+    admin: DEFAULT_USERS[0]
 };
 
 // ==========================================
@@ -140,18 +120,7 @@ class AppController {
         this.products = [];
         this.chatMessages = [];
         this.depositOrders = [];
-        this.adminDisputes = [
-            {
-                id: 'DISP_1',
-                userName: 'Phúc Lâm',
-                userEmail: 'lamnp.st@st.utc2.edu.vn',
-                currentRep: 92,
-                reason: 'Bị hạ điểm oan do đối phương hẹn nhưng trễ 45 phút rồi tự ý hủy đơn cọc',
-                evidence: 'Ảnh tin nhắn hẹn tại KTX Cỏ May lúc 17h00 và nhật ký cuộc gọi 17h15 không nghe máy',
-                time: 'Hôm nay, 08:30',
-                status: 'pending'
-            }
-        ];
+        this.adminDisputes = [];
         this.adminWarningsIssued = [];
 
         this.filterMaxPrice = 350000;
@@ -227,6 +196,12 @@ class AppController {
         const savedOrders = localStorage.getItem('unipass_deposit_orders');
         if (savedOrders) {
             try { this.depositOrders = JSON.parse(savedOrders); } catch (e) { this.depositOrders = []; }
+        }
+
+        // Tải hồ sơ khiếu nại giao dịch
+        const savedDisputes = localStorage.getItem('unipass_admin_disputes');
+        if (savedDisputes) {
+            try { this.adminDisputes = JSON.parse(savedDisputes); } catch (e) { this.adminDisputes = []; }
         }
 
         // Kiểm tra phiên đăng nhập đã lưu
@@ -479,10 +454,62 @@ class AppController {
                 this.depositOrders.unshift(order);
                 localStorage.setItem('unipass_deposit_orders', JSON.stringify(this.depositOrders));
                 this.updateDepositBadge();
-                if (order.seller === this.user.name) {
+                this.renderProfile();
+                if (order.seller === this.user.name || order.sellerEmail === this.user.email) {
                     if (window.sound) window.sound.playSuccess();
-                    showToast(`🤝 [ĐẶT CỌC MỚI] ${order.buyer} vừa đặt cọc món "${order.productTitle}"!`, 'success');
+                    showToast(`🤝 [ĐƠN ĐẶT CỌC MỚI] ${order.buyer} vừa đặt cọc món "${order.productTitle}"! Vui lòng vào mục Cá Nhân bấm Xác Nhận Đơn Hàng.`, 'success');
                 }
+            }
+        });
+
+        // 4b. Nhận cập nhật trạng thái đơn hàng (xác nhận người bán / xác nhận hoàn thành)
+        window.UniPassOnlineSync.on('ORDER_UPDATED', (order) => {
+            if (!order || !order.id) return;
+            const idx = this.depositOrders.findIndex(o => o.id === order.id);
+            if (idx !== -1) {
+                this.depositOrders[idx] = order;
+            } else {
+                this.depositOrders.unshift(order);
+            }
+            localStorage.setItem('unipass_deposit_orders', JSON.stringify(this.depositOrders));
+            this.updateDepositBadge();
+            this.renderProfile();
+
+            if (this.user) {
+                if (order.buyer === this.user.name && order.sellerAccepted && order.status === 'in_trade') {
+                    if (window.sound) window.sound.playSuccess();
+                    showToast(`🎉 Người bán ${order.seller} đã xác nhận đơn hàng "${order.productTitle}"! Hai bạn hãy gặp nhau trao đổi đồ.`, 'success');
+                }
+                if (order.status === 'completed' && (order.buyer === this.user.name || order.seller === this.user.name)) {
+                    if (window.sound) window.sound.playSuccess();
+                    showToast(`🎉 Giao dịch đơn "${order.productTitle}" đã hoàn tất 100%! Bài đăng đã tự động gỡ.`, 'success');
+                }
+            }
+        });
+
+        // 4c. Nhận khiếu nại giao dịch mới từ sinh viên gửi Admin
+        window.UniPassOnlineSync.on('NEW_DISPUTE', (dispute) => {
+            if (!dispute || !dispute.id) return;
+            const exists = this.adminDisputes.some(d => d.id === dispute.id);
+            if (!exists) {
+                this.adminDisputes.unshift(dispute);
+                localStorage.setItem('unipass_admin_disputes', JSON.stringify(this.adminDisputes));
+                this.renderAdminDashboard();
+                if (this.user && this.user.role === 'admin') {
+                    if (window.sound) window.sound.playNotification();
+                    showToast(`🚨 [KHIẾU NẠI MỚI GỬI ADMIN]: ${dispute.reporterName} tố cáo ${dispute.accusedName} (${dispute.reason})!`, 'danger');
+                }
+            }
+        });
+
+        // 4d. Nhận thông báo kết quả xử lý khiếu nại
+        window.UniPassOnlineSync.on('DISPUTE_RESOLVED', (res) => {
+            if (!res || !res.disputeId) return;
+            const disp = this.adminDisputes.find(d => d.id === res.disputeId);
+            if (disp) {
+                disp.status = res.status;
+                localStorage.setItem('unipass_admin_disputes', JSON.stringify(this.adminDisputes));
+                this.renderAdminDashboard();
             }
         });
 
@@ -526,6 +553,13 @@ class AppController {
             this.renderAdminDashboard();
         } else if (data.type === 'USERS_UPDATED') {
             this.registeredUsers = data.users;
+            this.renderAdminDashboard();
+        } else if (data.type === 'ORDERS_UPDATED') {
+            this.depositOrders = data.orders;
+            this.updateDepositBadge();
+            this.renderProfile();
+        } else if (data.type === 'DISPUTES_UPDATED') {
+            this.adminDisputes = data.disputes;
             this.renderAdminDashboard();
         } else if (data.type === 'USER_WARNED') {
             if (data.targetName === this.user.name) {
@@ -580,6 +614,16 @@ class AppController {
     saveOrders() {
         localStorage.setItem('unipass_deposit_orders', JSON.stringify(this.depositOrders));
         this.updateDepositBadge();
+        if (this.syncChannel) {
+            this.syncChannel.postMessage({ type: 'ORDERS_UPDATED', orders: this.depositOrders });
+        }
+    }
+
+    saveDisputes() {
+        localStorage.setItem('unipass_admin_disputes', JSON.stringify(this.adminDisputes));
+        if (this.syncChannel) {
+            this.syncChannel.postMessage({ type: 'DISPUTES_UPDATED', disputes: this.adminDisputes });
+        }
     }
 
     updateDepositBadge() {
@@ -825,23 +869,118 @@ class AppController {
        if (history) {
             // ✅ Chỉ lấy các đơn mà tài khoản hiện tại là người mua (buyer) HOẶC người bán (seller)
             const myOrders = this.depositOrders.filter(o => 
-                o.buyer === this.user.name || o.seller === this.user.name
+                o.buyer === this.user.name || o.buyerEmail === this.user.email ||
+                o.seller === this.user.name || o.sellerEmail === this.user.email
             );
 
             if (myOrders.length === 0) {
                 history.innerHTML = `<p style="font-size:12px; color:#64748b;">Chưa có đơn cọc nào.</p>`;
             } else {
-                history.innerHTML = myOrders.map(o => `
-                    <div style="background:#f0fdf4; border:1px solid #bbf7d0; border-radius:8px; padding:8px 12px; margin-bottom:6px; font-size:12.5px;">
-                        <div style="display:flex; justify-content:space-between;">
-                            <strong>${o.productTitle}</strong>
-                            <span style="color:#16a34a; font-weight:700;">Đã cọc ${formatNumber(o.depositAmount)} đ</span>
+                history.innerHTML = myOrders.map(o => {
+                    const isBuyer = (this.user.name === o.buyer || this.user.email === o.buyerEmail);
+                    const isSeller = (this.user.name === o.seller || this.user.email === o.sellerEmail);
+                    const counterpartName = isBuyer ? o.seller : o.buyer;
+                    const counterpartRole = isBuyer ? 'Người bán' : 'Người mua';
+
+                    let statusBadge = '';
+                    let actionButtonsHtml = '';
+
+                    if (o.status === 'completed') {
+                        statusBadge = `<span style="background:#dcfce7; color:#15803d; padding:2px 8px; border-radius:4px; font-weight:700; font-size:11px;">✅ Đã Hoàn Thành (Đã xóa bài)</span>`;
+                    } else if (o.status === 'closed_penalized') {
+                        statusBadge = `<span style="background:#fee2e2; color:#b91c1c; padding:2px 8px; border-radius:4px; font-weight:700; font-size:11px;">⚠️ Đã Đóng & Xử Phạt Vi Phạm</span>`;
+                    } else if (o.status === 'pending_seller' || !o.sellerAccepted) {
+                        statusBadge = `<span style="background:#fef3c7; color:#b45309; padding:2px 8px; border-radius:4px; font-weight:700; font-size:11px;">⏳ Chờ Người Bán Xác Nhận</span>`;
+                        if (isSeller) {
+                            actionButtonsHtml += `
+                                <button class="btn-primary-confirm" style="background:#16a34a; font-size:11.5px; padding:6px 12px; width:auto; margin:0;" onclick="confirmOrderBySeller('${o.id}')">
+                                    ✅ Xác Nhận Đơn Hàng & Điểm Hẹn
+                                </button>
+                            `;
+                        } else {
+                            actionButtonsHtml += `<span style="font-size:11.5px; color:#64748b; font-style:italic;">Đang đợi người bán xác nhận đơn...</span>`;
+                        }
+                    } else {
+                        // Đang trong quá trình trao đổi (in_trade hoặc pending_mutual)
+                        const buyerDone = o.buyerCompleted;
+                        const sellerDone = o.sellerCompleted;
+
+                        statusBadge = `<span style="background:#e0f2fe; color:#0369a1; padding:2px 8px; border-radius:4px; font-weight:700; font-size:11px;">🔄 Đang Trao Đổi Đồ</span>`;
+
+                        // Nút xác nhận của người mua
+                        if (isBuyer) {
+                            if (!buyerDone) {
+                                actionButtonsHtml += `
+                                    <button class="btn-primary-confirm" style="background:#16a34a; font-size:11.5px; padding:6px 12px; width:auto; margin:0;" onclick="confirmTradeComplete('${o.id}', 'buyer')">
+                                        🤝 Tôi Đã Nhận Đồ (Xác Nhận Thành Công)
+                                    </button>
+                                `;
+                            } else {
+                                actionButtonsHtml += `<span style="font-size:11.5px; color:#16a34a; font-weight:700;">✓ Bạn đã xác nhận nhận đồ</span>`;
+                            }
+                        }
+
+                        // Nút xác nhận của người bán
+                        if (isSeller) {
+                            if (!sellerDone) {
+                                actionButtonsHtml += `
+                                    <button class="btn-primary-confirm" style="background:#16a34a; font-size:11.5px; padding:6px 12px; width:auto; margin:0;" onclick="confirmTradeComplete('${o.id}', 'seller')">
+                                        🤝 Tôi Đã Giao Đồ (Xác Nhận Thành Công)
+                                    </button>
+                                `;
+                            } else {
+                                actionButtonsHtml += `<span style="font-size:11.5px; color:#16a34a; font-weight:700;">✓ Bạn đã xác nhận giao đồ</span>`;
+                            }
+                        }
+
+                        // Nếu bạn đã xác nhận mà đối phương không chịu xác nhận -> Nút phạt
+                        if ((isBuyer && buyerDone && !sellerDone) || (isSeller && sellerDone && !buyerDone)) {
+                            actionButtonsHtml += `
+                                <button class="btn-admin-danger" style="font-size:11px; padding:5px 10px; width:auto; margin:0;" onclick="reportUnconfirmedTrade('${o.id}')" title="Phạt 5 điểm uy tín đối phương vì không chịu xác nhận sau khi nhận/giao đồ">
+                                    ⚠️ Phạt ${counterpartName} Không Xác Nhận (-5đ)
+                                </button>
+                            `;
+                        }
+                    }
+
+                    // Nút Khiếu Nại lên Admin (Boom hàng, hàng lỗi) cho mọi đơn chưa completed
+                    if (o.status !== 'completed' && o.status !== 'closed_penalized') {
+                        actionButtonsHtml += `
+                            <button class="btn-outline-chat" style="font-size:11px; padding:5px 9px; width:auto; margin:0; color:#dc2626; border-color:#fca5a5;" onclick="openOrderDisputeModal('${o.id}')">
+                                🚨 Báo Boom Hàng / Lỗi (Admin)
+                            </button>
+                        `;
+                    }
+
+                    return `
+                        <div style="background:#ffffff; border:1px solid #e2e8f0; border-radius:10px; padding:12px 14px; margin-bottom:10px; box-shadow:0 1px 3px rgba(0,0,0,0.04);">
+                            <div style="display:flex; justify-content:space-between; align-items:flex-start; margin-bottom:6px;">
+                                <div>
+                                    <strong style="font-size:13.5px; color:#0f172a;">${o.productTitle}</strong>
+                                    <div style="font-size:11px; color:#64748b; margin-top:2px;">
+                                        Mã đơn: <span style="font-family:monospace; font-weight:700; color:#0284c7;">${o.orderCode || o.id}</span> • 
+                                        ${counterpartRole}: <strong>${counterpartName}</strong> • Hẹn gặp: <strong>${o.meetLocation || 'Campus UTC2'}</strong>
+                                    </div>
+                                </div>
+                                <div>${statusBadge}</div>
+                            </div>
+
+                            <div style="background:#f8fafc; border-radius:6px; padding:8px 10px; margin-bottom:8px; font-size:11.5px; color:#334155; display:flex; justify-content:space-between; flex-wrap:wrap; gap:6px;">
+                                <div>Cọc giữ chỗ: <strong style="color:#16a34a;">${formatNumber(o.depositAmount || 0)} đ</strong></div>
+                                <div>Tổng thanh toán: <strong>${formatNumber(o.totalPayment || o.finalTotal || 0)} đ</strong></div>
+                                <div>
+                                    Tiến độ xác nhận: 
+                                    <span style="color:${o.buyerCompleted ? '#16a34a' : '#b45309'}; font-weight:700;">Mua: ${o.buyerCompleted ? '✓' : 'Chưa'}</span> | 
+                                    <span style="color:${o.sellerCompleted ? '#16a34a' : '#b45309'}; font-weight:700;">Bán: ${o.sellerCompleted ? '✓' : 'Chưa'}</span>
+                                </div>
+                            </div>
+
+                            <div style="display:flex; gap:8px; align-items:center; flex-wrap:wrap; justify-content:flex-end;">
+                                ${actionButtonsHtml}
+                            </div>
                         </div>
-                        <div style="font-size:11px; color:#64748b; margin-top:2px;">
-                            ${o.buyer === this.user.name ? `Người bán: ${o.seller}` : `Người mua: ${o.buyer}`} • Tổng tiền: ${formatNumber(o.finalTotal)} đ (Đã trừ ${o.discountCoins} xu)
-                        </div>
-                    </div>
-                `).join('');
+                    `;
+                }).join('');
             }
         }
     }
@@ -953,31 +1092,50 @@ class AppController {
             `).join('');
         }
 
-        // Bảng 3: Duyệt kiểm chứng kháng nghị uy tín
+        // Bảng 3: Xét duyệt khiếu nại giao dịch & trừ điểm uy tín (Boom hàng, Hàng lỗi, Không xác nhận)
         if (disputesTbody) {
             if (this.adminDisputes.length === 0) {
-                disputesTbody.innerHTML = `<tr><td colspan="5" style="text-align:center; color:#94a3b8; padding:20px;">Không có kháng nghị nào đang chờ xử lý.</td></tr>`;
+                disputesTbody.innerHTML = `<tr><td colspan="5" style="text-align:center; color:#94a3b8; padding:20px;">Không có khiếu nại giao dịch nào đang chờ xử lý.</td></tr>`;
             } else {
-                disputesTbody.innerHTML = this.adminDisputes.map(d => `
+                disputesTbody.innerHTML = this.adminDisputes.map(d => {
+                    const reporter = d.reporterName || 'Sinh viên';
+                    const accused = d.accusedName || d.userName || 'Chưa rõ';
+                    const penaltyPts = d.penaltyPoints || 10;
+
+                    return `
                     <tr>
-                        <td><strong>${d.userName}</strong><br><span style="font-size:11px; color:#64748b;">${d.userEmail}</span></td>
-                        <td style="color:#b45309; font-weight:600;">${d.reason}</td>
-                        <td style="font-size:12px; color:#475569;">${d.evidence}</td>
-                        <td style="color:#64748b; font-size:11px;">${d.time}</td>
+                        <td>
+                            <div>Báo cáo: <strong>${reporter}</strong></div>
+                            <div style="font-size:11px; color:#dc2626; margin-top:2px;">➔ Bị tố: <strong>${accused}</strong> (${d.accusedEmail || d.userEmail || ''})</div>
+                        </td>
+                        <td>
+                            <span style="color:#b45309; font-weight:700;">${d.reason}</span>
+                            <div style="font-size:11px; color:#0284c7; margin-top:2px;">Đơn: ${d.orderCode || ''} • ${d.productTitle || ''}</div>
+                        </td>
+                        <td>
+                            <div style="font-size:12px; color:#475569; max-width:280px; white-space:pre-line;">${d.evidence || 'Không có mô tả chi tiết'}</div>
+                        </td>
+                        <td>
+                            <span style="background:#fee2e2; color:#b91c1c; padding:2px 8px; border-radius:4px; font-weight:800; font-size:11px;">-${penaltyPts} điểm uy tín</span>
+                            <div style="color:#64748b; font-size:11px; margin-top:2px;">${d.time}</div>
+                        </td>
                         <td>
                             ${d.status === 'pending' ? `
-                                <div style="display:flex; gap:6px;">
-                                    <button class="btn-admin-success" onclick="adminApproveDispute('${d.id}')">
-                                        ✓ Khôi Phục Uy Tín
+                                <div style="display:flex; flex-direction:column; gap:6px;">
+                                    <button class="btn-admin-danger" style="padding:6px 10px; font-size:11.5px; font-weight:700;" onclick="adminPenalizeDispute('${d.id}')">
+                                        ⚖️ Duyệt & Trừ ${penaltyPts}đ
                                     </button>
-                                    <button class="btn-admin-danger" onclick="adminRejectDispute('${d.id}')">
+                                    <button class="btn-outline-chat" style="padding:4px 8px; font-size:11px;" onclick="adminRejectDispute('${d.id}')">
                                         ✕ Bác Bỏ
                                     </button>
                                 </div>
-                            ` : `<span style="font-weight:700; color:${d.status === 'approved' ? '#16a34a' : '#ef4444'};">${d.status === 'approved' ? '✓ Đã khôi phục điểm' : '✕ Đã từ chối'}</span>`}
+                            ` : `<span style="font-weight:700; color:${d.status === 'penalized' ? '#dc2626' : (d.status === 'approved' ? '#16a34a' : '#64748b')};">
+                                    ${d.status === 'penalized' ? `⚖️ Đã trừ ${penaltyPts}đ` : (d.status === 'approved' ? '✓ Đã khôi phục điểm' : '✕ Đã bác bỏ')}
+                                 </span>`}
                         </td>
                     </tr>
-                `).join('');
+                `;
+                }).join('');
             }
         }
     }
@@ -1075,10 +1233,14 @@ function requestOtpCode(e) {
         mockBox.style.display = 'block'; // Đảm bảo hộp thư hiện lên
     }
 
-    if (otpInput) otpInput.value = otp; // Tự điền luôn mã OTP vào ô nhập
+    // NGHIÊM NGẶT: Người dùng BẮT BUỘC phải tự gõ mã OTP nhận được trong hộp thư!
+    if (otpInput) {
+        otpInput.value = '';
+        otpInput.focus();
+    }
 
     if (window.sound) window.sound.playNotification();
-    showToast(`Mã OTP đã gửi về ${email}! Vui lòng kiểm tra hộp thư bên dưới.`, 'success');
+    showToast(`Mã OTP đã gửi về ${email}! Vui lòng xem mã trong hộp thư thông báo và tự nhập tay vào ô xác thực.`, 'success');
 }
 
    
@@ -1130,14 +1292,20 @@ function handleAuthSubmitForm(e) {
         }
 
         if (!window.app.generatedOtp) {
-            showToast('Vui lòng bấm "Gửi Mã OTP" để nhận mã xác nhận trước!', 'danger');
+            showToast('Vui lòng bấm nút "Gửi Mã OTP" để nhận mã xác nhận qua Gmail trước!', 'danger');
             if (window.sound) window.sound.playWarning();
             return;
         }
 
-        if (enteredOtp !== window.app.generatedOtp && enteredOtp !== '123456') {
-            showToast('Mã OTP không chính xác! Vui lòng kiểm tra lại.', 'danger');
+        // BẮT BUỘC NHẬP ĐÚNG MÃ OTP VỪA GỬI VỀ GMAIL (KHÔNG CHO PHÉP BỎ QUA)
+        if (enteredOtp !== window.app.generatedOtp) {
+            showToast('Mã OTP không chính xác hoặc chưa hợp lệ! Vui lòng kiểm tra mã trong hộp thư và gõ đúng 6 số.', 'danger');
             if (window.sound) window.sound.playWarning();
+            const otpInput = document.getElementById('authOtpInput');
+            if (otpInput) {
+                otpInput.focus();
+                otpInput.select();
+            }
             return;
         }
 
@@ -1164,6 +1332,9 @@ function handleAuthSubmitForm(e) {
             window.app.user = newUser;
         }
 
+        // Hủy mã OTP sau khi đăng ký hợp lệ thành công
+        window.app.generatedOtp = null;
+
         window.app.isLoggedIn = true;
         window.app.checkAuthDisplay();
         window.app.updateUserUI();
@@ -1182,7 +1353,7 @@ function handleAuthSubmitForm(e) {
             switchNavTab('admin');
         }
     } else {
-        // Chế độ Đăng nhập
+        // Chế độ Đăng nhập: Tự nhập Gmail và Mật khẩu
         let existingUser = window.app.registeredUsers.find(u => u.email === email);
         if (existingUser) {
             if (existingUser.password && existingUser.password !== password) {
@@ -1200,20 +1371,30 @@ function handleAuthSubmitForm(e) {
                 window.app.saveUsers();
             }
         } else {
-            // Chưa có trong hệ thống, tự động tạo mới tài khoản cho sinh viên
-            const displayName = email.split('@')[0];
-            existingUser = {
-                id: isOfficialAdmin ? 'ADMIN' : ('U_' + Date.now()),
-                name: isOfficialAdmin ? 'Quản Trị Viên UTC2 (6651071091)' : displayName,
-                email: email,
-                password: isOfficialAdmin ? ADMIN_CREDENTIALS.password : password,
-                role: isOfficialAdmin ? 'admin' : 'student',
-                coins: isOfficialAdmin ? 9999 : 500,
-                reputation: isOfficialAdmin ? 100 : 95,
-                avatarLetter: displayName.charAt(0).toUpperCase()
-            };
-            window.app.registeredUsers.push(existingUser);
-            window.app.saveUsers();
+            // TÀI KHOẢN CHƯA ĐĂNG KÝ: KHÔNG TỰ ĐỘNG ĐĂNG NHẬP, BẮT BUỘC CHUYỂN SANG ĐĂNG KÝ VỚI OTP
+            if (!isOfficialAdmin) {
+                showToast('Tài khoản chưa được đăng ký! Vui lòng chuyển sang tab "Đăng Ký Tài Khoản" để nhận mã OTP và đăng ký tài khoản mới.', 'warning');
+                if (window.sound) window.sound.playWarning();
+                switchAuthMode('register');
+                const regEmail = document.getElementById('authEmailInput');
+                if (regEmail) regEmail.value = email;
+                const regPwd = document.getElementById('authPasswordInput');
+                if (regPwd) regPwd.value = password;
+                return;
+            } else {
+                existingUser = {
+                    id: 'ADMIN',
+                    name: 'Quản Trị Viên UTC2 (6651071091)',
+                    email: email,
+                    password: ADMIN_CREDENTIALS.password,
+                    role: 'admin',
+                    coins: 9999,
+                    reputation: 100,
+                    avatarLetter: 'A'
+                };
+                window.app.registeredUsers.push(existingUser);
+                window.app.saveUsers();
+            }
         }
 
         window.app.user = existingUser;
@@ -1478,13 +1659,73 @@ function adminRemindUser(userName) {
     }
 }
 
+function adminPenalizeDispute(dispId) {
+    const dispute = window.app.adminDisputes.find(d => d.id === dispId);
+    if (!dispute) return;
+
+    dispute.status = 'penalized';
+
+    // Xác định đối tượng vi phạm bị trừ điểm
+    const accusedName = dispute.accusedName || dispute.userName;
+    const accusedEmail = dispute.accusedEmail || dispute.userEmail;
+    const pointsToDeduct = parseInt(dispute.penaltyPoints) || 10;
+
+    const accusedUser = window.app.registeredUsers.find(u => 
+        (accusedName && u.name === accusedName) || 
+        (accusedEmail && u.email === accusedEmail)
+    );
+
+    if (accusedUser) {
+        accusedUser.reputation = Math.max(0, (accusedUser.reputation || 95) - pointsToDeduct);
+        window.app.saveUsers();
+        if (window.app.user && (window.app.user.email === accusedUser.email || window.app.user.name === accusedUser.name)) {
+            window.app.user.reputation = accusedUser.reputation;
+            window.app.updateUserUI();
+        }
+        if (window.UniPassSupabase && window.UniPassSupabase.isConfigured()) {
+            window.UniPassSupabase.upsertProfile(accusedUser);
+        }
+    }
+
+    // Ghi nhận cảnh cáo chính thức trong hệ thống Admin
+    const warning = {
+        id: 'WARN_' + Date.now(),
+        targetName: accusedName,
+        targetEmail: accusedEmail || 'student@st.utc2.edu.vn',
+        reason: `[Xử phạt khiếu nại đơn ${dispute.orderCode || ''}] ${dispute.reason}`,
+        penaltyPoints: pointsToDeduct,
+        time: 'Vừa xong'
+    };
+    window.app.adminWarningsIssued.unshift(warning);
+
+    if (window.UniPassSupabase && window.UniPassSupabase.isConfigured()) {
+        window.UniPassSupabase.addWarning(warning);
+        window.UniPassSupabase.updateDisputeStatus(dispId, 'penalized', `Đã duyệt xử phạt -${pointsToDeduct} điểm uy tín`);
+    }
+    if (window.UniPassOnlineSync) {
+        window.UniPassOnlineSync.broadcastWarning(warning);
+        window.UniPassOnlineSync.broadcastDisputeResolved({
+            disputeId: dispId,
+            status: 'penalized',
+            accusedName: accusedName,
+            penaltyPoints: pointsToDeduct
+        });
+    }
+
+    window.app.saveDisputes();
+    window.app.renderAdminDashboard();
+
+    if (window.sound) window.sound.playWarning();
+    showToast(`⚖️ Admin đã duyệt khiếu nại! Đã trừ ${pointsToDeduct} điểm uy tín của ${accusedName} và ghi nhận cảnh cáo.`, 'success');
+}
+
 function adminApproveDispute(dispId) {
+    // Tương thích ngược: Duyệt khôi phục điểm nếu là khiếu nại oan
     const dispute = window.app.adminDisputes.find(d => d.id === dispId);
     if (!dispute) return;
 
     dispute.status = 'approved';
 
-    // Khôi phục điểm uy tín lên 98 điểm
     const user = window.app.registeredUsers.find(u => u.name === dispute.userName || u.email === dispute.userEmail);
     if (user) {
         user.reputation = 98;
@@ -1495,6 +1736,7 @@ function adminApproveDispute(dispId) {
         }
     }
 
+    window.app.saveDisputes();
     window.app.renderAdminDashboard();
 
     if (window.sound) window.sound.playSuccess();
@@ -1506,8 +1748,17 @@ function adminRejectDispute(dispId) {
     if (!dispute) return;
 
     dispute.status = 'rejected';
+    window.app.saveDisputes();
+
+    if (window.UniPassSupabase && window.UniPassSupabase.isConfigured()) {
+        window.UniPassSupabase.updateDisputeStatus(dispId, 'rejected', 'Bằng chứng không đủ xác thực');
+    }
+    if (window.UniPassOnlineSync) {
+        window.UniPassOnlineSync.broadcastDisputeResolved({ disputeId: dispId, status: 'rejected' });
+    }
+
     window.app.renderAdminDashboard();
-    showToast(`Đã bác bỏ khiếu nại của ${dispute.userName} do không đủ bằng chứng.`, 'warning');
+    showToast(`✕ Admin đã bác bỏ khiếu nại do không đủ bằng chứng xác thực.`, 'warning');
 }
 
 // ==========================================
@@ -1644,6 +1895,10 @@ function confirmDepositOrder() {
         totalPayment: finalTotal,
         shippingOption: document.getElementById('shippingSelectOption') ? document.getElementById('shippingSelectOption').value : 'campus',
         meetLocation: currentCheckoutProduct.location,
+        status: 'pending_seller', // Người mua đã cọc, chờ người bán xác nhận đơn hàng
+        sellerAccepted: false,     // Người bán đã bấm xác nhận đơn hàng hay chưa
+        buyerCompleted: false,     // Người mua xác nhận đã nhận hàng
+        sellerCompleted: false,    // Người bán xác nhận đã giao hàng
         timestamp: Date.now()
     };
 
@@ -1662,7 +1917,277 @@ function confirmDepositOrder() {
 
     closeCheckoutModal();
     if (window.sound) window.sound.playSuccess();
-    showToast(`Đặt cọc thành công ${formatNumber(depositAmount)} đ! Đã giữ chỗ món "${currentCheckoutProduct.title}".`, 'success');
+    showToast(`Đặt cọc thành công ${formatNumber(depositAmount)} đ! Đã gửi thông báo xác nhận đơn tới người bán (${currentCheckoutProduct.seller}).`, 'success');
+    window.app.renderProfile();
+}
+
+// ==========================================
+// 7b. QUẢN LÝ QUY TRÌNH GIAO DỊCH 2 BÊN & XỬ PHẠT (ĐẶC TẢ UTC2)
+// ==========================================
+
+// 1. Người bán xác nhận đơn hàng sau khi người mua đặt cọc
+function confirmOrderBySeller(orderId) {
+    const order = window.app.depositOrders.find(o => o.id === orderId);
+    if (!order) return;
+
+    if (window.app.user.name !== order.seller && window.app.user.email !== order.sellerEmail) {
+        showToast('Chỉ người bán mới có quyền xác nhận đơn hàng này!', 'danger');
+        return;
+    }
+
+    order.sellerAccepted = true;
+    order.status = 'in_trade';
+    window.app.saveOrders();
+
+    if (window.UniPassSupabase && window.UniPassSupabase.isConfigured()) {
+        window.UniPassSupabase.updateOrder(order.id, { status: 'in_trade', notes: 'Người bán đã xác nhận đơn' });
+    }
+    if (window.UniPassOnlineSync) {
+        window.UniPassOnlineSync.broadcastOrderUpdate(order);
+    }
+
+    if (window.sound) window.sound.playSuccess();
+    showToast(`✓ Bạn đã xác nhận đơn hàng "${order.productTitle}"! Vui lòng hẹn gặp ${order.buyer} tại điểm hẹn để trao đổi đồ.`, 'success');
+    window.app.renderProfile();
+}
+
+// 2. Hai bên lên xác nhận giao dịch thành công (Cả 2 cùng xác nhận -> Tự động xóa bài đăng)
+function confirmTradeComplete(orderId, role) {
+    const order = window.app.depositOrders.find(o => o.id === orderId);
+    if (!order) return;
+
+    if (role === 'buyer') {
+        if (window.app.user.name !== order.buyer && window.app.user.email !== order.buyerEmail) {
+            showToast('Bạn không phải người mua của đơn này!', 'danger');
+            return;
+        }
+        order.buyerCompleted = true;
+    } else if (role === 'seller') {
+        if (window.app.user.name !== order.seller && window.app.user.email !== order.sellerEmail) {
+            showToast('Bạn không phải người bán của đơn này!', 'danger');
+            return;
+        }
+        order.sellerCompleted = true;
+    }
+
+    // NẾU CẢ 2 BÊN ĐÃ XÁC NHẬN HOÀN TẤT: TỰ ĐỘNG XÓA BÀI ĐĂNG & CỘNG ĐIỂM UY TÍN
+    if (order.buyerCompleted && order.sellerCompleted) {
+        order.status = 'completed';
+
+        // Cộng +2 điểm uy tín cho cả 2 bên
+        const buyerUser = window.app.registeredUsers.find(u => u.name === order.buyer || u.email === order.buyerEmail);
+        const sellerUser = window.app.registeredUsers.find(u => u.name === order.seller || u.email === order.sellerEmail);
+
+        if (buyerUser) buyerUser.reputation = Math.min(100, (buyerUser.reputation || 95) + 2);
+        if (sellerUser) sellerUser.reputation = Math.min(100, (sellerUser.reputation || 95) + 2);
+        window.app.saveUsers();
+
+        if (window.app.user && (window.app.user.name === order.buyer || window.app.user.name === order.seller)) {
+            window.app.user.reputation = Math.min(100, (window.app.user.reputation || 95) + 2);
+            window.app.updateUserUI();
+        }
+
+        // TỰ ĐỘNG XÓA BÀI ĐĂNG KHỎI HỆ THỐNG (BẢNG TIN + CLOUD + ĐA MÁY)
+        if (order.productId) {
+            window.app.products = window.app.products.filter(p => p.id !== order.productId);
+            window.app.saveProducts();
+            window.app.rebuildDSACache();
+            window.app.renderProducts();
+            window.app.renderAdminDashboard();
+
+            if (window.UniPassSupabase && window.UniPassSupabase.isConfigured()) {
+                window.UniPassSupabase.deleteProduct(order.productId);
+            }
+            if (window.UniPassOnlineSync) {
+                window.UniPassOnlineSync.broadcastDeletePost(order.productId);
+            }
+        }
+
+        window.app.saveOrders();
+
+        if (window.UniPassSupabase && window.UniPassSupabase.isConfigured()) {
+            window.UniPassSupabase.updateOrder(order.id, { status: 'completed' });
+        }
+        if (window.UniPassOnlineSync) {
+            window.UniPassOnlineSync.broadcastOrderUpdate(order);
+        }
+
+        if (window.sound) window.sound.playSuccess();
+        showToast(`🎉 Giao dịch thành công 100%! Cả hai bên đã xác nhận hoàn tất. Bài đăng "${order.productTitle}" đã được tự động gỡ khỏi hệ thống (+2 điểm uy tín)!`, 'success');
+    } else {
+        // Chỉ mới 1 bên xác nhận
+        order.status = 'pending_mutual';
+        window.app.saveOrders();
+
+        if (window.UniPassSupabase && window.UniPassSupabase.isConfigured()) {
+            window.UniPassSupabase.updateOrder(order.id, { status: 'pending_mutual' });
+        }
+        if (window.UniPassOnlineSync) {
+            window.UniPassOnlineSync.broadcastOrderUpdate(order);
+        }
+
+        if (window.sound) window.sound.playNotification();
+        showToast(`✓ Bạn đã xác nhận thành công! Đang chờ đối phương xác nhận để hoàn tất giao dịch và hoàn cọc.`, 'info');
+    }
+
+    window.app.renderProfile();
+}
+
+// 3. Xử phạt cá nhân không chịu xác nhận sau khi giao dịch thành công (Trừ 5 điểm uy tín)
+function reportUnconfirmedTrade(orderId) {
+    const order = window.app.depositOrders.find(o => o.id === orderId);
+    if (!order) return;
+
+    let delinquentName = '';
+    let delinquentEmail = '';
+
+    if (order.buyerCompleted && !order.sellerCompleted) {
+        delinquentName = order.seller;
+        delinquentEmail = order.sellerEmail;
+    } else if (order.sellerCompleted && !order.buyerCompleted) {
+        delinquentName = order.buyer;
+        delinquentEmail = order.buyerEmail;
+    } else {
+        showToast('Cần ít nhất một bên xác nhận đã trao đổi trước khi báo cáo vi phạm không xác nhận!', 'warning');
+        return;
+    }
+
+    if (!confirm(`Xác nhận xử phạt "${delinquentName}" do không chịu xác nhận giao dịch thành công? Đối phương sẽ bị trừ 5 điểm uy tín theo quy định UTC2.`)) {
+        return;
+    }
+
+    // Trừ 5 điểm uy tín của cá nhân không xác nhận
+    const delinquentUser = window.app.registeredUsers.find(u => 
+        (delinquentName && u.name === delinquentName) || 
+        (delinquentEmail && u.email === delinquentEmail)
+    );
+
+    if (delinquentUser) {
+        delinquentUser.reputation = Math.max(0, (delinquentUser.reputation || 95) - 5);
+        window.app.saveUsers();
+        if (window.app.user.email === delinquentUser.email || window.app.user.name === delinquentUser.name) {
+            window.app.user.reputation = delinquentUser.reputation;
+            window.app.updateUserUI();
+        }
+        if (window.UniPassSupabase && window.UniPassSupabase.isConfigured()) {
+            window.UniPassSupabase.upsertProfile(delinquentUser);
+        }
+    }
+
+    // Ghi nhận cảnh cáo
+    const warning = {
+        id: 'WARN_' + Date.now(),
+        targetName: delinquentName,
+        targetEmail: delinquentEmail || 'student@st.utc2.edu.vn',
+        reason: `Bị trừ 5 điểm uy tín do không chịu xác nhận giao dịch thành công cho đơn ${order.orderCode} ("${order.productTitle}").`,
+        penaltyPoints: 5,
+        time: 'Vừa xong'
+    };
+    window.app.adminWarningsIssued.unshift(warning);
+
+    if (window.UniPassSupabase && window.UniPassSupabase.isConfigured()) {
+        window.UniPassSupabase.addWarning(warning);
+    }
+    if (window.UniPassOnlineSync) {
+        window.UniPassOnlineSync.broadcastWarning(warning);
+    }
+
+    // Đóng giao dịch và gỡ bài đăng nếu còn
+    order.status = 'closed_penalized';
+    if (order.productId) {
+        window.app.products = window.app.products.filter(p => p.id !== order.productId);
+        window.app.saveProducts();
+        window.app.rebuildDSACache();
+        window.app.renderProducts();
+        if (window.UniPassSupabase && window.UniPassSupabase.isConfigured()) {
+            window.UniPassSupabase.deleteProduct(order.productId);
+        }
+        if (window.UniPassOnlineSync) {
+            window.UniPassOnlineSync.broadcastDeletePost(order.productId);
+        }
+    }
+
+    window.app.saveOrders();
+    if (window.UniPassOnlineSync) {
+        window.UniPassOnlineSync.broadcastOrderUpdate(order);
+    }
+
+    if (window.sound) window.sound.playWarning();
+    showToast(`⚖️ Đã xử lý! ${delinquentName} bị trừ 5 điểm uy tín do không xác nhận giao dịch sau khi trao đồ.`, 'warning');
+    window.app.renderProfile();
+}
+
+// 4. Mở modal khiếu nại (Boom hàng, hàng lỗi) gửi Admin
+function openOrderDisputeModal(orderId) {
+    const order = window.app.depositOrders.find(o => o.id === orderId);
+    if (!order) return;
+
+    const isBuyer = (window.app.user.name === order.buyer || window.app.user.email === order.buyerEmail);
+    const targetName = isBuyer ? order.seller : order.buyer;
+    const targetEmail = isBuyer ? (order.sellerEmail || 'seller@st.utc2.edu.vn') : (order.buyerEmail || 'buyer@st.utc2.edu.vn');
+
+    document.getElementById('disputeOrderId').value = order.id;
+    document.getElementById('disputeProductTitle').innerText = order.productTitle;
+    document.getElementById('disputeOrderCode').innerText = order.orderCode || order.id;
+    document.getElementById('disputeTargetUser').innerText = targetName;
+    document.getElementById('disputeTargetEmail').innerText = targetEmail;
+    document.getElementById('disputeEvidenceText').value = '';
+
+    openModal('orderDisputeModal');
+}
+
+// 5. Gửi hồ sơ khiếu nại lên Admin
+function handleOrderDisputeSubmit(event) {
+    event.preventDefault();
+    const orderId = document.getElementById('disputeOrderId').value;
+    const order = window.app.depositOrders.find(o => o.id === orderId);
+    if (!order) {
+        closeModal('orderDisputeModal');
+        return;
+    }
+
+    const isBuyer = (window.app.user.name === order.buyer || window.app.user.email === order.buyerEmail);
+    const targetName = isBuyer ? order.seller : order.buyer;
+    const targetEmail = isBuyer ? (order.sellerEmail || 'seller@st.utc2.edu.vn') : (order.buyerEmail || 'buyer@st.utc2.edu.vn');
+
+    const reasonSelect = document.getElementById('disputeReasonSelect');
+    const reasonType = reasonSelect.value;
+    const reasonText = reasonSelect.options[reasonSelect.selectedIndex].text;
+    const penaltyPoints = parseInt(document.getElementById('disputePenaltyPointsSelect').value) || 10;
+    const evidenceText = document.getElementById('disputeEvidenceText').value.trim();
+
+    const newDispute = {
+        id: 'DISP_' + Date.now(),
+        orderId: order.id,
+        orderCode: order.orderCode || order.id,
+        productTitle: order.productTitle,
+        reporterName: window.app.user.name,
+        reporterEmail: window.app.user.email,
+        accusedName: targetName,
+        accusedEmail: targetEmail,
+        userName: targetName,
+        userEmail: targetEmail,
+        reasonType: reasonType,
+        reason: reasonText,
+        penaltyPoints: penaltyPoints,
+        evidence: evidenceText,
+        time: 'Hôm nay, ' + new Date().toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' }),
+        status: 'pending'
+    };
+
+    window.app.adminDisputes.unshift(newDispute);
+    window.app.saveDisputes();
+
+    if (window.UniPassSupabase && window.UniPassSupabase.isConfigured()) {
+        window.UniPassSupabase.createDispute(newDispute);
+    }
+    if (window.UniPassOnlineSync) {
+        window.UniPassOnlineSync.broadcastDispute(newDispute);
+    }
+
+    closeModal('orderDisputeModal');
+    if (window.sound) window.sound.playNotification();
+    showToast(`🚨 Đã gửi hồ sơ khiếu nại lên Admin! Quản trị viên UTC2 sẽ xem xét và trừ điểm uy tín của ${targetName}.`, 'success');
     window.app.renderProfile();
 }
 
