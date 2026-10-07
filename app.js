@@ -1243,35 +1243,12 @@ async function requestOtpCode(e) {
     const targetEmail = document.getElementById('mockTargetEmail');
     const otpInput = document.getElementById('authOtpInput');
     const otpStatusBadge = document.getElementById('otpStatusBadge');
-    const directHelper = document.getElementById('emailDirectSendHelper');
-    const directBtn = document.getElementById('directGmailComposeBtn');
 
     if (targetEmail) targetEmail.innerText = email;
     if (otpStatusBadge) otpStatusBadge.innerText = 'Đã Phát Lệnh';
     if (mockBox) {
         mockBox.classList.add('active');
         mockBox.style.display = 'block'; // Đảm bảo bảng hướng dẫn hiện lên
-    }
-
-    // Cấu hình link mở ứng dụng Gmail soạn thư gửi mã về chính hộp thư (khắc phục triệt để khi máy chủ hết hạn mức)
-    const webhookUrl = localStorage.getItem('unipass_email_webhook');
-    const mailSubject = encodeURIComponent(`[UTC2HAND] Mã OTP xác thực Gmail cá nhân: ${otp}`);
-    const mailBody = encodeURIComponent(`Chào bạn,\n\nMã xác thực 6 số đăng ký tài khoản UTC2HAND của bạn là: ${otp}\n\nMã có hiệu lực trong vòng 5 phút. Vui lòng quay lại ứng dụng và nhập đúng 6 số này vào ô xác thực để hoàn tất đăng ký.`);
-    const composeUrl = `https://mail.google.com/mail/?view=cm&fs=1&to=${encodeURIComponent(email)}&su=${mailSubject}&body=${mailBody}`;
-
-    if (directBtn) {
-        directBtn.href = composeUrl;
-    }
-
-    if (directHelper) {
-        directHelper.style.display = 'block';
-    }
-
-    // Tự động mở tab soạn thư Gmail để người dùng chỉ cần nhấn "Gửi" là nhận ngay vào hộp thư
-    if (!webhookUrl) {
-        try {
-            window.open(composeUrl, '_blank');
-        } catch (err) {}
     }
 
     // Xóa ô nhập OTP và focus để người dùng nhập từ thư Gmail
@@ -1284,6 +1261,7 @@ async function requestOtpCode(e) {
     let rateLimited = false;
 
     // 1. TỰ ĐỘNG GỬI EMAIL THỰC TẾ QUA GOOGLE APPS SCRIPT WEBHOOK (NẾU ĐÃ CẤU HÌNH)
+    const webhookUrl = localStorage.getItem('unipass_email_webhook');
     if (webhookUrl && webhookUrl.startsWith('http')) {
         try {
             const getUrl = webhookUrl + (webhookUrl.includes('?') ? '&' : '?') + 'email=' + encodeURIComponent(email) + '&otp=' + encodeURIComponent(otp) + '&appName=' + encodeURIComponent('UniPass UTC2');
@@ -1320,11 +1298,14 @@ async function requestOtpCode(e) {
 
     // Xử lý thông báo theo tình trạng gửi
     if (sentViaWebhook) {
-        showToast(`✓ Đã tự động gửi mã OTP qua Gmail Webhook đến: ${email}! Hãy kiểm tra hộp thư.`, 'success');
+        showToast(`✓ Đã gửi mã OTP qua Gmail Webhook đến: ${email}! Hãy kiểm tra hộp thư.`, 'success');
         if (otpStatusBadge) otpStatusBadge.innerText = 'Đã Gửi Thư';
+    } else if (rateLimited) {
+        showToast(`⚠️ Supabase tạm giới hạn gửi mail/giờ. Vui lòng cấu hình Webhook Google Apps Script hoặc kiểm tra hòm thư.`, 'warning');
+        if (otpStatusBadge) otpStatusBadge.innerText = 'Đã Gửi Lệnh';
     } else {
-        showToast(`✓ Đã mở tab Gmail soạn sẵn mã xác thực cho ${email}! Hãy bấm "Gửi" trên Gmail để nhận mã vào hộp thư.`, 'success');
-        if (otpStatusBadge) otpStatusBadge.innerText = 'Đã Sẵn Sàng';
+        showToast(`✓ Đã phát lệnh gửi mã OTP về Gmail: ${email}! Vui lòng mở tin nhắn hộp thư Gmail để lấy mã 6 số.`, 'success');
+        if (otpStatusBadge) otpStatusBadge.innerText = 'Đã Phát Lệnh';
     }
 
     if (window.sound) window.sound.playNotification();
