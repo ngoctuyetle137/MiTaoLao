@@ -24,26 +24,25 @@
                 <p>Cổng đăng nhập/đăng kí</p>
             </div>
 
-            <!-- Tabs Chuyển Đổi: Đăng Ký Mới / Đăng Nhập -->
+            <!-- Tabs Chuyển Đổi: Đăng Nhập / Đăng Ký Mới -->
             <div class="auth-tabs-toggle">
-                <button class="auth-tab-btn active" id="tabRegisterBtn" onclick="switchAuthMode('register')">
-                    Đăng Ký Tài Khoản
-                </button>
-                <button class="auth-tab-btn" id="tabLoginBtn" onclick="switchAuthMode('login')">
+                <button class="auth-tab-btn active" id="tabLoginBtn" onclick="switchAuthMode('login')">
                     Đăng Nhập
+                </button>
+                <button class="auth-tab-btn" id="tabRegisterBtn" onclick="switchAuthMode('register')">
+                    Đăng Ký Tài Khoản
                 </button>
             </div>
 
             <!-- FORM ĐĂNG KÝ / ĐĂNG NHẬP -->
-           <!-- FORM ĐĂNG KÝ / ĐĂNG NHẬP -->
             <form onsubmit="handleAuthSubmitForm(event)">
-                <!-- 1. Họ và Tên -->
-                <div class="auth-form-group" id="authNameField">
+                <!-- 1. Họ và Tên (Hiện khi Đăng Ký) -->
+                <div class="auth-form-group" id="authNameField" style="display:none;">
                     <label class="auth-label">Họ và tên sinh viên *</label>
                     <div class="auth-input-wrap">
                         <span class="auth-input-icon">👤</span>
                         <input type="text" id="authFullNameInput" class="auth-input" 
-                               placeholder="Ví dụ: Lê Thị Ngọc Tuyết, Nguyễn Văn An..." value="Lê Thị Ngọc Tuyết">
+                               placeholder="Ví dụ: Nguyễn Văn An, Trần Thị Mai..." value="">
                     </div>
                 </div>
 
@@ -53,10 +52,10 @@
                     <div class="auth-input-wrap">
                         <span class="auth-input-icon">✉️️</span>
                         <input type="email" id="authEmailInput" class="auth-input" 
-                               placeholder="vidu: tuyetltn.st@st.utc2.edu.vn" value="tuyetltn.st@st.utc2.edu.vn" required>
+                               placeholder="Nhập Gmail UTC2 (vd: masv@st.utc2.edu.vn)" value="" required>
                     </div>
                     <div style="font-size:11px; color:#0284c7; margin-top:4px;">
-                        * Bắt buộc đuôi @st.utc2.edu.vn hoặc @utc2.edu.vn để chống tài khoản rác/spam.
+                        * Bắt buộc đuôi @st.utc2.edu.vn hoặc @utc2.edu.vn để đảm bảo an toàn.
                     </div>
                 </div>
 
@@ -66,12 +65,12 @@
                     <div class="auth-input-wrap">
                         <span class="auth-input-icon">🔒</span>
                         <input type="password" id="authPasswordInput" class="auth-input" 
-                               placeholder="Nhập mật khẩu của bạn..." value="123456" required>
+                               placeholder="Nhập mật khẩu của bạn..." value="" required>
                     </div>
                 </div>
 
-                <!-- 4. Gửi & Nhập Mã OTP Xác Nhận Qua Gmail -->
-                <div class="auth-form-group" id="authOtpSection">
+                <!-- 4. Gửi & Nhập Mã OTP Xác Nhận Qua Gmail (Hiện khi Đăng Ký) -->
+                <div class="auth-form-group" id="authOtpSection" style="display:none;">
                     <label class="auth-label">Mã OTP xác nhận qua Gmail *</label>
                     <div class="auth-otp-row">
                         <div class="auth-input-wrap" style="flex:1;">
@@ -86,31 +85,21 @@
                 </div>
 
                 <!-- HỘP MÔ PHỎNG HỘP THƯ GMAIL UTC2 NHẬN OTP -->
-                <div class="mock-email-box" id="mockEmailNotification">
+                <div class="mock-email-box" id="mockEmailNotification" style="display:none;">
                     <div class="mock-email-title">
                         <span>📬</span> [Hộp Thư Đến UTC2 Mail] Mã xác thực của bạn:
                     </div>
-                    <div>Mã OTP xác nhận tài khoản: <span class="mock-otp-code-highlight" id="displayGeneratedOtp">894215</span></div>
+                    <div>Mã OTP xác nhận tài khoản: <span class="mock-otp-code-highlight" id="displayGeneratedOtp">------</span></div>
                     <div style="font-size:11px; color:#166534; margin-top:4px;">
-                        Đã gửi đến: <strong id="mockTargetEmail">tuyetltn.st@st.utc2.edu.vn</strong> (Hiệu lực 5 phút).
+                        Đã gửi đến: <strong id="mockTargetEmail">sinhvien@st.utc2.edu.vn</strong> (Hiệu lực 5 phút).
                     </div>
                 </div>
 
                 <!-- Nút Xác Nhận Đăng Ký / Đăng Nhập -->
                 <button type="submit" class="auth-submit-btn" id="authSubmitButton">
-                    ✓ Hoàn Tất Đăng Ký & Nhận 500 Xu
+                    ✓ Đăng Nhập Vào Hệ Thống
                 </button>
             </form>
-
-            <!-- Lối vào nhanh bằng tài khoản mẫu -->
-            <div class="auth-quick-skip">
-                <span>Hoặc vào nhanh: </span>
-                <span class="auth-quick-link" onclick="quickLoginDemoUser('userA')">TK A (Tuyết)</span>
-                <span> | </span>
-                <span class="auth-quick-link" onclick="quickLoginDemoUser('userB')">TK B (Lâm)</span>
-                <span> | </span>
-                <span class="auth-quick-link" onclick="quickLoginDemoUser('admin')">🛡 TK Admin (6651071091)</span>
-            </div>
 
             <!-- Phúc lợi khởi tạo tài khoản -->
             <div class="auth-benefit-pills">
@@ -184,17 +173,17 @@
                     <span>🌐</span> Trình Bày Online
                 </button>
 
-                <!-- Nút Đổi Tài Khoản Sinh Viên A ⇄ B (Lâm) -->
-                <button class="switch-user-btn" id="quickSwitchUserBtn" onclick="toggleQuickAccount()">
-                    Đổi sang TK giả định (An)
+                <!-- Nút Đổi Tài Khoản Sinh Viên (Ẩn để mỗi người dùng đúng tài khoản của mình) -->
+                <button class="switch-user-btn" id="quickSwitchUserBtn" style="display:none;" onclick="toggleQuickAccount()">
+                    Đổi tài khoản
                 </button>
 
                 <!-- Huy hiệu Sinh viên & Số Xu -->
                 <div class="user-profile-badge" onclick="switchNavTab('profile')">
-                    <div class="user-avatar-circle" id="userAvatarText">T</div>
+                    <div class="user-avatar-circle" id="userAvatarText">U</div>
                     <div style="font-size:12px; line-height:1.2;">
-                        <div id="navUserName" style="font-weight:700;">Lê Thị Ngọc Tuyết</div>
-                        <div style="color:var(--gold); font-size:11px;">🪙 <span id="navUserCoins">170</span> Xu</div>
+                        <div id="navUserName" style="font-weight:700;">Sinh viên UTC2</div>
+                        <div style="color:var(--gold); font-size:11px;">🪙 <span id="navUserCoins">500</span> Xu</div>
                     </div>
                 </div>
 
@@ -521,12 +510,12 @@
             <div style="width:100%;">
                 <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:16px;">
                     <div style="display:flex; align-items:center; gap:14px;">
-                        <div class="user-avatar-circle" style="width:52px; height:52px; font-size:22px;" id="profileAvatarCircle">T</div>
+                        <div class="user-avatar-circle" style="width:52px; height:52px; font-size:22px;" id="profileAvatarCircle">U</div>
                         <div>
-                            <h3 id="profileFullName" style="font-size:18px; color:#0f172a;">Lê Thị Ngọc Tuyết</h3>
-                            <div style="font-size:12.5px; color:#64748b;" id="profileEmail">tuyetltn.st@st.utc2.edu.vn</div>
+                            <h3 id="profileFullName" style="font-size:18px; color:#0f172a;">Sinh viên UTC2</h3>
+                            <div style="font-size:12.5px; color:#64748b;" id="profileEmail">sinhvien@st.utc2.edu.vn</div>
                             <div style="margin-top:4px; font-size:12.5px; color:#16a34a; font-weight:700;">
-                                🛡 Điểm Uy Tín: <span id="profileRepScore">98</span>/100 (Uy tín cao)
+                                🛡 Điểm Uy Tín: <span id="profileRepScore">95</span>/100
                             </div>
                         </div>
                     </div>
@@ -606,6 +595,14 @@
             </h3>
             <div class="checkout-price" id="modalProductPrice">
                 35.000 VNĐ
+            </div>
+
+            <!-- Mô tả chi tiết món đồ -->
+            <div style="background:#f8fafc; border:1px solid #e2e8f0; border-radius:10px; padding:10px 14px; margin-bottom:14px;">
+                <div style="font-size:11.5px; font-weight:700; color:#64748b; text-transform:uppercase; margin-bottom:4px;">📝 Mô tả chi tiết sản phẩm:</div>
+                <div id="modalProductDescription" style="font-size:13px; color:#334155; line-height:1.5; white-space:pre-line;">
+                    Món đồ được đăng pass trực tiếp tại campus UTC2.
+                </div>
             </div>
 
             <div class="checkout-info-grid">
@@ -712,9 +709,15 @@
                     </div>
                 </div>
 
+                <!-- Mô tả chi tiết món đồ -->
                 <div style="margin-bottom:12px;">
-                    <label style="display:block; font-size:12.5px; font-weight:600; color:#334155; margin-bottom:4px;">Địa điểm hẹn gặp tại UTC2 *</label>
-                    <input type="text" id="newPostLocation" class="hero-search-input" style="padding:10px 14px; border:1px solid #cbd5e1; box-shadow:none;" value="Ký túc xá Cỏ May UTC2 (0.5 km)" required>
+                    <label style="display:block; font-size:12.5px; font-weight:600; color:#334155; margin-bottom:4px;">Mô tả chi tiết sản phẩm *</label>
+                    <textarea id="newPostDescription" class="hero-search-input" rows="3" style="padding:10px 14px; border:1px solid #cbd5e1; box-shadow:none; resize:vertical; font-family:inherit; width:100%; box-sizing:border-box;" placeholder="Mô tả tình trạng đồ dùng, độ mới, giáo trình có ghi chú gì không, phụ kiện kèm theo..." required></textarea>
+                </div>
+
+                <div style="margin-bottom:12px;">
+                    <label style="display:block; font-size:12.5px; font-weight:600; color:#334155; margin-bottom:4px;">Vị trí / Địa điểm hẹn gặp tại UTC2 *</label>
+                    <input type="text" id="newPostLocation" class="hero-search-input" style="padding:10px 14px; border:1px solid #cbd5e1; box-shadow:none;" placeholder="Tự nhập vị trí (Ví dụ: Cổng 1 UTC2, KTX Cỏ May, Phòng học C102, Sân bóng...)" value="" required>
                 </div>
 
                 <!-- Tải ảnh từ tệp file hoặc dán URL -->
@@ -790,8 +793,8 @@
                 <strong style="color:#0284c7; font-size:14.5px;">6651071091@st.utc2.edu.vn</strong>
             </p>
             <div style="background:#fef2f2; border:1px solid #fecaca; border-radius:10px; padding:12px 16px; margin-bottom:18px; font-size:12.5px; color:#991b1b; text-align:left;">
-                <div style="margin-bottom:4px;">• Tài khoản đang dùng: <strong id="deniedCurrentUserName">Lê Thị Ngọc Tuyết</strong></div>
-                <div style="margin-bottom:4px;">• Email đăng nhập: <span id="deniedCurrentUserEmail" style="font-family:monospace; font-weight:700;">tuyetltn.st@st.utc2.edu.vn</span></div>
+                <div style="margin-bottom:4px;">• Tài khoản đang dùng: <strong id="deniedCurrentUserName">Sinh viên</strong></div>
+                <div style="margin-bottom:4px;">• Email đăng nhập: <span id="deniedCurrentUserEmail" style="font-family:monospace; font-weight:700;">sinhvien@st.utc2.edu.vn</span></div>
                 <div>• Thẩm quyền: <strong>Tài khoản Sinh viên (Không được phép truy cập Admin)</strong></div>
             </div>
             <div style="margin-bottom:16px; text-align:left;">

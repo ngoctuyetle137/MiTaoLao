@@ -131,10 +131,10 @@ const USERS_REGISTRY = {
 class AppController {
     constructor() {
         this.registeredUsers = [];
-        this.currentUserKey = 'userA';
-        this.user = DEFAULT_USERS[0];
+        this.currentUserKey = null;
+        this.user = null;
         this.isLoggedIn = false;
-        this.currentAuthMode = 'register';
+        this.currentAuthMode = 'login';
         this.generatedOtp = '';
 
         this.products = [];
@@ -233,11 +233,21 @@ class AppController {
         const savedUser = localStorage.getItem('unipass_current_user');
         if (savedUser) {
             try {
-                this.user = JSON.parse(savedUser);
-                this.isLoggedIn = true;
+                const parsed = JSON.parse(savedUser);
+                if (parsed && parsed.email) {
+                    this.user = parsed;
+                    this.isLoggedIn = true;
+                } else {
+                    this.user = null;
+                    this.isLoggedIn = false;
+                }
             } catch (e) {
+                this.user = null;
                 this.isLoggedIn = false;
             }
+        } else {
+            this.user = null;
+            this.isLoggedIn = false;
         }
 
         this.rebuildDSACache();
@@ -572,9 +582,14 @@ class AppController {
         this.updateDepositBadge();
     }
 
-updateDepositBadge() {
+    updateDepositBadge() {
         const badge = document.getElementById('depositOrderCount');
         if (!badge) return;
+        if (!this.user) {
+            badge.style.display = 'none';
+            badge.innerText = '0';
+            return;
+        }
         
         // Đếm số đơn cọc liên quan đến tài khoản hiện tại
         const myOrderCount = this.depositOrders.filter(o => 
@@ -588,6 +603,11 @@ updateDepositBadge() {
     updateChatUnreadBadge() {
         const badge = document.getElementById('unreadChatBadge');
         if (!badge) return;
+        if (!this.user) {
+            badge.style.display = 'none';
+            badge.innerText = '0';
+            return;
+        }
 
         const partnerName = this.getChatPartnerName();
         const unread = this.chatMessages.filter(m => m.receiver === this.user.name && m.sender === partnerName).length;
@@ -601,16 +621,19 @@ updateDepositBadge() {
     }
 
     getChatPartnerName() {
+        if (!this.user) return 'Sinh viên UTC2';
         if (this.currentChatPartner && this.currentChatPartner !== this.user.name) {
             return this.currentChatPartner;
         }
         // Tìm bạn chat mặc định: ưu tiên người khác mình trong danh sách
         const otherUser = this.registeredUsers.find(u => u.name !== this.user.name && u.role !== 'admin');
         if (otherUser) return otherUser.name;
-        return this.user.name === 'Lê Thị Ngọc Tuyết' ? 'Phúc Lâm' : 'Lê Thị Ngọc Tuyết';
+        return 'Sinh viên UTC2';
     }
 
     updateUserUI() {
+        if (!this.user) return;
+
         const nameEl = document.getElementById('navUserName');
         const coinsEl = document.getElementById('navUserCoins');
         const avatarEl = document.getElementById('userAvatarText');
@@ -628,10 +651,9 @@ updateDepositBadge() {
         if (avatarEl) avatarEl.innerText = letter;
 
         if (switchBtn) {
-            // Hiển thị tên người dùng tiếp theo trong danh sách
             const nextIdx = (this.registeredUsers.findIndex(u => u.email === this.user.email) + 1) % this.registeredUsers.length;
             const nextUser = this.registeredUsers[nextIdx] || this.registeredUsers[0];
-            switchBtn.innerText = `Đổi sang: ${nextUser.name.split(' ').slice(-1)[0] || nextUser.name}`;
+            switchBtn.innerText = `Đổi sang: ${nextUser ? (nextUser.name.split(' ').slice(-1)[0] || nextUser.name) : 'Người khác'}`;
         }
 
         if (profName) profName.innerText = this.user.name;
@@ -735,7 +757,7 @@ updateDepositBadge() {
         }
 
         container.innerHTML = list.map(item => {
-            const isMyItem = item.seller === this.user.name;
+            const isMyItem = this.user ? (item.seller === this.user.name) : false;
             return `
                 <div class="uni-product-card" onclick="openCheckoutModal('${item.id}')">
                     <div class="card-image-wrapper">
@@ -746,6 +768,11 @@ updateDepositBadge() {
                     <div class="card-content">
                         <h4 class="card-title-text">${item.title}</h4>
                         <div class="card-price-text">${formatNumber(item.price)} VNĐ</div>
+                        ${item.description ? `
+                            <div style="font-size:12px; color:#64748b; margin:4px 0 6px 0; line-height:1.4; display:-webkit-box; -webkit-line-clamp:2; -webkit-box-orient:vertical; overflow:hidden;">
+                                ${item.description}
+                            </div>
+                        ` : ''}
                         
                         <div class="card-seller-row">
                             <span>Ng/pass: ${item.seller}</span>
@@ -772,6 +799,11 @@ updateDepositBadge() {
     renderProfile() {
         const myPosts = document.getElementById('myPostsListContainer');
         const history = document.getElementById('purchaseHistoryContainer');
+        if (!this.user) {
+            if (myPosts) myPosts.innerHTML = `<p style="font-size:12px; color:#64748b;">Vui lòng đăng nhập để xem bài đăng.</p>`;
+            if (history) history.innerHTML = `<p style="font-size:12px; color:#64748b;">Vui lòng đăng nhập để xem lịch sử cọc.</p>`;
+            return;
+        }
 
         if (myPosts) {
             const myItems = this.products.filter(p => p.seller === this.user.name);
@@ -818,6 +850,14 @@ updateDepositBadge() {
         const area = document.getElementById('chatMessagesArea');
         const headerSub = document.getElementById('chatHeaderSubtitle');
         if (!area) return;
+        if (!this.user) {
+            area.innerHTML = `
+                <div style="text-align:center; color:#94a3b8; font-size:12.5px; margin-top:30px;">
+                    Vui lòng đăng nhập để nhắn tin trao đổi đồ.
+                </div>
+            `;
+            return;
+        }
 
         const partnerName = this.getChatPartnerName();
         if (headerSub) {
@@ -1046,14 +1086,24 @@ function requestOtpCode(e) {
 function handleAuthSubmitForm(e) {
     e.preventDefault();
     const email = document.getElementById('authEmailInput').value.trim();
-    const fullName = document.getElementById('authFullNameInput').value.trim();
-    const enteredOtp = document.getElementById('authOtpInput').value.trim();
+    const fullName = document.getElementById('authFullNameInput') ? document.getElementById('authFullNameInput').value.trim() : '';
+    const enteredOtp = document.getElementById('authOtpInput') ? document.getElementById('authOtpInput').value.trim() : '';
     const password = document.getElementById('authPasswordInput') ? document.getElementById('authPasswordInput').value.trim() : '';
+
+    if (!email) {
+        showToast('Vui lòng nhập địa chỉ Gmail!', 'danger');
+        return;
+    }
 
     const isCollegeEmail = email.endsWith('@st.utc2.edu.vn') || email.endsWith('@utc2.edu.vn');
     if (!isCollegeEmail) {
-        showToast('Vui lòng dùng Gmail trường UTC2 (@st.utc2.edu.vn)!', 'danger');
+        showToast('Vui lòng dùng Gmail trường UTC2 (@st.utc2.edu.vn hoặc @utc2.edu.vn)!', 'danger');
         if (window.sound) window.sound.playWarning();
+        return;
+    }
+
+    if (!password) {
+        showToast('Vui lòng nhập mật khẩu của bạn!', 'danger');
         return;
     }
 
@@ -1074,6 +1124,11 @@ function handleAuthSubmitForm(e) {
     }
 
     if (window.app.currentAuthMode === 'register') {
+        if (!fullName) {
+            showToast('Vui lòng nhập họ và tên của bạn!', 'danger');
+            return;
+        }
+
         if (!window.app.generatedOtp) {
             showToast('Vui lòng bấm "Gửi Mã OTP" để nhận mã xác nhận trước!', 'danger');
             if (window.sound) window.sound.playWarning();
@@ -1089,13 +1144,16 @@ function handleAuthSubmitForm(e) {
         // Tìm xem tài khoản đã tồn tại hay chưa
         let existingUser = window.app.registeredUsers.find(u => u.email === email);
         if (existingUser) {
+            existingUser.name = fullName || existingUser.name;
+            existingUser.password = password;
             window.app.user = existingUser;
+            window.app.saveUsers();
         } else {
             const newUser = {
                 id: isOfficialAdmin ? 'ADMIN' : ('U_' + Date.now()),
                 name: fullName || (isOfficialAdmin ? 'Quản Trị Viên UTC2 (6651071091)' : email.split('@')[0]),
                 email: email,
-                password: isOfficialAdmin ? ADMIN_CREDENTIALS.password : (password || '123456'),
+                password: isOfficialAdmin ? ADMIN_CREDENTIALS.password : password,
                 role: isOfficialAdmin ? 'admin' : 'student',
                 coins: isOfficialAdmin ? 9999 : 500,
                 reputation: isOfficialAdmin ? 100 : 95,
@@ -1109,7 +1167,14 @@ function handleAuthSubmitForm(e) {
         window.app.isLoggedIn = true;
         window.app.checkAuthDisplay();
         window.app.updateUserUI();
+        window.app.renderProducts();
+        window.app.renderProfile();
         window.app.renderAdminDashboard();
+
+        // Đồng bộ profile lên Supabase Cloud
+        if (window.UniPassSupabase && window.UniPassSupabase.isConfigured()) {
+            window.UniPassSupabase.upsertProfile(window.app.user);
+        }
 
         if (window.sound) window.sound.playSuccess();
         showToast(isOfficialAdmin ? `Đăng nhập quyền Quản Trị Viên UTC2 (6651071091)!` : `Đăng ký thành công! Chào mừng bạn gia nhập UniPass UTC2 (+500 Xu, Uy tín 95đ)!`, 'success');
@@ -1119,17 +1184,33 @@ function handleAuthSubmitForm(e) {
     } else {
         // Chế độ Đăng nhập
         let existingUser = window.app.registeredUsers.find(u => u.email === email);
-        if (!existingUser) {
-            // Nếu chưa có trong hệ thống, tự động ghi nhận
+        if (existingUser) {
+            if (existingUser.password && existingUser.password !== password) {
+                showToast('Mật khẩu không chính xác! Vui lòng kiểm tra lại.', 'danger');
+                if (window.sound) window.sound.playWarning();
+                const pwdInput = document.getElementById('authPasswordInput');
+                if (pwdInput) {
+                    pwdInput.focus();
+                    pwdInput.select();
+                }
+                return;
+            }
+            if (!existingUser.password) {
+                existingUser.password = password;
+                window.app.saveUsers();
+            }
+        } else {
+            // Chưa có trong hệ thống, tự động tạo mới tài khoản cho sinh viên
+            const displayName = email.split('@')[0];
             existingUser = {
                 id: isOfficialAdmin ? 'ADMIN' : ('U_' + Date.now()),
-                name: isOfficialAdmin ? 'Quản Trị Viên UTC2 (6651071091)' : email.split('@')[0],
+                name: isOfficialAdmin ? 'Quản Trị Viên UTC2 (6651071091)' : displayName,
                 email: email,
-                password: isOfficialAdmin ? ADMIN_CREDENTIALS.password : (password || '123456'),
+                password: isOfficialAdmin ? ADMIN_CREDENTIALS.password : password,
                 role: isOfficialAdmin ? 'admin' : 'student',
                 coins: isOfficialAdmin ? 9999 : 500,
                 reputation: isOfficialAdmin ? 100 : 95,
-                avatarLetter: email.charAt(0).toUpperCase()
+                avatarLetter: displayName.charAt(0).toUpperCase()
             };
             window.app.registeredUsers.push(existingUser);
             window.app.saveUsers();
@@ -1139,7 +1220,14 @@ function handleAuthSubmitForm(e) {
         window.app.isLoggedIn = true;
         window.app.checkAuthDisplay();
         window.app.updateUserUI();
+        window.app.renderProducts();
+        window.app.renderProfile();
         window.app.renderAdminDashboard();
+
+        // Đồng bộ profile lên Supabase Cloud
+        if (window.UniPassSupabase && window.UniPassSupabase.isConfigured()) {
+            window.UniPassSupabase.upsertProfile(window.app.user);
+        }
 
         if (window.sound) window.sound.playSuccess();
         showToast(isOfficialAdmin ? `Đăng nhập quyền Quản Trị Viên UTC2 (6651071091)!` : `Đăng nhập thành công với tài khoản ${email}!`, 'success');
@@ -1188,8 +1276,25 @@ function quickLoginDemoUser(userKey) {
 
 function logoutToAuthScreen() {
     window.app.isLoggedIn = false;
+    window.app.user = null;
     localStorage.removeItem('unipass_current_user');
     window.app.checkAuthDisplay();
+
+    const emailInput = document.getElementById('authEmailInput');
+    const pwdInput = document.getElementById('authPasswordInput');
+    const nameInput = document.getElementById('authFullNameInput');
+    const otpInput = document.getElementById('authOtpInput');
+    if (emailInput) emailInput.value = '';
+    if (pwdInput) pwdInput.value = '';
+    if (nameInput) nameInput.value = '';
+    if (otpInput) otpInput.value = '';
+
+    const mockBox = document.getElementById('mockEmailNotification');
+    if (mockBox) {
+        mockBox.classList.remove('active');
+        mockBox.style.display = 'none';
+    }
+
     if (window.sound) window.sound.playClick();
     showToast('Đã đăng xuất khỏi tài khoản!', 'info');
 }
@@ -1425,13 +1530,17 @@ function openCheckoutModal(productId) {
     document.getElementById('modalSellerName').innerText = item.seller;
     document.getElementById('modalSellerRep').innerText = `★ ${item.sellerRep}/100`;
     document.getElementById('modalSellerLocation').innerText = item.location;
+    const descEl = document.getElementById('modalProductDescription');
+    if (descEl) {
+        descEl.innerText = item.description || 'Món đồ được đăng pass trực tiếp tại campus UTC2.';
+    }
 
     document.getElementById('shippingSelectOption').value = '0';
     document.getElementById('useCoinDiscountCheckbox').checked = true;
 
     updateCheckoutCalculations();
 
-    const isMine = item.seller === window.app.user.name;
+    const isMine = window.app.user ? (item.seller === window.app.user.name) : false;
     const confirmBtn = document.getElementById('confirmDepositBtn');
     if (isMine) {
         confirmBtn.innerText = 'Món đồ của chính bạn';
@@ -1824,11 +1933,27 @@ function removeSelectedPostImage() {
 function handlePostSubmit(e) {
     e.preventDefault();
 
+    if (!window.app.user) {
+        showToast('Vui lòng đăng nhập trước khi đăng bài pass đồ!', 'warning');
+        return;
+    }
+
     const title = document.getElementById('newPostTitle').value.trim();
     const price = parseInt(document.getElementById('newPostPrice').value) || 0;
     const category = document.getElementById('newPostCategory').value;
     const location = document.getElementById('newPostLocation').value.trim();
+    const description = document.getElementById('newPostDescription') ? document.getElementById('newPostDescription').value.trim() : '';
     const urlInput = document.getElementById('newPostImage').value.trim();
+
+    if (!location) {
+        showToast('Vui lòng tự nhập vị trí / địa điểm hẹn gặp tại UTC2!', 'warning');
+        return;
+    }
+
+    if (!description) {
+        showToast('Vui lòng nhập mô tả chi tiết sản phẩm!', 'warning');
+        return;
+    }
 
     const finalImage = pendingUploadedImageDataUrl || urlInput || 'https://images.unsplash.com/photo-1544716278-ca5e3f4abd8c?w=500&auto=format&fit=crop&q=60';
 
@@ -1843,12 +1968,12 @@ function handlePostSubmit(e) {
         timemarkCode: randCode,
         seller: window.app.user.name,
         sellerEmail: window.app.user.email,
-        sellerRep: window.app.user.reputation,
-        location,
+        sellerRep: window.app.user.reputation || 95,
+        location: location,
         distanceKm: 0.5,
         expiryDays: 7,
         imageUrl: finalImage,
-        description: 'Món đồ được đăng pass trực tiếp tại campus UTC2.'
+        description: description
     };
 
     const codeDisplay = document.getElementById('generatedTimeMarkCode');
@@ -1879,6 +2004,18 @@ function confirmPublishPost() {
 
     closeModal('timemarkCodeModal');
     removeSelectedPostImage();
+
+    // Đặt lại các ô nhập của form đăng bài
+    const titleInput = document.getElementById('newPostTitle');
+    const priceInput = document.getElementById('newPostPrice');
+    const locInput = document.getElementById('newPostLocation');
+    const descInput = document.getElementById('newPostDescription');
+    const urlInput = document.getElementById('newPostImage');
+    if (titleInput) titleInput.value = '';
+    if (priceInput) priceInput.value = '';
+    if (locInput) locInput.value = '';
+    if (descInput) descInput.value = '';
+    if (urlInput) urlInput.value = '';
 
     if (window.sound) window.sound.playSuccess();
     showToast(`✓ Đã đăng bài "${pendingNewPost.title}" thành công lên hệ thống!`, 'success');
