@@ -255,6 +255,34 @@ class AppController {
             updateSupabaseNavIndicator();
         }
 
+        // Lắng nghe sự kiện xác thực email từ Supabase Auth (khi người dùng bấm Sign in trong email)
+        if (window.UniPassSupabase && window.UniPassSupabase.initAuthListener) {
+            window.UniPassSupabase.initAuthListener((supaUser) => {
+                if (!supaUser || !supaUser.email) return;
+                console.log('🎉 [Supabase Auth] Người dùng đã xác thực email thành công:', supaUser.email);
+                window.app.emailVerifiedByMagicLink = true;
+                window.app.verifiedSupabaseEmail = supaUser.email;
+
+                const emailInput = document.getElementById('authEmailInput');
+                const otpInput = document.getElementById('authOtpInput');
+                const otpBadge = document.getElementById('otpStatusBadge');
+
+                if (emailInput && (!emailInput.value || emailInput.value === supaUser.email)) {
+                    emailInput.value = supaUser.email;
+                }
+                if (otpInput) {
+                    otpInput.value = 'CONFIRMED';
+                }
+                if (otpBadge) {
+                    otpBadge.innerText = 'Đã Xác Thực ✓';
+                    otpBadge.style.background = '#dcfce7';
+                    otpBadge.style.color = '#15803d';
+                }
+
+                showToast(`✓ Đã xác thực thành công Gmail ${supaUser.email} từ liên kết Supabase!`, 'success');
+            });
+        }
+
         console.log('🔄 Đang đồng bộ dữ liệu từ Supabase Cloud...');
         try {
             // Tải sản phẩm từ Supabase
@@ -1593,8 +1621,9 @@ async function handleAuthSubmitForm(e) {
             return;
         }
 
-        // BẮT BUỘC XÁC THỰC MÃ OTP 6 SỐ
-        let isOtpValid = (window.app.generatedOtp && enteredOtp === window.app.generatedOtp);
+        // BẮT BUỘC XÁC THỰC MÃ OTP 6 SỐ HOẶC XÁC THỰC QUA LIÊN KẾT SUPABASE
+        let isOtpValid = (window.app.generatedOtp && enteredOtp === window.app.generatedOtp) ||
+                         (window.app.emailVerifiedByMagicLink && window.app.verifiedSupabaseEmail === email);
 
         // Kiểm tra đối chiếu với Supabase Auth nếu người dùng dùng mã từ Supabase
         if (!isOtpValid && window.UniPassSupabase && window.UniPassSupabase.isConfigured()) {

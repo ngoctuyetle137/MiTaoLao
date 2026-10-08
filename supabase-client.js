@@ -142,10 +142,12 @@
             }
 
             try {
+                const currentRedirect = window.location.href.split('#')[0].split('?')[0];
                 const { data, error } = await client.auth.signInWithOtp({
                     email: email,
                     options: {
-                        shouldCreateUser: true
+                        shouldCreateUser: true,
+                        emailRedirectTo: currentRedirect
                     }
                 });
 
@@ -160,6 +162,27 @@
                 console.error('❌ [Supabase Auth] Lỗi kết nối khi gửi OTP:', err);
                 return { success: false, error: err, message: err.message };
             }
+        },
+
+        initAuthListener: function (callback) {
+            const client = this.getClient();
+            if (!client) return;
+
+            // 1. Kiểm tra session hiện tại nếu người dùng vừa mở link từ email
+            client.auth.getSession().then(({ data, error }) => {
+                if (data && data.session && data.session.user) {
+                    console.log('✅ [Supabase Auth] Phát hiện phiên đăng nhập qua Email Magic Link:', data.session.user.email);
+                    if (callback) callback(data.session.user);
+                }
+            }).catch(() => {});
+
+            // 2. Lắng nghe sự kiện chuyển đổi trạng thái auth (khi bấm link Sign in)
+            client.auth.onAuthStateChange((event, session) => {
+                if ((event === 'SIGNED_IN' || event === 'USER_UPDATED') && session && session.user) {
+                    console.log('✅ [Supabase Auth] Đăng nhập thành công từ liên kết email:', session.user.email);
+                    if (callback) callback(session.user);
+                }
+            });
         },
 
         verifyOtpEmail: async function (email, token) {
