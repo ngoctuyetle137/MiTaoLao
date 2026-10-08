@@ -1414,9 +1414,16 @@ const UniPassMailer = {
                     '&otp=' + encodeURIComponent(otp) +
                     '&appName=' + encodeURIComponent('UniPass UTC2') +
                     '&type=' + encodeURIComponent(type) +
-                    '&productTitle=' + encodeURIComponent(title || '');
+                    '&productTitle=' + encodeURIComponent(title || '') +
+                    '&_t=' + Date.now();
 
                 fetch(getUrl, { mode: 'no-cors' }).catch(() => {});
+                // Fallback Image beacon: đảm bảo request luôn bay đến Google Apps Script
+                try {
+                    const beacon = new Image();
+                    beacon.src = getUrl;
+                } catch (_) {}
+
                 fetch(cfg.webhook, {
                     method: 'POST',
                     mode: 'no-cors',
@@ -3334,8 +3341,16 @@ async function saveAndConnectSupabase() {
 
     if (!urlInput || !keyInput) return;
 
-    const url = urlInput.value.trim();
-    const key = keyInput.value.trim();
+    const url = urlInput.value.trim() || 'https://lhlwemmpnrmlskeljniq.supabase.co';
+    let key = keyInput.value.trim();
+
+    // Bảo vệ: Nếu người dùng để trống hoặc bị hiển thị dạng che dấu (****** hoặc ...), giữ lại key thật
+    if (!key || key.includes('...') || key.includes('*') || key.length < 25) {
+        key = (window.UniPassSupabase && window.UniPassSupabase.getRawKey && window.UniPassSupabase.getRawKey()) || 
+              localStorage.getItem('unipass_supabase_key') || 
+              'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImxobHdlbW1wbnJtbHNrZWxqbmlxIiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTEyNzIyNTYsImV4cCI6MjEwNjg0ODI1Nn0.OBOpRm80_LZ9vmt3hgKUuDqPkeAzDHPkYS_MoacHeDo';
+        keyInput.value = key;
+    }
 
     if (webhookInput) {
         const webhookVal = webhookInput.value.trim();
