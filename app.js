@@ -1369,6 +1369,8 @@ function switchAuthMode(mode) {
 // ==========================================
 // BỘ GỬI EMAIL TỰ ĐỘNG QUA SMTP & GMAIL DISPATCHER
 // ==========================================
+const DEFAULT_APPS_SCRIPT_WEBHOOK = 'https://script.google.com/macros/s/AKfycbwJJ_jlPWowzSqsVigiA5_08u14G3iUTH8F2b-BlUqzVa15ltOLeZDGaAKRFtBG2Ja2Xw/exec';
+
 const UniPassMailer = {
     getConfig: function() {
         return {
@@ -1376,7 +1378,7 @@ const UniPassMailer = {
             port: parseInt(localStorage.getItem('unipass_smtp_port')) || 587,
             user: localStorage.getItem('unipass_smtp_user') || '',
             pass: localStorage.getItem('unipass_smtp_pass') || '',
-            webhook: localStorage.getItem('unipass_email_webhook') || ''
+            webhook: localStorage.getItem('unipass_email_webhook') || DEFAULT_APPS_SCRIPT_WEBHOOK
         };
     },
 
@@ -3281,7 +3283,7 @@ function openSupabaseModal() {
     const detail = document.getElementById('supabaseDetailText');
 
     if (webhookInput) {
-        webhookInput.value = localStorage.getItem('unipass_email_webhook') || '';
+        webhookInput.value = localStorage.getItem('unipass_email_webhook') || DEFAULT_APPS_SCRIPT_WEBHOOK;
     }
 
     const smtpHostInput = document.getElementById('smtpHostInput');

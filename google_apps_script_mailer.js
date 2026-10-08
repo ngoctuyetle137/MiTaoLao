@@ -1,23 +1,10 @@
+
+
 /**
  * ===================================================================
- * GOOGLE APPS SCRIPT - BỘ GỬI EMAIL OTP TỰ ĐỘNG CHO UNIPASS UTC2
- * Miễn phí 100%, gửi thư trực tiếp từ máy chủ Gmail của Google (không sợ vào spam)
- * ===================================================================
- * 
- * 📘 HƯỚNG DẪN CÀI ĐẶT 3 BƯỚC NHANH TRONG 1 PHÚT:
- * 1. Mở trang: https://script.google.com/ ➔ Bấm "Dự án mới" (New project)
- * 2. Xóa hết mã cũ, dán toàn bộ nội dung file này vào ➔ Nhấn Ctrl + S để Lưu.
- * 3. Bấm nút màu xanh "Triển khai" (Deploy) ở góc trên bên phải:
- *    - Chọn "Tùy chọn triển khai mới" (New deployment).
- *    - Bấm biểu tượng Bánh răng (⚙️) ➔ Chọn loại "Ứng dụng web" (Web app).
- *    - Mô tả: "UniPass OTP Mailer".
- *    - Thực thi dưới dạng (Execute as): "Tôi" (tài khoản Gmail của bạn).
- *    - Ai có quyền truy cập (Who has access): "Bất kỳ ai" (Anyone) -> RẤT QUAN TRỌNG.
- *    - Bấm nút "Triển khai" (Deploy) ➔ Cấp quyền truy cập cho Gmail khi Google hỏi.
- *    - Sao chép đường dẫn "URL ứng dụng web" (Web App URL) có dạng:
- *      https://script.google.com/macros/s/AKfycb.../exec
- * 4. Dán URL vừa sao chép vào mục "Cấu Hình Supabase & Email OTP" trên trang web UniPass UTC2.
- * 
+ * UNIPASS UTC2 - GOOGLE APPS SCRIPT REAL EMAIL OTP DISPATCHER
+ * URL ĐÃ TRIỂN KHAI HOẠT ĐỘNG CHÍNH THỨC:
+ * https://script.google.com/macros/s/AKfycbwJJ_jlPWowzSqsVigiA5_08u14G3iUTH8F2b-BlUqzVa15ltOLeZDGaAKRFtBG2Ja2Xw/exec
  * ===================================================================
  */
 
