@@ -145,7 +145,7 @@
              TOP NAVBAR
              ========================================== -->
         <header class="navbar">
-            <!-- Logo UniPass UTC2 -->
+            <!-- Logo Hand UTC2 -->
             <a class="brand" onclick="switchNavTab('home')">
                 <div class="brand-icon">🎓</div>
                 <div class="brand-text">
@@ -187,15 +187,9 @@
                     <span style="font-size:11.5px; font-weight:700; color:#15803d;">Online Đa Máy</span>
                 </div>
 
-                <!-- Nút Cấu Hình Supabase Cloud Database -->
-                <button class="online-share-btn" id="supabaseStatusNavBtn" onclick="openSupabaseModal()" title="Cài đặt & kiểm tra CSDL Supabase PostgreSQL">
-                    <span>⚡</span> <span id="supabaseStatusNavText">Supabase DB</span>
-                </button>
+               
 
-                <!-- Nút Mở Hướng Dẫn Trình Bày Online & Mạng LAN -->
-                <button class="online-share-btn" onclick="openOnlinePresentationModal()" title="Kết nối trình bày Online & Mạng Wi-Fi">
-                    <span>🌐</span> Trình Bày Online
-                </button>
+               
 
                 <!-- Nút Đổi Tài Khoản Sinh Viên (Ẩn để mỗi người dùng đúng tài khoản của mình) -->
                 <button class="switch-user-btn" id="quickSwitchUserBtn" style="display:none;" onclick="toggleQuickAccount()">
@@ -211,10 +205,7 @@
                     </div>
                 </div>
 
-                <!-- Bật / Tắt âm thanh -->
-                <button class="sound-btn" id="soundToggleBtn" title="Bật/Tắt âm thanh" onclick="toggleSound()">
-                    <span id="soundIcon">🔊</span>
-                </button>
+                
 
                 <!-- Nút Đăng Xuất quay lại Trang Đăng Nhập -->
                 <button class="logout-icon-btn" title="Đăng Xuất / Đổi Gmail" onclick="logoutToAuthScreen()">
@@ -289,7 +280,7 @@
                             <input type="range" class="price-slider-bar" id="distanceRangeSlider" min="1" max="10" step="1" value="5">
                             <div class="distance-labels-row">
                                 <span>Cổng trường (0.5km)</span>
-                                <span>KTX Khu B (1.5km)</span>
+                                <span>KTX  (1.5km)</span>
                             </div>
                         </div>
                     </div>
@@ -337,7 +328,7 @@
                 <div class="feed-top-bar">
     <div style="display:flex; align-items:center; gap:12px;">
         <button type="button" id="btnToggleFilterMode" class="btn-outline-chat" style="padding:6px 14px; font-size:12.5px; font-weight:700;" onclick="toggleSidebarFilter()">
-            🎛️ Bộ Lọc: Đang Tắt (Hiện tất cả đồ)
+             Bộ Lọc: Đang Tắt (Hiện tất cả đồ)
         </button>
         <div class="feed-count-text" id="feedCountDisplay">
             Hiển thị <strong>5 món đồ</strong> sẵn sàng pass
@@ -375,7 +366,7 @@
                 <div style="display:flex; align-items:center; gap:14px;">
                     <div style="width:46px; height:46px; border-radius:50%; background:#ffffff; color:#0284c7; font-size:22px; font-weight:900; display:flex; align-items:center; justify-content:center; box-shadow:0 4px 10px rgba(0,0,0,0.1);">👑</div>
                     <div>
-                        <div style="font-size:16.5px; font-weight:800; letter-spacing:0.3px;">PHÂN HỆ QUẢN TRỊ VIÊN HỆ THỐNG UNIPASS UTC2</div>
+                        <div style="font-size:16.5px; font-weight:800; letter-spacing:0.3px;">PHÂN HỆ QUẢN TRỊ VIÊN HỆ THỐNG HAND UTC2</div>
                         <div style="font-size:13px; opacity:0.95; margin-top:2px;">
                             Tài khoản quản trị được ủy quyền duy nhất: <strong style="background:rgba(255,255,255,0.25); padding:2px 8px; border-radius:6px; font-family:monospace; font-size:13.5px;">6651071091@st.utc2.edu.vn</strong>
                         </div>
@@ -389,7 +380,7 @@
 
             <!-- Banner Cam Kết Bảo Mật Quyền Riêng Tư -->
             <div class="admin-privacy-banner">
-                <strong>🛡️ QUY ĐỊNH BẢO MẬT & PHÂN QUYỀN ADMIN UTC2HAND:</strong><br>
+                <strong> QUY ĐỊNH BẢO MẬT & PHÂN QUYỀN ADMIN HANDUTC2:</strong><br>
                 Admin KHÔNG có quyền truy cập tin nhắn riêng tư của sinh viên hay can thiệp giao dịch nhạy cảm. 
                 Admin có quyền: <strong>Cảnh cáo tài khoản vi phạm</strong>, <strong>Xóa bài đăng rác / phá giá</strong>, 
                 <strong>Nhắc nhở người dùng</strong>, và <strong>Duyệt kiểm chứng kháng nghị uy tín</strong> để ngăn chặn hành vi chơi xấu dìm điểm rèn luyện!
@@ -400,6 +391,10 @@
                 <div class="admin-stat-card">
                     <div class="admin-stat-label">Tổng bài đăng hoạt động</div>
                     <div class="admin-stat-number" id="adminTotalPosts">4</div>
+                </div>
+                <div class="admin-stat-card" style="border-left:4px solid #f59e0b; background:#fffbeb;">
+                    <div class="admin-stat-label" style="color:#b45309; font-weight:700;">Bài đăng chờ duyệt TimeMark</div>
+                    <div class="admin-stat-number" style="color:#d97706;" id="adminPendingPostsCount">0</div>
                 </div>
                 <div class="admin-stat-card">
                     <div class="admin-stat-label">Tài khoản sinh viên đã xác thực</div>
@@ -415,11 +410,40 @@
                 </div>
             </div>
 
+            <!-- Panel Ưu Tiên: Phê Duyệt Bài Đăng Chờ Duyệt (Kiểm Tra Mã OTP & Ảnh TimeMark) -->
+            <div class="admin-panel-card" style="border: 2px solid #0284c7; box-shadow: 0 4px 16px rgba(2,132,199,0.12);">
+                <div class="admin-panel-header" style="background: linear-gradient(135deg, #f0f9ff 0%, #e0f2fe 100%); padding: 14px 18px; border-bottom: 1px solid #bae6fd;">
+                    <div class="admin-panel-title" style="color: #0369a1;">
+                        <span>🛡️</span> Phê Duyệt Bài Đăng Chờ Duyệt (Kiểm Tra Mã OTP & Ảnh TimeMark)
+                        <span id="adminPendingBadge" style="background:#ef4444; color:#fff; font-size:11px; padding:2px 8px; border-radius:12px; margin-left:8px; font-weight:800;">0 bài chờ</span>
+                    </div>
+                    <span style="font-size:12px; color:#0369a1; font-weight:600;">Soi ảnh giấy ghi mã OTP TimeMark + thời gian để phê duyệt bài lên trang chính</span>
+                </div>
+
+                <div style="overflow-x:auto;">
+                    <table class="admin-table">
+                        <thead>
+                            <tr>
+                                <th>Sản Phẩm & Giá Pass</th>
+                                <th>Sinh Viên / Gmail</th>
+                                <th>Mã OTP Cấp Cho Bài</th>
+                                <th>Ảnh SP & Ảnh Chụp Cùng Giấy TimeMark</th>
+                                <th>Thời Gian Gửi</th>
+                                <th>Quyết Định Của Admin</th>
+                            </tr>
+                        </thead>
+                        <tbody id="adminPendingPostsTableBody">
+                            <!-- Rendered by JS -->
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
             <!-- Panel 1: Quản Lý & Xóa Bài Đăng Rác / Phá Giá -->
             <div class="admin-panel-card">
                 <div class="admin-panel-header">
                     <div class="admin-panel-title">
-                        <span>📦</span> Quản Lý Bài Đăng & Xử Lý Tin Rác / Phá Giá
+                        <span>📦</span> Quản Lý Toàn Bộ Bài Đăng Đã Duyệt (Tin Hoạt Động)
                     </div>
                     <span style="font-size:12px; color:#64748b;">Admin có quyền xóa bài đăng vi phạm TimeMark hoặc phá giá</span>
                 </div>
@@ -505,7 +529,7 @@
         <div class="game-tab-view" id="gameSectionView">
             <div style="text-align:center;">
                 <h2 style="font-size:24px; font-weight:800; color:#0284c7;">
-                    🎮 KÉO THẢ SĂN XU "BLOCKLASH"
+                    🎮 CHƠI GAME NHẬN THƯỞNG
                 </h2>
                 <p style="font-size:13.5px; color:#64748b; margin-top:4px;">
                     Chơi game phá gạch: Đạt <strong>trên 1000 điểm</strong> nhận ngay <strong>10 xu</strong>. 
@@ -670,7 +694,7 @@
                 <label class="coin-discount-checkbox-row">
                     <input type="checkbox" id="useCoinDiscountCheckbox" checked onchange="updateCheckoutCalculations()">
                     <span id="coinDiscountLabelText">
-                        Dùng 20 UniCoins săn được để giảm 2.000 đ
+                        Dùng 20000 UniCoins săn được để giảm 2.000 đ
                     </span>
                 </label>
 
@@ -755,8 +779,8 @@
                         <input type="file" id="postImageFileInput" accept="image/*" onchange="handlePostImageFileSelect(event)">
                         <div id="fileUploadPromptContent">
                             <div class="file-upload-icon">📷</div>
-                            <div class="file-upload-text">Bấm vào đây để chọn ảnh từ máy / điện thoại</div>
-                            <div class="file-upload-subtext">Hỗ trợ JPG, PNG, WebP (Tự động nén và tải ảnh thật có mã TimeMark)</div>
+                            <div class="file-upload-text">Bấm vào đây để chọn ảnh món đồ từ máy / điện thoại</div>
+                            <div class="file-upload-subtext">Hỗ trợ JPG, PNG, WebP (Ảnh rõ nét sản phẩm bạn muốn pass)</div>
                         </div>
                         <div class="file-image-preview-wrap" id="fileImagePreviewWrap">
                             <img id="fileImagePreviewElement" src="" alt="Ảnh sản phẩm tải lên">
@@ -774,33 +798,105 @@
                 <div style="display:flex; justify-content:flex-end; gap:10px;">
                     <button type="button" class="btn-outline-chat" onclick="closeModal('createPostModal')">Hủy</button>
                     <button type="submit" class="btn-primary-confirm" style="background:#0284c7;">
-                        Tiếp Tục Nhận Mã TimeMark ➔
+                        Tiếp Tục: Nhận Mã OTP TimeMark ➔
                     </button>
                 </div>
             </form>
         </div>
     </div>
 
-    <!-- MODAL XÁC THỰC MÃ TIMEMARK TRÊN GIẤY -->
+    <!-- MODAL XÁC THỰC MÃ TIMEMARK & TẢI ẢNH CHỤP GIẤY GHI MÃ -->
     <div class="checkout-modal-overlay" id="timemarkCodeModal">
-        <div class="checkout-modal-card" style="max-width:480px; text-align:center;">
+        <div class="checkout-modal-card" style="max-width:540px; text-align:center; padding:24px;">
             <button class="checkout-close-btn" onclick="closeModal('timemarkCodeModal')">✕</button>
-            <h3 style="font-size:18px; font-weight:800; color:#0f172a; margin-bottom:6px;">📷 Mã Xác Thực TimeMark Chống Lừa Đảo</h3>
-            <p style="font-size:12.5px; color:#64748b; margin-bottom:14px;">Hệ thống cấp mã định danh ngẫu nhiên cho bài đăng của bạn:</p>
+            <div style="font-size:36px; margin-bottom:4px;">📸</div>
+            <h3 style="font-size:18px; font-weight:800; color:#0f172a; margin-bottom:4px;">Mã Xác Thực TimeMark & Chụp Ảnh Chống Lừa Đảo</h3>
+            <p style="font-size:12.5px; color:#64748b; margin-bottom:12px;">Hệ thống cấp mã định danh bảo mật và phát lệnh gửi về Gmail của bạn</p>
 
-            <div style="background:#f0fdf4; border:2px dashed #86efac; border-radius:12px; padding:16px; margin-bottom:16px;">
-                <div style="font-size:11px; color:#16a34a; font-weight:700;">MÃ XÁC THỰC TIMEMARK:</div>
-                <div id="generatedTimeMarkCode" style="font-size:24px; font-weight:900; letter-spacing:2px; color:#15803d; margin:6px 0;">
+            <!-- Hộp Hiển Thị Mã OTP TimeMark & Trạng Thái Gửi Mail -->
+            <div style="background:#f0fdf4; border:2px dashed #86efac; border-radius:12px; padding:14px; margin-bottom:14px; text-align:center;">
+                <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:4px;">
+                    <span style="font-size:11px; color:#16a34a; font-weight:700; text-transform:uppercase; letter-spacing:0.5px;">MÃ XÁC THỰC TIMEMARK CỦA BẠN:</span>
+                    <span id="timemarkEmailStatusBadge" style="font-size:10.5px; background:#dcfce7; color:#15803d; padding:2px 8px; border-radius:10px; font-weight:700;">Đã Gửi Về Gmail</span>
+                </div>
+                <div id="generatedTimeMarkCode" style="font-size:30px; font-weight:900; letter-spacing:4px; color:#15803d; margin:6px 0;">
                     UTC2 - 8924
                 </div>
-                <div style="font-size:12px; color:#475569; line-height:1.4;">
-                    ✍️ Hãy viết mã này ra mẩu giấy đặt bên cạnh món đồ khi chụp ảnh để người mua yên tâm 100% không phải ảnh mạng!
+                <div id="timemarkEmailSentNotice" style="font-size:11.5px; color:#0369a1; background:#e0f2fe; padding:6px 10px; border-radius:6px; margin-top:6px; line-height:1.4;">
+                    📩 Đã gửi mã xác nhận qua SMTP/Gmail về: <strong id="timemarkSellerEmail">student@st.utc2.edu.vn</strong>
                 </div>
             </div>
 
-            <button class="btn-primary-confirm" style="background:#0284c7; width:100%;" onclick="confirmPublishPost()">
-                ✓ Xác Nhận & Đăng Lên Bảng Tin
-            </button>
+            <!-- Hướng Dẫn 3 Bước Thực Hiện -->
+            <div style="background:#f8fafc; border:1px solid #e2e8f0; border-radius:10px; padding:12px; text-align:left; font-size:12px; color:#334155; line-height:1.5; margin-bottom:14px;">
+                <div style="font-weight:700; color:#0f172a; margin-bottom:4px;">📋 Hướng dẫn chụp ảnh xác thực chính chủ:</div>
+                <div>1. ✍️ <strong>Ghi mã ra giấy:</strong> Lấy mẩu giấy trắng, viết rõ mã <strong id="timemarkCodeGuide" style="color:#15803d;">UTC2 - 8924</strong> và ngày giờ hiện tại.</div>
+                <div>2. 📦 <strong>Đặt cạnh món đồ:</strong> Đặt mẩu giấy ngay bên cạnh sản phẩm bạn muốn pass.</div>
+                <div>3. 📷 <strong>Chụp ảnh & Tải lên:</strong> Chụp 1 bức ảnh rõ nét cả món đồ và mẩu giấy ghi mã, sau đó tải lên khung bên dưới.</div>
+            </div>
+
+            <!-- Khung Tải Ảnh Xác Thực TimeMark (Giấy ghi mã OTP + Sản phẩm) -->
+            <div style="margin-bottom:16px; text-align:left;">
+                <label style="display:block; font-size:12.5px; font-weight:700; color:#0f172a; margin-bottom:6px;">
+                    📷 Hình ảnh xác thực TimeMark (Chụp giấy ghi mã OTP + Sản phẩm) *
+                </label>
+                
+                <input type="file" id="timemarkProofFileInput" accept="image/*" capture="environment" style="display:none;" onchange="handleTimeMarkProofImageSelect(event)">
+
+                <div id="timemarkProofUploadPrompt" onclick="document.getElementById('timemarkProofFileInput').click()" style="border:2px dashed #93c5fd; border-radius:10px; padding:18px; text-align:center; background:#f0f9ff; cursor:pointer; transition:all 0.2s ease;">
+                    <div style="font-size:32px; margin-bottom:4px;">📷</div>
+                    <div style="font-size:13px; font-weight:700; color:#0284c7;">Bấm để chụp ảnh hoặc tải ảnh từ thiết bị</div>
+                    <div style="font-size:11px; color:#64748b; margin-top:2px;">Bắt buộc phải có ảnh giấy ghi mã OTP đặt cạnh đồ vật để Admin duyệt</div>
+                </div>
+
+                <!-- Khung xem trước ảnh xác thực TimeMark -->
+                <div id="timemarkProofPreviewWrap" style="display:none; margin-top:10px; border:1px solid #cbd5e1; border-radius:10px; padding:8px; background:#fff; text-align:center;">
+                    <div style="position:relative; display:inline-block; max-width:100%;">
+                        <img id="timemarkProofPreviewImg" src="" alt="Ảnh xác thực TimeMark" style="max-height:220px; max-width:100%; border-radius:8px; object-fit:contain; border:1px solid #e2e8f0; cursor:pointer;" onclick="openZoomImageModal(this.src, 'Ảnh xác thực TimeMark')">
+                        <div style="position:absolute; top:6px; left:6px; background:rgba(22,163,74,0.92); color:#fff; font-size:10.5px; font-weight:700; padding:2px 8px; border-radius:4px;">
+                            ✓ Đã chọn ảnh TimeMark
+                        </div>
+                    </div>
+                    <div style="margin-top:8px; display:flex; justify-content:center; gap:8px;">
+                        <button type="button" class="btn-outline-chat" style="padding:5px 12px; font-size:11.5px;" onclick="document.getElementById('timemarkProofFileInput').click()">
+                            🔄 Chọn / Chụp lại ảnh khác
+                        </button>
+                        <button type="button" class="btn-outline-chat" style="padding:5px 12px; font-size:11.5px; color:#ef4444; border-color:#fca5a5;" onclick="removeTimeMarkProofImage()">
+                            ✕ Xóa ảnh này
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Nút gửi bài chờ Admin duyệt -->
+            <div style="display:flex; gap:10px;">
+                <button type="button" class="btn-outline-chat" style="flex:1;" onclick="closeModal('timemarkCodeModal')">
+                    Hủy
+                </button>
+                <button type="button" class="btn-primary-confirm" style="background:#16a34a; flex:2;" onclick="confirmPublishPostWithProof()">
+                    🚀 Gửi Bài Chờ Admin Phê Duyệt
+                </button>
+            </div>
+            <div style="font-size:11px; color:#64748b; margin-top:8px; text-align:center;">
+                * Sau khi gửi, bài đăng sẽ chuyển sang trạng thái <strong>Chờ Duyệt</strong>. Admin kiểm tra mã TimeMark và duyệt thì bài mới hiển thị lên trang chính!
+            </div>
+        </div>
+    </div>
+
+    <!-- MODAL PHÓNG TO ẢNH SOI MÃ TIMEMARK & SẢN PHẨM -->
+    <div class="checkout-modal-overlay" id="zoomImageModal">
+        <div class="checkout-modal-card" style="max-width:720px; text-align:center; padding:18px;">
+            <button class="checkout-close-btn" onclick="closeModal('zoomImageModal')">✕</button>
+            <h4 id="zoomImageTitle" style="font-size:15px; font-weight:800; color:#0f172a; margin-bottom:10px; text-align:left;">
+                🔍 Xem Chi Tiết Ảnh Xác Thực TimeMark
+            </h4>
+            <div style="background:#0f172a; border-radius:10px; padding:10px; display:flex; justify-content:center; align-items:center; min-height:280px; max-height:75vh; overflow:auto;">
+                <img id="zoomImageElement" src="" alt="Ảnh phóng to" style="max-width:100%; max-height:70vh; object-fit:contain; border-radius:6px;">
+            </div>
+            <div style="display:flex; justify-content:space-between; align-items:center; margin-top:12px;">
+                <span style="font-size:11.5px; color:#64748b;">Admin kiểm tra mẩu giấy ghi mã OTP TimeMark và mốc thời gian cạnh sản phẩm.</span>
+                <button class="btn-outline-chat" style="padding:6px 16px;" onclick="closeModal('zoomImageModal')">Đóng</button>
+            </div>
         </div>
     </div>
 
@@ -1000,16 +1096,50 @@
                 <input type="password" id="supabaseKeyInput" class="hero-search-input" style="padding:8px 12px; border:1px solid #cbd5e1; box-shadow:none; font-family:monospace; font-size:12px;" value="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImxobHdlbW1wbnJtbHNrZWxqbmlxIiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTEyNzIyNTYsImV4cCI6MjEwNjg0ODI1Nn0.OBOpRm80_LZ9vmt3hgKUuDqPkeAzDHPkYS_MoacHeDo" placeholder="Dán mã anon key bắt đầu bằng eyJhbGciOi...">
             </div>
 
-            <div style="margin-bottom:14px;">
-                <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:4px;">
-                    <label style="font-size:12px; font-weight:700; color:#334155;">
-                        3. Webhook Gửi Email OTP Thực Tế (Google Apps Script / Tùy chọn)
+            <!-- Cấu hình Gửi Email OTP & Mã Xác Thực TimeMark qua SMTP / Gmail -->
+            <div style="background:#f8fafc; border:1px solid #cbd5e1; border-radius:10px; padding:12px; margin-bottom:14px;">
+                <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:6px;">
+                    <label style="font-size:12.5px; font-weight:700; color:#0f172a;">
+                        3. Cấu Hình SMTP Tự Động Gửi Email OTP & TimeMark
                     </label>
-                    <span style="font-size:11px; color:#16a34a; font-weight:700;">Gmail Tự Động</span>
+                    <span style="font-size:11px; background:#dcfce7; color:#15803d; padding:2px 8px; border-radius:4px; font-weight:700;">SMTP / Gmail API</span>
                 </div>
-                <input type="url" id="emailWebhookUrlInput" class="hero-search-input" style="padding:8px 12px; border:1px solid #cbd5e1; box-shadow:none; font-family:monospace; font-size:12px;" placeholder="Dán URL Google Apps Script Web App (https://script.google.com/macros/s/.../exec)">
-                <div style="font-size:11px; color:#64748b; margin-top:3px;">
-                    * Xem hướng dẫn triển khai 1 phút trong tệp <code>google_apps_script_mailer.js</code> để gửi email bằng chính tài khoản Gmail của bạn.
+                <div style="font-size:11.5px; color:#64748b; margin-bottom:8px; line-height:1.4;">
+                    Hệ thống dùng máy chủ SMTP Gmail (hoặc Webhook Google Apps Script) để tự động gửi mã OTP xác thực và mã TimeMark đăng bài về Gmail.
+                </div>
+
+                <div style="display:grid; grid-template-columns: 2fr 1fr; gap:8px; margin-bottom:8px;">
+                    <div>
+                        <label style="font-size:11px; font-weight:700; color:#475569;">SMTP Host:</label>
+                        <input type="text" id="smtpHostInput" class="hero-search-input" style="padding:6px 10px; font-size:11.5px; border:1px solid #cbd5e1; box-shadow:none; font-family:monospace;" value="smtp.gmail.com" placeholder="smtp.gmail.com">
+                    </div>
+                    <div>
+                        <label style="font-size:11px; font-weight:700; color:#475569;">Cổng (Port):</label>
+                        <input type="number" id="smtpPortInput" class="hero-search-input" style="padding:6px 10px; font-size:11.5px; border:1px solid #cbd5e1; box-shadow:none; font-family:monospace;" value="587" placeholder="587">
+                    </div>
+                </div>
+
+                <div style="display:grid; grid-template-columns: 1fr 1fr; gap:8px; margin-bottom:8px;">
+                    <div>
+                        <label style="font-size:11px; font-weight:700; color:#475569;">Gmail người gửi (Username):</label>
+                        <input type="email" id="smtpUserInput" class="hero-search-input" style="padding:6px 10px; font-size:11.5px; border:1px solid #cbd5e1; box-shadow:none; font-family:monospace;" placeholder="vi-du@gmail.com">
+                    </div>
+                    <div>
+                        <label style="font-size:11px; font-weight:700; color:#475569;">Mật khẩu ứng dụng (App Password 16 số):</label>
+                        <input type="password" id="smtpPassInput" class="hero-search-input" style="padding:6px 10px; font-size:11.5px; border:1px solid #cbd5e1; box-shadow:none; font-family:monospace;" placeholder="xxxx xxxx xxxx xxxx">
+                    </div>
+                </div>
+
+                <div style="margin-bottom:8px;">
+                    <label style="font-size:11px; font-weight:700; color:#475569;">Hoặc Webhook Google Apps Script (Gửi qua Gmail miễn phí):</label>
+                    <input type="url" id="emailWebhookUrlInput" class="hero-search-input" style="padding:6px 10px; font-size:11.5px; border:1px solid #cbd5e1; box-shadow:none; font-family:monospace;" placeholder="Dán URL Google Apps Script (https://script.google.com/macros/s/.../exec)">
+                </div>
+
+                <div style="display:flex; justify-content:space-between; align-items:center;">
+                    <button type="button" class="btn-outline-chat" style="padding:5px 12px; font-size:11.5px; color:#0284c7; border-color:#93c5fd;" onclick="testSmtpConnection()">
+                        🧪 Gửi Thử Email SMTP Ngay
+                    </button>
+                    <span style="font-size:11px; color:#64748b;">* Xem tệp <code>google_apps_script_mailer.js</code></span>
                 </div>
             </div>
 

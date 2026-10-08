@@ -220,6 +220,7 @@
                     distanceKm: Number(item.distance_km) || 0.5,
                     expiryDays: Number(item.expiry_days) || 7,
                     imageUrl: item.image_url,
+                    timemarkProofUrl: item.timemark_proof_url || '',
                     description: item.description,
                     status: item.status || 'available'
                 }));
@@ -248,8 +249,9 @@
                     distance_km: product.distanceKm || 0.5,
                     expiry_days: product.expiryDays || 7,
                     image_url: product.imageUrl,
+                    timemark_proof_url: product.timemarkProofUrl || '',
                     description: product.description || '',
-                    status: 'available'
+                    status: product.status || 'pending'
                 };
 
                 const { data, error } = await client
@@ -257,10 +259,28 @@
                     .insert([record]);
 
                 if (error) throw error;
-                console.log('✅ [Supabase] Đã thêm sản phẩm lên Cloud:', record.id);
+                console.log('✅ [Supabase] Đã thêm sản phẩm lên Cloud (Status:', record.status, '):', record.id);
                 return true;
             } catch (err) {
                 console.error('❌ [Supabase] Lỗi thêm sản phẩm:', err);
+                return false;
+            }
+        },
+
+        updateProductStatus: async function (productId, status) {
+            const client = this.getClient();
+            if (!client) return false;
+            try {
+                const { error } = await client
+                    .from('products')
+                    .update({ status: status })
+                    .eq('id', productId);
+
+                if (error) throw error;
+                console.log(`✅ [Supabase] Đã cập nhật trạng thái sản phẩm ${productId} -> ${status}`);
+                return true;
+            } catch (err) {
+                console.error('❌ [Supabase] Lỗi cập nhật trạng thái sản phẩm:', err);
                 return false;
             }
         },

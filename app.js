@@ -407,9 +407,47 @@ class AppController {
                 this.rebuildDSACache();
                 this.renderProducts();
                 this.renderAdminDashboard();
+                this.renderProfile();
 
                 if (window.sound) window.sound.playNotification();
-                showToast(`📦 [MÁY KHÁC VỪA ĐĂNG] ${post.seller} pass: "${post.title}"!`, 'info');
+                if (post.status === 'pending') {
+                    if (this.user && this.user.role === 'admin') {
+                        showToast(`🛡️ [BÀI ĐĂNG CHỜ DUYỆT] ${post.seller} vừa gửi bài "${post.title}" kèm ảnh TimeMark!`, 'warning');
+                    }
+                } else {
+                    showToast(`📦 [MÁY KHÁC VỪA ĐĂNG] ${post.seller} pass: "${post.title}"!`, 'info');
+                }
+            }
+        });
+
+        // 1b. Nhận sự kiện bài đăng được Admin phê duyệt TimeMark
+        window.UniPassOnlineSync.on('POST_APPROVED', (data) => {
+            if (!data || !data.postId) return;
+            const post = this.products.find(p => p.id === data.postId);
+            if (post) {
+                post.status = 'approved';
+                localStorage.setItem('unipass_products', JSON.stringify(this.products));
+                this.rebuildDSACache();
+                this.renderProducts();
+                this.renderAdminDashboard();
+                this.renderProfile();
+                if (window.sound) window.sound.playSuccess();
+                showToast(`🎉 Bài đăng "${post.title}" vừa được Admin phê duyệt và xuất hiện trên trang chính!`, 'info');
+            }
+        });
+
+        // 1c. Nhận sự kiện bài đăng bị Admin từ chối TimeMark
+        window.UniPassOnlineSync.on('POST_REJECTED', (data) => {
+            if (!data || !data.postId) return;
+            const post = this.products.find(p => p.id === data.postId);
+            if (post) {
+                post.status = 'rejected';
+                post.rejectReason = data.reason || 'Ảnh TimeMark không hợp lệ';
+                localStorage.setItem('unipass_products', JSON.stringify(this.products));
+                this.rebuildDSACache();
+                this.renderProducts();
+                this.renderAdminDashboard();
+                this.renderProfile();
             }
         });
 
@@ -586,7 +624,10 @@ class AppController {
         this.avl = new window.UTC2_DSA.AVLTree();
         this.postDLL = new window.UTC2_DSA.PostDoublyLinkedList();
 
-        this.products.forEach(p => {
+        // CHỈ NẠP CÁC BÀI ĐÃ ĐƯỢC ADMIN DUYỆT (LOẠI BỎ PENDING VÀ REJECTED)
+        const approvedPosts = this.products.filter(p => p.status !== 'pending' && p.status !== 'rejected');
+
+        approvedPosts.forEach(p => {
             this.trie.insert(p.title, p.id, 5);
             if (p.courseCode) this.trie.insert(p.courseCode, p.id, 10);
             if (p.category) this.trie.insert(p.category, p.id, 3);
@@ -729,9 +770,12 @@ class AppController {
 
     // Lọc sản phẩm
     getFilteredItems() {
-        // Nếu TẮT bộ lọc: Hiển thị toàn bộ bài đăng
+        // Chỉ lấy các bài đã được Admin phê duyệt (Loại bỏ các bài đang chờ duyệt TimeMark hoặc bị từ chối)
+        const baseApprovedProducts = this.products.filter(p => p.status !== 'pending' && p.status !== 'rejected');
+
+        // Nếu TẮT bộ lọc: Hiển thị toàn bộ bài đăng đã duyệt
         if (!this.isFilterActive) {
-            let items = [...this.products];
+            let items = [...baseApprovedProducts];
             if (this.searchKeyword.trim().length > 0) {
                 const kw = this.searchKeyword.toLowerCase();
                 items = items.filter(p => 
@@ -745,6 +789,7 @@ class AppController {
 
         // Nếu BẬT bộ lọc: Chạy thuật toán AVL Tree và lọc theo tiêu chí
         let items = this.avl.rangeQuery(0, this.filterMaxPrice);
+        items = items.filter(p => p.status !== 'pending' && p.status !== 'rejected');
 
         items = items.filter(p => (p.distanceKm || 0.5) <= this.filterMaxDistance);
 
@@ -854,15 +899,32 @@ class AppController {
             if (myItems.length === 0) {
                 myPosts.innerHTML = `<p style="font-size:12px; color:#64748b;">Chưa có bài đăng nào.</p>`;
             } else {
-                myPosts.innerHTML = myItems.map(p => `
-                    <div style="background:#f8fafc; border:1px solid #e2e8f0; border-radius:8px; padding:8px 12px; margin-bottom:6px; font-size:12.5px; display:flex; justify-content:space-between; align-items:center;">
+                myPosts.innerHTML = myItems.map(p => {
+                    let statusBadge = '';
+                    if (p.status === 'pending') {
+                        statusBadge = `<span style="background:#fef3c7; color:#b45309; padding:2px 8px; border-radius:4px; font-weight:700; font-size:10.5px;">⏳ Chờ Admin duyệt TimeMark</span>`;
+                    } else if (p.status === 'rejected') {
+                        statusBadge = `<span style="background:#fee2e2; color:#b91c1c; padding:2px 8px; border-radius:4px; font-weight:700; font-size:10.5px;">❌ Bị từ chối duyệt</span>`;
+                    } else {
+                        statusBadge = `<span style="background:#dcfce7; color:#15803d; padding:2px 8px; border-radius:4px; font-weight:700; font-size:10.5px;">✅ Đã duyệt (Hiển thị)</span>`;
+                    }
+
+                    return `
+                    <div style="background:#f8fafc; border:1px solid #e2e8f0; border-radius:8px; padding:10px 14px; margin-bottom:8px; font-size:12.5px; display:flex; justify-content:space-between; align-items:center;">
                         <div>
-                            <strong>${p.title}</strong>
-                            <div style="color:#0284c7; font-size:11px;">${formatNumber(p.price)} đ • TimeMark: ${p.timemarkCode}</div>
+                            <div style="display:flex; align-items:center; gap:8px;">
+                                <strong>${p.title}</strong>
+                                ${statusBadge}
+                            </div>
+                            <div style="color:#0284c7; font-size:11.5px; margin-top:3px;">
+                                ${formatNumber(p.price)} đ • TimeMark: <strong>${p.timemarkCode}</strong>
+                                ${p.timemarkProofUrl ? ` • <a href="javascript:void(0)" onclick="openZoomImageModal('${p.timemarkProofUrl}', 'Ảnh TimeMark: ${p.title}')" style="color:#16a34a; font-weight:700; text-decoration:underline;">🔍 Xem ảnh TimeMark đã chụp</a>` : ''}
+                            </div>
                         </div>
                         <button onclick="removePost('${p.id}')" style="background:none; border:none; color:#ef4444; font-size:12px; cursor:pointer; font-weight:700;">Xóa</button>
                     </div>
-                `).join('');
+                    `;
+                }).join('');
             }
         }
 
@@ -1035,25 +1097,95 @@ class AppController {
     // RENDER GIAO DIỆN ADMIN (THEO ĐẶC TẢ FILE WORD)
     // ==========================================
     renderAdminDashboard() {
+        const pendingPostsTbody = document.getElementById('adminPendingPostsTableBody');
+        const pendingPostsCountEl = document.getElementById('adminPendingPostsCount');
+        const pendingBadgeEl = document.getElementById('adminPendingBadge');
+
         const postsTbody = document.getElementById('adminPostsTableBody');
         const usersTbody = document.getElementById('adminUsersTableBody');
         const disputesTbody = document.getElementById('adminDisputesTableBody');
         const totalPostsEl = document.getElementById('adminTotalPosts');
-        const totalUsersEl = document.querySelector('.admin-stat-card:nth-child(2) .admin-stat-number');
+        const totalUsersEl = document.querySelector('.admin-stat-card:nth-child(3) .admin-stat-number');
         const pendingDispEl = document.getElementById('adminPendingDisputes');
         const warningsCountEl = document.getElementById('adminWarningsCount');
+
+        // Phân loại bài đăng: Chờ duyệt vs Đã duyệt
+        const pendingPosts = this.products.filter(p => p.status === 'pending');
+        const activeApprovedPosts = this.products.filter(p => p.status !== 'pending' && p.status !== 'rejected');
 
         // Danh sách sinh viên thực tế (loại tài khoản quản trị)
         const studentUsers = this.registeredUsers.filter(u => u.role !== 'admin');
 
-        if (totalPostsEl) totalPostsEl.innerText = this.products.length;
+        if (totalPostsEl) totalPostsEl.innerText = activeApprovedPosts.length;
+        if (pendingPostsCountEl) pendingPostsCountEl.innerText = pendingPosts.length;
+        if (pendingBadgeEl) pendingBadgeEl.innerText = `${pendingPosts.length} bài chờ`;
         if (totalUsersEl) totalUsersEl.innerText = studentUsers.length;
         if (pendingDispEl) pendingDispEl.innerText = this.adminDisputes.filter(d => d.status === 'pending').length;
         if (warningsCountEl) warningsCountEl.innerText = this.adminWarningsIssued.length;
 
-        // Bảng 1: Quản lý bài đăng & Xóa bài rác
+        // BẢNG ƯU TIÊN: Phê duyệt bài đăng chờ duyệt TimeMark
+        if (pendingPostsTbody) {
+            if (pendingPosts.length === 0) {
+                pendingPostsTbody.innerHTML = `
+                    <tr>
+                        <td colspan="6" style="text-align:center; color:#15803d; padding:22px; font-weight:700; background:#f0fdf4;">
+                            🎉 Tuyệt vời! Hiện không có bài đăng nào chờ duyệt. Tất cả bài đăng đều đã được xác thực TimeMark chính chủ.
+                        </td>
+                    </tr>
+                `;
+            } else {
+                pendingPostsTbody.innerHTML = pendingPosts.map(p => `
+                    <tr style="background:#fffbeb;">
+                        <td>
+                            <strong>${p.title}</strong>
+                            <div style="color:#0284c7; font-weight:700;">${formatNumber(p.price)} đ</div>
+                            <div style="font-size:11px; color:#64748b;">📍 ${p.location}</div>
+                        </td>
+                        <td>
+                            <div><strong>${p.seller}</strong></div>
+                            <div style="font-size:11px; color:#64748b;">${p.sellerEmail}</div>
+                            <div style="font-size:11px; color:#16a34a; font-weight:700;">★ ${p.sellerRep}/100</div>
+                        </td>
+                        <td>
+                            <span style="background:#dcfce7; color:#15803d; padding:4px 8px; border-radius:4px; font-weight:900; font-size:13px; letter-spacing:1px; display:inline-block;">
+                                ${p.timemarkCode}
+                            </span>
+                        </td>
+                        <td>
+                            <div style="display:flex; gap:8px; align-items:center;">
+                                <div style="text-align:center;">
+                                    <div style="font-size:9.5px; color:#64748b; margin-bottom:2px;">Ảnh SP:</div>
+                                    <img src="${p.imageUrl}" alt="${p.title}" style="width:52px; height:52px; object-fit:cover; border-radius:6px; border:1px solid #cbd5e1; cursor:pointer;" onclick="openZoomImageModal('${p.imageUrl}', 'Ảnh sản phẩm: ${p.title}')" title="Bấm xem to">
+                                </div>
+                                <div style="text-align:center;">
+                                    <div style="font-size:9.5px; color:#16a34a; font-weight:700; margin-bottom:2px;">📸 Ảnh TimeMark:</div>
+                                    <img src="${p.timemarkProofUrl || p.imageUrl}" alt="TimeMark" style="width:62px; height:62px; object-fit:cover; border-radius:6px; border:2px solid #16a34a; cursor:pointer;" onclick="openZoomImageModal('${p.timemarkProofUrl || p.imageUrl}', 'ẢNH XÁC THỰC TIMEMARK (Mã: ${p.timemarkCode})')" title="Bấm để phóng to soi chữ viết mã OTP trên giấy">
+                                    <div style="font-size:9.5px; color:#15803d; font-weight:700; cursor:pointer;" onclick="openZoomImageModal('${p.timemarkProofUrl || p.imageUrl}', 'ẢNH XÁC THỰC TIMEMARK (Mã: ${p.timemarkCode})')">🔍 Soi mã</div>
+                                </div>
+                            </div>
+                        </td>
+                        <td>
+                            <div style="font-size:11.5px; color:#475569;">${p.createdTimeStr || 'Vừa xong'}</div>
+                            <span style="background:#fef3c7; color:#b45309; padding:2px 6px; border-radius:4px; font-size:10.5px; font-weight:700;">⏳ Chờ duyệt</span>
+                        </td>
+                        <td>
+                            <div style="display:flex; flex-direction:column; gap:5px;">
+                                <button class="btn-admin-success" style="padding:6px 10px; font-size:11.5px; border-radius:6px;" onclick="adminApprovePost('${p.id}')">
+                                    ✅ Duyệt Lên Trang Chính
+                                </button>
+                                <button class="btn-admin-danger" style="padding:5px 10px; font-size:11px; border-radius:6px;" onclick="adminRejectPost('${p.id}')">
+                                    ❌ Từ Chối Duyệt
+                                </button>
+                            </div>
+                        </td>
+                    </tr>
+                `).join('');
+            }
+        }
+
+        // Bảng 1: Quản lý toàn bộ bài đăng đã duyệt & Xóa bài rác
         if (postsTbody) {
-            postsTbody.innerHTML = this.products.map(p => `
+            postsTbody.innerHTML = activeApprovedPosts.map(p => `
                 <tr>
                     <td><strong>${p.title}</strong></td>
                     <td style="color:#0284c7; font-weight:700;">${formatNumber(p.price)} đ</td>
@@ -1062,7 +1194,7 @@ class AppController {
                     <td><span style="color:#d97706;">Còn ${p.expiryDays} ngày</span></td>
                     <td>
                         <button class="btn-admin-danger" onclick="adminDeletePost('${p.id}')">
-                            🗑 Xóa Bài Rác
+                            🗑 Xóa Bài
                         </button>
                     </td>
                 </tr>
@@ -1206,6 +1338,123 @@ function switchAuthMode(mode) {
     if (window.sound) window.sound.playClick();
 }
 
+// ==========================================
+// BỘ GỬI EMAIL TỰ ĐỘNG QUA SMTP & GMAIL DISPATCHER
+// ==========================================
+const UniPassMailer = {
+    getConfig: function() {
+        return {
+            host: localStorage.getItem('unipass_smtp_host') || 'smtp.gmail.com',
+            port: parseInt(localStorage.getItem('unipass_smtp_port')) || 587,
+            user: localStorage.getItem('unipass_smtp_user') || '',
+            pass: localStorage.getItem('unipass_smtp_pass') || '',
+            webhook: localStorage.getItem('unipass_email_webhook') || ''
+        };
+    },
+
+    // Gửi email OTP đăng ký tài khoản
+    sendRegistrationOtp: async function(email, otp) {
+        return this.dispatchEmail({
+            to: email,
+            otp: otp,
+            type: 'register',
+            title: 'Xác thực tài khoản'
+        });
+    },
+
+    // Gửi email mã TimeMark khi đăng bài
+    sendTimeMarkOtp: async function(email, timemarkCode, productTitle) {
+        return this.dispatchEmail({
+            to: email,
+            otp: timemarkCode,
+            type: 'timemark',
+            title: productTitle
+        });
+    },
+
+    // Động cơ gửi email đa kênh (SMTP / Google Apps Script / Supabase Auth)
+    dispatchEmail: async function({ to, otp, type, title }) {
+        const cfg = this.getConfig();
+        let sentViaWebhook = false;
+        let sentViaSupabase = false;
+
+        // 1. TỰ ĐỘNG GỬI QUA GOOGLE APPS SCRIPT WEBHOOK (MÁY CHỦ GMAIL CỦA GOOGLE - 100% INBOX)
+        if (cfg.webhook && cfg.webhook.startsWith('http')) {
+            try {
+                const getUrl = cfg.webhook + (cfg.webhook.includes('?') ? '&' : '?') +
+                    'email=' + encodeURIComponent(to) +
+                    '&otp=' + encodeURIComponent(otp) +
+                    '&appName=' + encodeURIComponent('UniPass UTC2') +
+                    '&type=' + encodeURIComponent(type) +
+                    '&productTitle=' + encodeURIComponent(title || '');
+
+                fetch(getUrl, { mode: 'no-cors' }).catch(() => {});
+                fetch(cfg.webhook, {
+                    method: 'POST',
+                    mode: 'no-cors',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        email: to,
+                        otp: otp,
+                        appName: 'UniPass UTC2',
+                        type: type,
+                        productTitle: title || ''
+                    })
+                }).catch(() => {});
+                sentViaWebhook = true;
+                console.log(`📨 [UniPassMailer] Đã gửi ${type} qua Webhook Gmail tới:`, to);
+            } catch (err) {
+                console.warn('⚠️ [UniPassMailer] Lỗi Webhook:', err);
+            }
+        }
+
+        // 2. TỰ ĐỘNG GỬI QUA SUPABASE AUTH CUSTOM SMTP (NẾU LÀ OTP ĐĂNG KÝ)
+        if (type === 'register' && window.UniPassSupabase && window.UniPassSupabase.isConfigured()) {
+            try {
+                const supaRes = await window.UniPassSupabase.sendOtpEmail(to);
+                if (supaRes && supaRes.success) {
+                    sentViaSupabase = true;
+                    console.log('📨 [UniPassMailer] Đã gửi OTP qua Supabase Auth SMTP:', to);
+                }
+            } catch (err) {
+                console.warn('⚠️ [UniPassMailer] Lỗi Supabase SMTP:', err);
+            }
+        }
+
+        return {
+            success: true,
+            sentViaWebhook: sentViaWebhook,
+            sentViaSupabase: sentViaSupabase
+        };
+    }
+};
+
+// Hàm kiểm tra và gửi thử thư SMTP trực tiếp
+async function testSmtpConnection() {
+    const host = (document.getElementById('smtpHostInput') ? document.getElementById('smtpHostInput').value.trim() : '') || 'smtp.gmail.com';
+    const port = (document.getElementById('smtpPortInput') ? document.getElementById('smtpPortInput').value.trim() : '') || '587';
+    const user = (document.getElementById('smtpUserInput') ? document.getElementById('smtpUserInput').value.trim() : '');
+    const pass = (document.getElementById('smtpPassInput') ? document.getElementById('smtpPassInput').value.trim() : '');
+    const webhook = (document.getElementById('emailWebhookUrlInput') ? document.getElementById('emailWebhookUrlInput').value.trim() : '');
+
+    localStorage.setItem('unipass_smtp_host', host);
+    localStorage.setItem('unipass_smtp_port', port);
+    if (user) localStorage.setItem('unipass_smtp_user', user);
+    if (pass) localStorage.setItem('unipass_smtp_pass', pass);
+    if (webhook) localStorage.setItem('unipass_email_webhook', webhook);
+
+    const testEmail = prompt('Nhập địa chỉ Gmail để hệ thống gửi thử một email xác thực kiểm tra kết nối SMTP:', user || (window.app.user ? window.app.user.email : ''));
+    if (!testEmail) return;
+
+    showToast('⏳ Đang phát lệnh kiểm tra gửi thư SMTP...', 'info');
+
+    const testCode = Math.floor(100000 + Math.random() * 900000).toString();
+    await UniPassMailer.sendRegistrationOtp(testEmail, testCode);
+
+    if (window.sound) window.sound.playNotification();
+    showToast(`✓ Đã phát lệnh gửi email thử nghiệm (Mã test: ${testCode}) đến: ${testEmail}! Vui lòng mở tin nhắn hộp thư Gmail để kiểm tra.`, 'success');
+}
+
 async function requestOtpCode(e) {
     if (e && e.preventDefault) e.preventDefault(); // Chặn form tự nộp và load lại trang
     
@@ -1248,7 +1497,7 @@ async function requestOtpCode(e) {
     if (otpStatusBadge) otpStatusBadge.innerText = 'Đã Phát Lệnh';
     if (mockBox) {
         mockBox.classList.add('active');
-        mockBox.style.display = 'block'; // Đảm bảo bảng hướng dẫn hiện lên
+        mockBox.style.display = 'block';
     }
 
     // Xóa ô nhập OTP và focus để người dùng nhập từ thư Gmail
@@ -1257,56 +1506,11 @@ async function requestOtpCode(e) {
         otpInput.focus();
     }
 
-    let sentViaWebhook = false;
-    let rateLimited = false;
+    // GỬI EMAIL OTP THẬT QUA SMTP / GMAIL DISPATCHER
+    await UniPassMailer.sendRegistrationOtp(email, otp);
 
-    // 1. TỰ ĐỘNG GỬI EMAIL THỰC TẾ QUA GOOGLE APPS SCRIPT WEBHOOK (NẾU ĐÃ CẤU HÌNH)
-    const webhookUrl = localStorage.getItem('unipass_email_webhook');
-    if (webhookUrl && webhookUrl.startsWith('http')) {
-        try {
-            const getUrl = webhookUrl + (webhookUrl.includes('?') ? '&' : '?') + 'email=' + encodeURIComponent(email) + '&otp=' + encodeURIComponent(otp) + '&appName=' + encodeURIComponent('UniPass UTC2');
-            fetch(getUrl, { mode: 'no-cors' }).catch(() => {});
-            fetch(webhookUrl, {
-                method: 'POST',
-                mode: 'no-cors',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ email: email, otp: otp, appName: 'UniPass UTC2' })
-            }).catch(() => {});
-            sentViaWebhook = true;
-            console.log('📨 [OTP Mailer] Đã phát lệnh gửi OTP qua Google Apps Script Webhook:', email);
-        } catch (err) {
-            console.warn('⚠️ [OTP Mailer] Lỗi kết nối Webhook:', err);
-        }
-    }
-
-    // 2. TỰ ĐỘNG GỬI EMAIL THỰC TẾ QUA SUPABASE AUTH
-    if (window.UniPassSupabase && window.UniPassSupabase.isConfigured()) {
-        try {
-            const supaRes = await window.UniPassSupabase.sendOtpEmail(email);
-            if (!supaRes.success) {
-                console.warn('⚠️ [Supabase Auth] Phản hồi OTP:', supaRes.message);
-                if (supaRes.message && (supaRes.message.includes('rate limit') || supaRes.message.includes('over_email_send_rate_limit'))) {
-                    rateLimited = true;
-                }
-            } else {
-                console.log('📨 [Supabase Auth] Đã gửi mã OTP thực tế về:', email);
-            }
-        } catch (err) {
-            console.warn('⚠️ [Supabase Auth] Lỗi ngoại lệ khi gửi OTP:', err);
-        }
-    }
-
-    // Xử lý thông báo theo tình trạng gửi
-    if (sentViaWebhook) {
-        showToast(`✓ Đã gửi mã OTP qua Gmail Webhook đến: ${email}! Hãy kiểm tra hộp thư.`, 'success');
-        if (otpStatusBadge) otpStatusBadge.innerText = 'Đã Gửi Thư';
-    } else if (rateLimited) {
-        showToast(`⚠️ Supabase tạm giới hạn gửi mail/giờ. Vui lòng cấu hình Webhook Google Apps Script hoặc kiểm tra hòm thư.`, 'warning');
-        if (otpStatusBadge) otpStatusBadge.innerText = 'Đã Gửi Lệnh';
-    } else {
-        showToast(`✓ Đã phát lệnh gửi mã OTP về Gmail: ${email}! Vui lòng mở tin nhắn hộp thư Gmail để lấy mã 6 số.`, 'success');
-        if (otpStatusBadge) otpStatusBadge.innerText = 'Đã Phát Lệnh';
-    }
+    if (otpStatusBadge) otpStatusBadge.innerText = 'Đã Gửi Thư';
+    showToast(`✓ Đã gửi mã OTP qua SMTP về Gmail: ${email}! Vui lòng mở tin nhắn hộp thư Gmail để lấy mã 6 số.`, 'success');
 
     if (window.sound) window.sound.playNotification();
 
@@ -1697,6 +1901,78 @@ function adminDeletePost(postId) {
             message: `Bài đăng "${post.title}" của bạn đã bị Admin gỡ bỏ vì: ${reason}.`
         });
     }
+}
+
+function adminApprovePost(postId) {
+    const post = window.app.products.find(p => p.id === postId);
+    if (!post) return;
+
+    post.status = 'approved';
+    post.approvedAt = Date.now();
+
+    // Thưởng 1 điểm uy tín cho người bán vì làm đúng quy trình TimeMark chống lừa đảo
+    const seller = window.app.registeredUsers.find(u => u.name === post.seller || u.email === post.sellerEmail);
+    if (seller) {
+        seller.reputation = Math.min(100, (seller.reputation || 95) + 1);
+        window.app.saveUsers();
+        if (window.app.user && (window.app.user.email === seller.email || window.app.user.name === seller.name)) {
+            window.app.user.reputation = seller.reputation;
+            window.app.updateUserUI();
+        }
+    }
+
+    window.app.saveProducts();
+    window.app.rebuildDSACache();
+    window.app.renderProducts();
+    window.app.renderAdminDashboard();
+    window.app.renderProfile();
+
+    if (window.UniPassSupabase && window.UniPassSupabase.isConfigured()) {
+        window.UniPassSupabase.updateProductStatus(postId, 'approved');
+    }
+
+    if (window.UniPassOnlineSync) {
+        window.UniPassOnlineSync.broadcastApprovePost(postId);
+    }
+
+    if (window.sound) window.sound.playSuccess();
+    showToast(`✓ Đã duyệt bài "${post.title}"! Bài đăng đã chính thức hiển thị trên trang chính (+1 điểm uy tín cho ${post.seller})!`, 'success');
+}
+
+function adminRejectPost(postId) {
+    const post = window.app.products.find(p => p.id === postId);
+    if (!post) return;
+
+    const reason = prompt(`Nhập lý do từ chối duyệt bài "${post.title}":`, 'Ảnh chụp TimeMark không rõ chữ viết tay mã OTP hoặc không trùng khớp sản phẩm.');
+    if (reason === null) return;
+
+    post.status = 'rejected';
+    post.rejectReason = reason;
+
+    window.app.saveProducts();
+    window.app.rebuildDSACache();
+    window.app.renderProducts();
+    window.app.renderAdminDashboard();
+    window.app.renderProfile();
+
+    if (window.UniPassSupabase && window.UniPassSupabase.isConfigured()) {
+        window.UniPassSupabase.updateProductStatus(postId, 'rejected');
+    }
+
+    if (window.UniPassOnlineSync) {
+        window.UniPassOnlineSync.broadcastRejectPost(postId, reason);
+    }
+
+    if (window.sound) window.sound.playWarning();
+    showToast(`Đã từ chối duyệt bài "${post.title}"!`, 'info');
+}
+
+function openZoomImageModal(imgSrc, title) {
+    const imgEl = document.getElementById('zoomImageElement');
+    const titleEl = document.getElementById('zoomImageTitle');
+    if (imgEl) imgEl.src = imgSrc || '';
+    if (titleEl) titleEl.innerText = title ? `🔍 ${title}` : '🔍 Xem Chi Tiết Ảnh';
+    openModal('zoomImageModal');
 }
 
 function adminWarnUser(userName) {
@@ -2565,6 +2841,78 @@ function removeSelectedPostImage() {
     if (promptContent) promptContent.style.display = 'block';
 }
 
+let pendingTimeMarkProofDataUrl = null;
+
+function handleTimeMarkProofImageSelect(event) {
+    const file = event.target.files && event.target.files[0];
+    if (!file) return;
+
+    if (!file.type.startsWith('image/')) {
+        showToast('Vui lòng chọn tệp định dạng hình ảnh (PNG, JPG, JPEG, WebP)!', 'danger');
+        return;
+    }
+
+    const reader = new FileReader();
+    reader.onload = function(e) {
+        const rawDataUrl = e.target.result;
+        const img = new Image();
+        img.onload = function() {
+            const canvas = document.createElement('canvas');
+            const MAX_WIDTH = 640;
+            const MAX_HEIGHT = 640;
+            let width = img.width;
+            let height = img.height;
+
+            if (width > height) {
+                if (width > MAX_WIDTH) {
+                    height = Math.round((height * MAX_WIDTH) / width);
+                    width = MAX_WIDTH;
+                }
+            } else {
+                if (height > MAX_HEIGHT) {
+                    width = Math.round((width * MAX_HEIGHT) / height);
+                    height = MAX_HEIGHT;
+                }
+            }
+
+            canvas.width = width;
+            canvas.height = height;
+            const ctx = canvas.getContext('2d');
+            ctx.drawImage(img, 0, 0, width, height);
+
+            const compressedDataUrl = canvas.toDataURL('image/jpeg', 0.72);
+            pendingTimeMarkProofDataUrl = compressedDataUrl;
+
+            const previewWrap = document.getElementById('timemarkProofPreviewWrap');
+            const previewImg = document.getElementById('timemarkProofPreviewImg');
+            const promptBox = document.getElementById('timemarkProofUploadPrompt');
+
+            if (previewImg) previewImg.src = compressedDataUrl;
+            if (previewWrap) previewWrap.style.display = 'block';
+            if (promptBox) promptBox.style.display = 'none';
+
+            if (window.sound) window.sound.playClick();
+            showToast('✓ Đã tải ảnh xác thực TimeMark thành công!', 'success');
+        };
+        img.src = rawDataUrl;
+    };
+    reader.readAsDataURL(file);
+}
+
+function removeTimeMarkProofImage() {
+    pendingTimeMarkProofDataUrl = null;
+    const fileInput = document.getElementById('timemarkProofFileInput');
+    if (fileInput) fileInput.value = '';
+
+    const previewWrap = document.getElementById('timemarkProofPreviewWrap');
+    const previewImg = document.getElementById('timemarkProofPreviewImg');
+    const promptBox = document.getElementById('timemarkProofUploadPrompt');
+
+    if (previewImg) previewImg.src = '';
+    if (previewWrap) previewWrap.style.display = 'none';
+    if (promptBox) promptBox.style.display = 'block';
+}
+
 function handlePostSubmit(e) {
     e.preventDefault();
 
@@ -2591,8 +2939,10 @@ function handlePostSubmit(e) {
     }
 
     const finalImage = pendingUploadedImageDataUrl || urlInput || 'https://images.unsplash.com/photo-1544716278-ca5e3f4abd8c?w=500&auto=format&fit=crop&q=60';
-
     const randCode = 'UTC2 - ' + Math.floor(1000 + Math.random() * 9000);
+
+    const now = new Date();
+    const timeStr = `${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')} - ${now.toLocaleDateString('vi-VN')}`;
 
     pendingNewPost = {
         id: 'P_' + Date.now(),
@@ -2608,37 +2958,70 @@ function handlePostSubmit(e) {
         distanceKm: 0.5,
         expiryDays: 7,
         imageUrl: finalImage,
-        description: description
+        timemarkProofUrl: null,
+        description: description,
+        status: 'pending', // ⏳ Chờ Admin duyệt
+        createdTimeStr: timeStr,
+        submittedAt: Date.now()
     };
 
     const codeDisplay = document.getElementById('generatedTimeMarkCode');
+    const guideCode = document.getElementById('timemarkCodeGuide');
+    const sellerEmailEl = document.getElementById('timemarkSellerEmail');
+    const emailBadge = document.getElementById('timemarkEmailStatusBadge');
+
     if (codeDisplay) codeDisplay.innerText = randCode;
+    if (guideCode) guideCode.innerText = randCode;
+    if (sellerEmailEl) sellerEmailEl.innerText = window.app.user.email;
+    if (emailBadge) emailBadge.innerText = 'Đang Gửi Mail...';
+
+    // Reset khung tải ảnh xác thực TimeMark
+    removeTimeMarkProofImage();
+
+    // Gửi mã xác nhận TimeMark về Gmail của người đăng qua SMTP
+    UniPassMailer.sendTimeMarkOtp(window.app.user.email, randCode, title).then(() => {
+        if (emailBadge) emailBadge.innerText = 'Đã Gửi Về Gmail';
+    });
 
     closeModal('createPostModal');
     openModal('timemarkCodeModal');
+
+    if (window.sound) window.sound.playNotification();
+    showToast(`📸 Đã cấp mã TimeMark [${randCode}] và phát lệnh gửi về Gmail: ${window.app.user.email}!`, 'success');
 }
 
-function confirmPublishPost() {
+function confirmPublishPostWithProof() {
     if (!pendingNewPost) return;
 
+    if (!pendingTimeMarkProofDataUrl) {
+        showToast('Vui lòng chụp và tải ảnh sản phẩm kèm mẩu giấy ghi mã OTP TimeMark để Admin duyệt!', 'warning');
+        if (window.sound) window.sound.playWarning();
+        return;
+    }
+
+    pendingNewPost.timemarkProofUrl = pendingTimeMarkProofDataUrl;
+    pendingNewPost.status = 'pending'; // ⏳ Bắt buộc chờ duyệt
+
     window.app.products.unshift(pendingNewPost);
-    window.app.rebuildDSACache(); // <-- BẮT BUỘC: Thêm dòng này để nạp bài mới vào AVL Tree & Trie
+    window.app.rebuildDSACache();
     window.app.saveProducts();
-    window.app.renderProducts();
-    window.app.renderProfile();
+    window.app.renderProducts(); // Không hiển thị lên trang chính vì status là pending!
+    window.app.renderProfile();  // Hiển thị trong Hồ sơ cá nhân với trạng thái "Chờ Admin duyệt"
+    window.app.renderAdminDashboard(); // Cập nhật ngay bảng duyệt bài của Admin
 
     // Đồng bộ sản phẩm mới lên Supabase Cloud
     if (window.UniPassSupabase && window.UniPassSupabase.isConfigured()) {
         window.UniPassSupabase.addProduct(pendingNewPost);
     }
 
-    // Đồng bộ bài đăng mới lên mạng đa máy (Máy B, C, D...)
+    // Đồng bộ bài đăng mới lên mạng đa máy
     if (window.UniPassOnlineSync) {
         window.UniPassOnlineSync.broadcastNewPost(pendingNewPost);
     }
 
     closeModal('timemarkCodeModal');
     removeSelectedPostImage();
+    removeTimeMarkProofImage();
 
     // Đặt lại các ô nhập của form đăng bài
     const titleInput = document.getElementById('newPostTitle');
@@ -2653,8 +3036,12 @@ function confirmPublishPost() {
     if (urlInput) urlInput.value = '';
 
     if (window.sound) window.sound.playSuccess();
-    showToast(`✓ Đã đăng bài "${pendingNewPost.title}" thành công lên hệ thống!`, 'success');
+    showToast(`✓ Đã gửi bài đăng "${pendingNewPost.title}" thành công! Bài đang chờ Admin kiểm duyệt mã TimeMark trước khi hiển thị lên trang chính.`, 'success');
     pendingNewPost = null;
+}
+
+function confirmPublishPost() {
+    confirmPublishPostWithProof();
 }
 
 function removePost(id) {
@@ -2861,6 +3248,15 @@ function openSupabaseModal() {
         webhookInput.value = localStorage.getItem('unipass_email_webhook') || '';
     }
 
+    const smtpHostInput = document.getElementById('smtpHostInput');
+    const smtpPortInput = document.getElementById('smtpPortInput');
+    const smtpUserInput = document.getElementById('smtpUserInput');
+    const smtpPassInput = document.getElementById('smtpPassInput');
+    if (smtpHostInput) smtpHostInput.value = localStorage.getItem('unipass_smtp_host') || 'smtp.gmail.com';
+    if (smtpPortInput) smtpPortInput.value = localStorage.getItem('unipass_smtp_port') || '587';
+    if (smtpUserInput) smtpUserInput.value = localStorage.getItem('unipass_smtp_user') || '';
+    if (smtpPassInput) smtpPassInput.value = localStorage.getItem('unipass_smtp_pass') || '';
+
     if (window.UniPassSupabase && window.UniPassSupabase.isConfigured()) {
         const cfg = window.UniPassSupabase.getConfig();
         if (urlInput) urlInput.value = cfg.url || 'https://lhlwemmpnrmlskeljniq.supabase.co';
@@ -2889,6 +3285,24 @@ async function saveAndConnectSupabase() {
     const urlInput = document.getElementById('supabaseUrlInput');
     const keyInput = document.getElementById('supabaseKeyInput');
     const webhookInput = document.getElementById('emailWebhookUrlInput');
+    const smtpHostInput = document.getElementById('smtpHostInput');
+    const smtpPortInput = document.getElementById('smtpPortInput');
+    const smtpUserInput = document.getElementById('smtpUserInput');
+    const smtpPassInput = document.getElementById('smtpPassInput');
+
+    if (smtpHostInput) localStorage.setItem('unipass_smtp_host', smtpHostInput.value.trim() || 'smtp.gmail.com');
+    if (smtpPortInput) localStorage.setItem('unipass_smtp_port', smtpPortInput.value.trim() || '587');
+    if (smtpUserInput) {
+        const u = smtpUserInput.value.trim();
+        if (u) localStorage.setItem('unipass_smtp_user', u);
+        else localStorage.removeItem('unipass_smtp_user');
+    }
+    if (smtpPassInput) {
+        const p = smtpPassInput.value.trim();
+        if (p) localStorage.setItem('unipass_smtp_pass', p);
+        else localStorage.removeItem('unipass_smtp_pass');
+    }
+
     if (!urlInput || !keyInput) return;
 
     const url = urlInput.value.trim();

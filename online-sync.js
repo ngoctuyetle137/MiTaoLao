@@ -179,6 +179,12 @@
                 case 'DISPUTE_RESOLVED':
                     this.emit('DISPUTE_RESOLVED', payload);
                     break;
+                case 'POST_APPROVED':
+                    this.emit('POST_APPROVED', payload);
+                    break;
+                case 'POST_REJECTED':
+                    this.emit('POST_REJECTED', payload);
+                    break;
                 case 'ADMIN_WARNING':
                     this.emit('ADMIN_WARNING', payload.warning);
                     break;
@@ -230,6 +236,16 @@
         // Phát lệnh xóa bài đăng
         broadcastDeletePost: function (postId) {
             return this.broadcast('DELETE_POST', { postId: postId });
+        },
+
+        // Phát lệnh duyệt bài đăng TimeMark lên trang chính
+        broadcastApprovePost: function (postId) {
+            return this.broadcast('POST_APPROVED', { postId: postId });
+        },
+
+        // Phát lệnh từ chối duyệt bài đăng TimeMark
+        broadcastRejectPost: function (postId, reason) {
+            return this.broadcast('POST_REJECTED', { postId: postId, reason: reason });
         },
 
         // Phát tin nhắn chat giữa các sinh viên
