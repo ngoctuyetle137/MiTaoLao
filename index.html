@@ -282,27 +282,7 @@
                         </div>
                     </div>
 
-                    <!-- 2. Khoảng cách quanh UTC2 CÓ DẤU TÍCH -->
-                    <div class="filter-group-block" id="filterBlockDistance">
-                        <div class="filter-section-title">
-                            <label class="filter-checkbox-label" for="chkFilterDistance">
-                                <input type="checkbox" id="chkFilterDistance" onchange="toggleFilterCriterion('distance')">
-                                <span>Tích để lọc <strong>Khoảng Cách</strong></span>
-                            </label>
-                            <span id="distanceDisplayVal" style="color:var(--primary); font-weight:700;">5 km</span>
-                        </div>
-                        <div class="filter-criterion-body disabled-criterion" id="filterBodyDistance">
-                            <div class="distance-slider-box">
-                                <input type="range" class="price-slider-bar" id="distanceRangeSlider" min="1" max="10" step="1" value="5">
-                                <div class="distance-labels-row">
-                                    <span>Cổng trường (0.5km)</span>
-                                    <span>KTX (1.5km)</span>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-
-                    <!-- 3. Danh mục mặt hàng CÓ DẤU TÍCH -->
+                    <!-- 2. Danh mục mặt hàng CÓ DẤU TÍCH -->
                     <div class="filter-group-block" id="filterBlockCategory">
                         <div class="filter-section-title">
                             <label class="filter-checkbox-label" for="chkFilterCategory">
@@ -332,7 +312,7 @@
                         </div>
                     </div>
 
-                    <!-- 4. Uy tín người bán CÓ DẤU TÍCH -->
+                    <!-- 3. Uy tín người bán CÓ DẤU TÍCH -->
                     <div class="filter-group-block" id="filterBlockReputation">
                         <div class="filter-section-title">
                             <label class="filter-checkbox-label" for="chkFilterReputation">
@@ -456,7 +436,12 @@
                         <span>🛡️</span> Phê Duyệt Bài Đăng Chờ Duyệt (Kiểm Tra Mã OTP & Ảnh TimeMark)
                         <span id="adminPendingBadge" style="background:#ef4444; color:#fff; font-size:11px; padding:2px 8px; border-radius:12px; margin-left:8px; font-weight:800;">0 bài chờ</span>
                     </div>
-                    <span style="font-size:12px; color:#0369a1; font-weight:600;">Soi ảnh giấy ghi mã OTP TimeMark + thời gian để phê duyệt bài lên trang chính</span>
+                    <div style="display:flex; align-items:center; gap:10px;">
+                        <span style="font-size:12px; color:#0369a1; font-weight:600;">Soi ảnh giấy ghi mã OTP TimeMark để duyệt bài</span>
+                        <button type="button" onclick="adminApproveAllPendingPosts()" style="background:#16a34a; color:#fff; border:none; padding:6px 14px; border-radius:6px; font-size:12px; font-weight:700; cursor:pointer; box-shadow:0 2px 6px rgba(22,163,74,0.3);">
+                            ⚡ Duyệt Nhanh Tất Cả Bài Chờ
+                        </button>
+                    </div>
                 </div>
 
                 <div style="overflow-x:auto;">
@@ -927,17 +912,17 @@
                 </div>
             </div>
 
-            <!-- Nút gửi bài chờ Admin duyệt -->
+            <!-- Nút xác nhận đăng bài -->
             <div style="display:flex; gap:10px;">
                 <button type="button" class="btn-outline-chat" style="flex:1;" onclick="closeModal('timemarkCodeModal')">
                     Hủy
                 </button>
                 <button type="button" class="btn-primary-confirm" style="background:#16a34a; flex:2;" onclick="confirmPublishPostWithProof()">
-                    🚀 Gửi Bài Chờ Admin Phê Duyệt
+                    🚀 Hoàn Tất & Đăng Bài Lên Trang Chính
                 </button>
             </div>
-            <div style="font-size:11px; color:#64748b; margin-top:8px; text-align:center;">
-                * Sau khi gửi, bài đăng sẽ chuyển sang trạng thái <strong>Chờ Duyệt</strong>. Admin kiểm tra mã TimeMark và duyệt thì bài mới hiển thị lên trang chính!
+            <div style="font-size:11.5px; color:#15803d; margin-top:8px; text-align:center; font-weight:600;">
+                ✓ Bài đăng kèm mã TimeMark sẽ được duyệt và hiển thị ngay trên trang chính để sinh viên tìm mua!
             </div>
         </div>
     </div>

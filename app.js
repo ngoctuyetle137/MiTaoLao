@@ -130,7 +130,6 @@ class AppController {
         this.filterMinReputation = 90;
         this.filterCriteriaEnabled = {
             price: false,
-            distance: false,
             category: false,
             reputation: false
         };
@@ -173,6 +172,17 @@ class AppController {
             try { this.products = JSON.parse(savedProducts); } catch (e) { this.products = [...INITIAL_PRODUCTS]; }
         } else {
             this.products = [...INITIAL_PRODUCTS];
+        }
+
+        // Đảm bảo tất cả bài đăng hợp lệ đều được duyệt và hiển thị trên trang chính
+        let hasPendingToApprove = false;
+        this.products.forEach(p => {
+            if (p.status === 'pending') {
+                p.status = 'approved';
+                hasPendingToApprove = true;
+            }
+        });
+        if (hasPendingToApprove || !savedProducts) {
             this.saveProducts();
         }
 
@@ -373,12 +383,50 @@ class AppController {
                     if (window.sound) window.sound.playNotification();
                     showToast(`📦 Có bài đăng pass đồ mới: "${newP.title}"!`, 'info');
                 }
-            } else if (payload.eventType === 'DELETE' || (payload.eventType === 'UPDATE' && payload.new.status === 'deleted')) {
-                const targetId = payload.old ? payload.old.id : payload.new.id;
-                this.products = this.products.filter(p => p.id !== targetId);
+            } else if (payload.eventType === 'UPDATE') {
+                const updatedP = payload.new;
+                if (updatedP.status === 'deleted') {
+                    this.products = this.products.filter(p => p.id !== updatedP.id);
+                } else {
+                    const idx = this.products.findIndex(p => p.id === updatedP.id);
+                    if (idx !== -1) {
+                        this.products[idx].status = updatedP.status || 'approved';
+                        if (updatedP.title) this.products[idx].title = updatedP.title;
+                        if (updatedP.price) this.products[idx].price = Number(updatedP.price);
+                    } else {
+                        this.products.unshift({
+                            id: updatedP.id,
+                            title: updatedP.title,
+                            price: Number(updatedP.price),
+                            originalPrice: Number(updatedP.original_price || updatedP.price),
+                            category: updatedP.category,
+                            courseCode: updatedP.course_code || '',
+                            timemarkCode: updatedP.timemark_code || 'UTC2 - PASS',
+                            seller: updatedP.seller_name,
+                            sellerEmail: updatedP.seller_email,
+                            sellerRep: Number(updatedP.seller_rep) || 95,
+                            location: updatedP.location,
+                            distanceKm: Number(updatedP.distance_km) || 0.5,
+                            expiryDays: Number(updatedP.expiry_days) || 7,
+                            imageUrl: updatedP.image_url,
+                            description: updatedP.description,
+                            status: updatedP.status || 'approved'
+                        });
+                    }
+                }
+                this.saveProducts();
                 this.rebuildDSACache();
                 this.renderProducts();
                 this.renderAdminDashboard();
+                this.renderProfile();
+            } else if (payload.eventType === 'DELETE') {
+                const targetId = payload.old ? payload.old.id : null;
+                if (targetId) {
+                    this.products = this.products.filter(p => p.id !== targetId);
+                    this.rebuildDSACache();
+                    this.renderProducts();
+                    this.renderAdminDashboard();
+                }
             }
         } else if (table === 'chat_messages') {
             if (payload.eventType === 'INSERT') {
@@ -914,17 +962,12 @@ class AppController {
                 items = items.filter(p => avlIds.has(p.id) || p.price <= this.filterMaxPrice);
             }
 
-            // 2. Tiêu chí Khoảng cách quanh UTC2 (chỉ lọc khi ĐƯỢC TÍCH)
-            if (enabled.distance) {
-                items = items.filter(p => (p.distanceKm || 0.5) <= this.filterMaxDistance);
-            }
-
-            // 3. Tiêu chí Danh mục (chỉ lọc khi ĐƯỢC TÍCH và không phải ALL)
+            // 2. Tiêu chí Danh mục (chỉ lọc khi ĐƯỢC TÍCH và không phải ALL)
             if (enabled.category && this.filterCategoryKey !== 'ALL') {
                 items = items.filter(p => p.category === this.filterCategoryKey);
             }
 
-            // 4. Tiêu chí Điểm uy tín người bán (chỉ lọc khi ĐƯỢC TÍCH)
+            // 3. Tiêu chí Điểm uy tín người bán (chỉ lọc khi ĐƯỢC TÍCH)
             if (enabled.reputation) {
                 items = items.filter(p => (p.sellerRep || 95) >= (this.filterMinReputation || 90));
             }
@@ -973,7 +1016,6 @@ class AppController {
                 const enabled = this.filterCriteriaEnabled || {};
                 const activeCriteria = [];
                 if (enabled.price) activeCriteria.push(`Giá ≤ ${formatNumber(this.filterMaxPrice)}đ (AVL)`);
-                if (enabled.distance) activeCriteria.push(`Khoảng cách ≤ ${this.filterMaxDistance}km`);
                 if (enabled.category && this.filterCategoryKey !== 'ALL') activeCriteria.push(`Danh mục: ${this.filterCategoryKey}`);
                 if (enabled.reputation) activeCriteria.push(`Uy tín ≥ ${this.filterMinReputation || 90}đ`);
 
@@ -2367,6 +2409,34 @@ function adminApprovePost(postId) {
     showToast(`✓ Đã duyệt bài "${post.title}"! Bài đăng đã chính thức hiển thị trên trang chính (+1 điểm uy tín cho ${post.seller})!`, 'success');
 }
 
+function adminApproveAllPendingPosts() {
+    const pendingList = window.app.products.filter(p => p.status === 'pending');
+    if (pendingList.length === 0) {
+        showToast('Hiện không có bài đăng nào đang chờ duyệt!', 'info');
+        return;
+    }
+
+    pendingList.forEach(p => {
+        p.status = 'approved';
+        p.approvedAt = Date.now();
+        if (window.UniPassSupabase && window.UniPassSupabase.isConfigured()) {
+            window.UniPassSupabase.updateProductStatus(p.id, 'approved');
+        }
+        if (window.UniPassOnlineSync) {
+            window.UniPassOnlineSync.broadcastApprovePost(p.id);
+        }
+    });
+
+    window.app.saveProducts();
+    window.app.rebuildDSACache();
+    window.app.renderProducts();
+    window.app.renderAdminDashboard();
+    window.app.renderProfile();
+
+    if (window.sound) window.sound.playSuccess();
+    showToast(`✓ Đã duyệt toàn bộ ${pendingList.length} bài đăng lên trang chính!`, 'success');
+}
+
 function adminRejectPost(postId) {
     const post = window.app.products.find(p => p.id === postId);
     if (!post) return;
@@ -3140,17 +3210,15 @@ function toggleFilterCriterion(criterionKey) {
 function resetFilters() {
     window.app.filterCriteriaEnabled = {
         price: false,
-        distance: false,
         category: false,
         reputation: false
     };
     window.app.filterMaxPrice = 350000;
-    window.app.filterMaxDistance = 5;
     window.app.filterCategoryKey = 'ALL';
     window.app.filterMinReputation = 90;
     window.app.searchKeyword = '';
 
-    ['Price', 'Distance', 'Category', 'Reputation'].forEach(key => {
+    ['Price', 'Category', 'Reputation'].forEach(key => {
         const chk = document.getElementById(`chkFilter${key}`);
         const body = document.getElementById(`filterBody${key}`);
         if (chk) chk.checked = false;
@@ -3161,11 +3229,6 @@ function resetFilters() {
     const priceMaxInput = document.getElementById('filterPriceMax');
     if (priceSlider) priceSlider.value = 350000;
     if (priceMaxInput) priceMaxInput.value = 'Đến: 350k';
-
-    const distSlider = document.getElementById('distanceRangeSlider');
-    const distVal = document.getElementById('distanceDisplayVal');
-    if (distSlider) distSlider.value = 5;
-    if (distVal) distVal.innerText = '5 km';
 
     const repSlider = document.getElementById('reputationRangeSlider');
     const repVal = document.getElementById('reputationDisplayVal');
@@ -3471,7 +3534,8 @@ function handlePostSubmit(e) {
     }
 
     const title = document.getElementById('newPostTitle').value.trim();
-    const price = parseInt(document.getElementById('newPostPrice').value) || 0;
+    const rawPrice = document.getElementById('newPostPrice').value;
+    const price = parseInt(String(rawPrice).replace(/[^\d]/g, '')) || 0;
     const category = document.getElementById('newPostCategory').value;
     const location = document.getElementById('newPostLocation').value.trim();
     const description = document.getElementById('newPostDescription') ? document.getElementById('newPostDescription').value.trim() : '';
@@ -3507,11 +3571,12 @@ function handlePostSubmit(e) {
         distanceKm: 0.5,
         expiryDays: 7,
         imageUrl: finalImage,
-        timemarkProofUrl: null,
+        timemarkProofUrl: finalImage,
         description: description,
-        status: 'pending', // ⏳ Chờ Admin duyệt
+        status: 'approved', // ✨ ĐƯỢC DUYỆT TỰ ĐỘNG ĐỂ HIỂN THỊ NGAY LẬP TỨC LÊN TRANG CHÍNH
         createdTimeStr: timeStr,
-        submittedAt: Date.now()
+        submittedAt: Date.now(),
+        approvedAt: Date.now()
     };
 
     const codeDisplay = document.getElementById('generatedTimeMarkCode');
@@ -3542,21 +3607,18 @@ function handlePostSubmit(e) {
 function confirmPublishPostWithProof() {
     if (!pendingNewPost) return;
 
-    if (!pendingTimeMarkProofDataUrl) {
-        showToast('Vui lòng chụp và tải ảnh sản phẩm kèm mẩu giấy ghi mã OTP TimeMark để Admin duyệt!', 'warning');
-        if (window.sound) window.sound.playWarning();
-        return;
-    }
-
-    pendingNewPost.timemarkProofUrl = pendingTimeMarkProofDataUrl;
-    pendingNewPost.status = 'pending'; // ⏳ Bắt buộc chờ duyệt
+    // Dùng ảnh xác thực TimeMark nếu tải lên, hoặc dùng ảnh sản phẩm
+    const proofImg = pendingTimeMarkProofDataUrl || pendingNewPost.imageUrl;
+    pendingNewPost.timemarkProofUrl = proofImg;
+    pendingNewPost.status = 'approved'; // ✨ ĐƯỢC DUYỆT THÀNH CÔNG VÀ HIỂN THỊ TRANG CHÍNH!
+    pendingNewPost.approvedAt = Date.now();
 
     window.app.products.unshift(pendingNewPost);
-    window.app.rebuildDSACache();
     window.app.saveProducts();
-    window.app.renderProducts(); // Không hiển thị lên trang chính vì status là pending!
-    window.app.renderProfile();  // Hiển thị trong Hồ sơ cá nhân với trạng thái "Chờ Admin duyệt"
-    window.app.renderAdminDashboard(); // Cập nhật ngay bảng duyệt bài của Admin
+    window.app.rebuildDSACache();
+    window.app.renderProducts(); // Hiển thị ngay lên trang chính!
+    window.app.renderProfile();  // Hiển thị trong Hồ sơ cá nhân
+    window.app.renderAdminDashboard(); // Cập nhật thống kê Admin
 
     // Đồng bộ sản phẩm mới lên Supabase Cloud
     if (window.UniPassSupabase && window.UniPassSupabase.isConfigured()) {
@@ -3584,8 +3646,11 @@ function confirmPublishPostWithProof() {
     if (descInput) descInput.value = '';
     if (urlInput) urlInput.value = '';
 
+    // Tự động chuyển về tab Săn Đồ (Home) nếu đang ở tab khác để người dùng thấy ngay bài đăng
+    switchNavTab('home');
+
     if (window.sound) window.sound.playSuccess();
-    showToast(`✓ Đã gửi bài đăng "${pendingNewPost.title}" thành công! Bài đang chờ Admin kiểm duyệt mã TimeMark trước khi hiển thị lên trang chính.`, 'success');
+    showToast(`🎉 Đã duyệt và đăng bài "${pendingNewPost.title}" thành công lên trang chính!`, 'success');
     pendingNewPost = null;
 }
 
@@ -3646,27 +3711,6 @@ document.addEventListener('DOMContentLoaded', () => {
                 if (body) body.classList.remove('disabled-criterion');
                 if (!window.app.filterCriteriaEnabled) window.app.filterCriteriaEnabled = {};
                 window.app.filterCriteriaEnabled.price = true;
-            }
-            window.app.renderProducts();
-        });
-    }
-
-    const distSlider = document.getElementById('distanceRangeSlider');
-    const distVal = document.getElementById('distanceDisplayVal');
-    if (distSlider) {
-        distSlider.addEventListener('input', (e) => {
-            const val = parseInt(e.target.value);
-            window.app.filterMaxDistance = val;
-            if (distVal) distVal.innerText = `${val} km`;
-
-            // Tự động tích chọn tiêu chí khoảng cách
-            const chk = document.getElementById('chkFilterDistance');
-            const body = document.getElementById('filterBodyDistance');
-            if (chk && !chk.checked) {
-                chk.checked = true;
-                if (body) body.classList.remove('disabled-criterion');
-                if (!window.app.filterCriteriaEnabled) window.app.filterCriteriaEnabled = {};
-                window.app.filterCriteriaEnabled.distance = true;
             }
             window.app.renderProducts();
         });
