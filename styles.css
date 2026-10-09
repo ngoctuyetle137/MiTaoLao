@@ -799,6 +799,39 @@ body {
     justify-content: space-between;
 }
 
+.filter-group-block {
+    display: flex;
+    flex-direction: column;
+}
+
+.filter-checkbox-label {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    cursor: pointer;
+    user-select: none;
+    font-size: 13px;
+    color: #0f172a;
+}
+
+.filter-checkbox-label input[type="checkbox"] {
+    width: 17px;
+    height: 17px;
+    accent-color: #0284c7;
+    cursor: pointer;
+    border-radius: 4px;
+}
+
+.filter-criterion-body {
+    transition: opacity 0.22s ease, filter 0.22s ease;
+}
+
+.filter-criterion-body.disabled-criterion {
+    opacity: 0.35;
+    pointer-events: none;
+    filter: grayscale(80%);
+}
+
 .mini-tag-info {
     font-size: 10.5px;
     background: #f1f5f9;

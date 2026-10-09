@@ -124,8 +124,16 @@ class AppController {
         this.adminWarningsIssued = [];
 
         this.filterMaxPrice = 350000;
+        this.filterMinPrice = 0;
         this.filterMaxDistance = 5;
         this.filterCategoryKey = 'ALL';
+        this.filterMinReputation = 90;
+        this.filterCriteriaEnabled = {
+            price: false,
+            distance: false,
+            category: false,
+            reputation: false
+        };
         this.searchKeyword = '';
         this.sortBy = 'newest';
         this.isFilterActive = false; // Mặc định tắt lọc để hiện tất cả đồ pass
@@ -685,6 +693,31 @@ class AppController {
         if (this.isLoggedIn) {
             if (authScreen) authScreen.style.display = 'none';
             if (mainApp) mainApp.style.display = 'block';
+
+            // Xóa sạch ngay ô tìm kiếm khi vừa đăng nhập vào sàn đồ (Không cho hiện email)
+            const searchInput = document.getElementById('mainSearchInput');
+            if (searchInput) {
+                searchInput.value = '';
+                this.searchKeyword = '';
+            }
+
+            // Bảo vệ 2 lớp chống trình duyệt tự động điền Gmail vào thanh tìm kiếm
+            setTimeout(() => {
+                const s = document.getElementById('mainSearchInput');
+                if (s && (s.value.includes('@') || (this.user && s.value === this.user.email))) {
+                    s.value = '';
+                    this.searchKeyword = '';
+                    this.renderProducts();
+                }
+            }, 80);
+            setTimeout(() => {
+                const s = document.getElementById('mainSearchInput');
+                if (s && (s.value.includes('@') || (this.user && s.value === this.user.email))) {
+                    s.value = '';
+                    this.searchKeyword = '';
+                    this.renderProducts();
+                }
+            }, 300);
         } else {
             if (authScreen) authScreen.style.display = 'flex';
             if (mainApp) mainApp.style.display = 'none';
@@ -868,37 +901,44 @@ class AppController {
     getFilteredItems() {
         // Chỉ lấy các bài đã được Admin phê duyệt (Loại bỏ các bài đang chờ duyệt TimeMark hoặc bị từ chối)
         const baseApprovedProducts = this.products.filter(p => p.status !== 'pending' && p.status !== 'rejected');
+        let items = [...baseApprovedProducts];
 
-        // Nếu TẮT bộ lọc: Hiển thị toàn bộ bài đăng đã duyệt
-        if (!this.isFilterActive) {
-            let items = [...baseApprovedProducts];
-            if (this.searchKeyword.trim().length > 0) {
-                const kw = this.searchKeyword.toLowerCase();
-                items = items.filter(p => 
-                    p.title.toLowerCase().includes(kw) ||
-                    (p.courseCode && p.courseCode.toLowerCase().includes(kw)) ||
-                    (p.seller && p.seller.toLowerCase().includes(kw))
-                );
+        // Nếu bộ lọc đang BẬT: CHỈ LỌC NHỮNG TIÊU CHÍ NÀO ĐƯỢC BẤM DẤU TÍCH!
+        if (this.isFilterActive) {
+            const enabled = this.filterCriteriaEnabled || {};
+
+            // 1. Tiêu chí Giá (chỉ lọc khi ĐƯỢC TÍCH)
+            if (enabled.price) {
+                const avlMatches = this.avl.rangeQuery(0, this.filterMaxPrice);
+                const avlIds = new Set(avlMatches.map(p => p.id));
+                items = items.filter(p => avlIds.has(p.id) || p.price <= this.filterMaxPrice);
             }
-            return items;
+
+            // 2. Tiêu chí Khoảng cách quanh UTC2 (chỉ lọc khi ĐƯỢC TÍCH)
+            if (enabled.distance) {
+                items = items.filter(p => (p.distanceKm || 0.5) <= this.filterMaxDistance);
+            }
+
+            // 3. Tiêu chí Danh mục (chỉ lọc khi ĐƯỢC TÍCH và không phải ALL)
+            if (enabled.category && this.filterCategoryKey !== 'ALL') {
+                items = items.filter(p => p.category === this.filterCategoryKey);
+            }
+
+            // 4. Tiêu chí Điểm uy tín người bán (chỉ lọc khi ĐƯỢC TÍCH)
+            if (enabled.reputation) {
+                items = items.filter(p => (p.sellerRep || 95) >= (this.filterMinReputation || 90));
+            }
         }
 
-        // Nếu BẬT bộ lọc: Chạy thuật toán AVL Tree và lọc theo tiêu chí
-        let items = this.avl.rangeQuery(0, this.filterMaxPrice);
-        items = items.filter(p => p.status !== 'pending' && p.status !== 'rejected');
-
-        items = items.filter(p => (p.distanceKm || 0.5) <= this.filterMaxDistance);
-
-        if (this.filterCategoryKey !== 'ALL') {
-            items = items.filter(p => p.category === this.filterCategoryKey);
-        }
-
-        if (this.searchKeyword.trim().length > 0) {
-            const kw = this.searchKeyword.toLowerCase();
+        // Lọc theo từ khóa tìm kiếm (nếu có gõ từ khóa)
+        if (this.searchKeyword && this.searchKeyword.trim().length > 0) {
+            const kw = this.searchKeyword.toLowerCase().trim();
             items = items.filter(p => 
-                p.title.toLowerCase().includes(kw) ||
+                (p.title && p.title.toLowerCase().includes(kw)) ||
                 (p.courseCode && p.courseCode.toLowerCase().includes(kw)) ||
-                (p.seller && p.seller.toLowerCase().includes(kw))
+                (p.category && p.category.toLowerCase().includes(kw)) ||
+                (p.seller && p.seller.toLowerCase().includes(kw)) ||
+                (p.description && p.description.toLowerCase().includes(kw))
             );
         }
 
@@ -927,7 +967,22 @@ class AppController {
         }
 
         if (dsaInfo) {
-            dsaInfo.innerText = `AVL Tree lọc được ${list.length} sp trong tầm giá [0 - ${formatNumber(this.filterMaxPrice)} đ].`;
+            if (!this.isFilterActive) {
+                dsaInfo.innerText = `Bộ lọc đang tắt (Hiển thị đầy đủ ${list.length} món đồ).`;
+            } else {
+                const enabled = this.filterCriteriaEnabled || {};
+                const activeCriteria = [];
+                if (enabled.price) activeCriteria.push(`Giá ≤ ${formatNumber(this.filterMaxPrice)}đ (AVL)`);
+                if (enabled.distance) activeCriteria.push(`Khoảng cách ≤ ${this.filterMaxDistance}km`);
+                if (enabled.category && this.filterCategoryKey !== 'ALL') activeCriteria.push(`Danh mục: ${this.filterCategoryKey}`);
+                if (enabled.reputation) activeCriteria.push(`Uy tín ≥ ${this.filterMinReputation || 90}đ`);
+
+                if (activeCriteria.length === 0) {
+                    dsaInfo.innerText = `Chưa tích chọn tiêu chí nào (Hiển thị ${list.length} món đồ). Bấm dấu tích vào tiêu chí bạn muốn lọc!`;
+                } else {
+                    dsaInfo.innerText = `Đang lọc theo: ${activeCriteria.join(' • ')} (${list.length} kết quả).`;
+                }
+            }
         }
 
         if (list.length === 0) {
@@ -3040,32 +3095,121 @@ function toggleQuickAccount() {
     window.app.toggleAccount();
 }
 
+function toggleFilterCriterion(criterionKey) {
+    if (!window.app.filterCriteriaEnabled) {
+        window.app.filterCriteriaEnabled = { price: false, distance: false, category: false, reputation: false };
+    }
+
+    const capKey = criterionKey.charAt(0).toUpperCase() + criterionKey.slice(1);
+    const chk = document.getElementById(`chkFilter${capKey}`);
+    const body = document.getElementById(`filterBody${capKey}`);
+
+    if (chk) {
+        window.app.filterCriteriaEnabled[criterionKey] = chk.checked;
+        if (body) {
+            if (chk.checked) {
+                body.classList.remove('disabled-criterion');
+            } else {
+                body.classList.add('disabled-criterion');
+            }
+        }
+    }
+
+    // Tự động kích hoạt bộ lọc nếu người dùng tích bất kỳ tiêu chí nào
+    if (!window.app.isFilterActive) {
+        const anyChecked = Object.values(window.app.filterCriteriaEnabled).some(v => v);
+        if (anyChecked) {
+            const aside = document.getElementById('filterSidebarAside');
+            const mainView = document.getElementById('mainHomeView');
+            const toggleBtn = document.getElementById('btnToggleFilterMode');
+            window.app.isFilterActive = true;
+            if (aside) aside.style.display = 'block';
+            if (mainView) mainView.style.gridTemplateColumns = '290px 1fr';
+            if (toggleBtn) {
+                toggleBtn.innerHTML = '⚡ Đang Bật Lọc (Bấm để Tắt)';
+                toggleBtn.style.background = '#0284c7';
+                toggleBtn.style.color = '#fff';
+            }
+        }
+    }
+
+    window.app.renderProducts();
+    if (window.sound) window.sound.playClick();
+}
+
 function resetFilters() {
+    window.app.filterCriteriaEnabled = {
+        price: false,
+        distance: false,
+        category: false,
+        reputation: false
+    };
     window.app.filterMaxPrice = 350000;
     window.app.filterMaxDistance = 5;
     window.app.filterCategoryKey = 'ALL';
+    window.app.filterMinReputation = 90;
     window.app.searchKeyword = '';
 
-    document.getElementById('priceRangeSlider').value = 350000;
-    document.getElementById('filterPriceMax').value = 'Đến: 350k';
-    document.getElementById('distanceRangeSlider').value = 5;
-    document.getElementById('distanceDisplayVal').innerText = '5 km';
-    document.getElementById('mainSearchInput').value = '';
+    ['Price', 'Distance', 'Category', 'Reputation'].forEach(key => {
+        const chk = document.getElementById(`chkFilter${key}`);
+        const body = document.getElementById(`filterBody${key}`);
+        if (chk) chk.checked = false;
+        if (body) body.classList.add('disabled-criterion');
+    });
+
+    const priceSlider = document.getElementById('priceRangeSlider');
+    const priceMaxInput = document.getElementById('filterPriceMax');
+    if (priceSlider) priceSlider.value = 350000;
+    if (priceMaxInput) priceMaxInput.value = 'Đến: 350k';
+
+    const distSlider = document.getElementById('distanceRangeSlider');
+    const distVal = document.getElementById('distanceDisplayVal');
+    if (distSlider) distSlider.value = 5;
+    if (distVal) distVal.innerText = '5 km';
+
+    const repSlider = document.getElementById('reputationRangeSlider');
+    const repVal = document.getElementById('reputationDisplayVal');
+    if (repSlider) repSlider.value = 90;
+    if (repVal) repVal.innerText = '≥ 90 đ';
 
     const allCatRadio = document.querySelector('input[name="catFilter"][value="ALL"]');
     if (allCatRadio) allCatRadio.checked = true;
 
+    const searchInput = document.getElementById('mainSearchInput');
+    if (searchInput) searchInput.value = '';
+
     window.app.renderProducts();
-    showToast('Đã đặt lại toàn bộ bộ lọc!', 'info');
+    showToast('Đã đặt lại toàn bộ bộ lọc và tiêu chí!', 'info');
 }
 
 function applyFilters() {
+    if (!window.app.isFilterActive) {
+        const aside = document.getElementById('filterSidebarAside');
+        const mainView = document.getElementById('mainHomeView');
+        const toggleBtn = document.getElementById('btnToggleFilterMode');
+        window.app.isFilterActive = true;
+        if (aside) aside.style.display = 'block';
+        if (mainView) mainView.style.gridTemplateColumns = '290px 1fr';
+        if (toggleBtn) {
+            toggleBtn.innerHTML = '⚡ Đang Bật Lọc (Bấm để Tắt)';
+            toggleBtn.style.background = '#0284c7';
+            toggleBtn.style.color = '#fff';
+        }
+    }
     window.app.renderProducts();
-    showToast('Đã áp dụng bộ lọc!', 'success');
+    showToast('Đã áp dụng các tiêu chí lọc được chọn!', 'success');
 }
 
 function filterCategory(catKey) {
     window.app.filterCategoryKey = catKey;
+    const chk = document.getElementById('chkFilterCategory');
+    const body = document.getElementById('filterBodyCategory');
+    if (chk && !chk.checked) {
+        chk.checked = true;
+        if (body) body.classList.remove('disabled-criterion');
+        if (!window.app.filterCriteriaEnabled) window.app.filterCriteriaEnabled = {};
+        window.app.filterCriteriaEnabled.category = true;
+    }
     window.app.renderProducts();
 }
 
@@ -3493,6 +3637,16 @@ document.addEventListener('DOMContentLoaded', () => {
             const val = parseInt(e.target.value);
             window.app.filterMaxPrice = val;
             if (priceMaxInput) priceMaxInput.value = `Đến: ${Math.round(val / 1000)}k`;
+
+            // Tự động tích chọn tiêu chí giá
+            const chk = document.getElementById('chkFilterPrice');
+            const body = document.getElementById('filterBodyPrice');
+            if (chk && !chk.checked) {
+                chk.checked = true;
+                if (body) body.classList.remove('disabled-criterion');
+                if (!window.app.filterCriteriaEnabled) window.app.filterCriteriaEnabled = {};
+                window.app.filterCriteriaEnabled.price = true;
+            }
             window.app.renderProducts();
         });
     }
@@ -3504,12 +3658,47 @@ document.addEventListener('DOMContentLoaded', () => {
             const val = parseInt(e.target.value);
             window.app.filterMaxDistance = val;
             if (distVal) distVal.innerText = `${val} km`;
+
+            // Tự động tích chọn tiêu chí khoảng cách
+            const chk = document.getElementById('chkFilterDistance');
+            const body = document.getElementById('filterBodyDistance');
+            if (chk && !chk.checked) {
+                chk.checked = true;
+                if (body) body.classList.remove('disabled-criterion');
+                if (!window.app.filterCriteriaEnabled) window.app.filterCriteriaEnabled = {};
+                window.app.filterCriteriaEnabled.distance = true;
+            }
+            window.app.renderProducts();
+        });
+    }
+
+    const repSlider = document.getElementById('reputationRangeSlider');
+    const repVal = document.getElementById('reputationDisplayVal');
+    if (repSlider) {
+        repSlider.addEventListener('input', (e) => {
+            const val = parseInt(e.target.value);
+            window.app.filterMinReputation = val;
+            if (repVal) repVal.innerText = `≥ ${val} đ`;
+
+            // Tự động tích chọn tiêu chí uy tín
+            const chk = document.getElementById('chkFilterReputation');
+            const body = document.getElementById('filterBodyReputation');
+            if (chk && !chk.checked) {
+                chk.checked = true;
+                if (body) body.classList.remove('disabled-criterion');
+                if (!window.app.filterCriteriaEnabled) window.app.filterCriteriaEnabled = {};
+                window.app.filterCriteriaEnabled.reputation = true;
+            }
             window.app.renderProducts();
         });
     }
 
     const searchInput = document.getElementById('mainSearchInput');
     const dropdown = document.getElementById('searchAutocompleteDropdown');
+    if (searchInput) {
+        searchInput.value = '';
+        if (window.app) window.app.searchKeyword = '';
+    }
     if (searchInput && dropdown) {
         searchInput.addEventListener('input', (e) => {
             const val = e.target.value.trim();

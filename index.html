@@ -231,8 +231,10 @@
                 <!-- Ô Tìm Kiếm với nút Tìm kiếm bên trong -->
                 <div class="hero-input-box">
                     <span class="hero-input-icon">🔍</span>
-                    <input type="text" id="mainSearchInput" class="hero-search-input" 
-                           placeholder="Thử gõ: VL101, casio, toán, c++, nồi cơm, máy sấy, lap trinh..." autocomplete="off">
+                    <input type="search" id="mainSearchInput" name="site_search_query" class="hero-search-input" 
+                           placeholder="Thử gõ: VL101, casio, toán, c++, nồi cơm, máy sấy, lap trinh..." 
+                           autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" 
+                           role="searchbox" readonly onfocus="this.removeAttribute('readonly');">
                     <button class="hero-submit-btn" onclick="executeSearch()">
                         Tìm kiếm ➔
                     </button>
@@ -248,72 +250,111 @@
              ========================================== -->
         <main class="main-content-layout" id="mainHomeView">
             <!-- CỘT BÊN TRÁI: BỘ LỌC CHỌN LỌC -->
-<aside id="filterSidebarAside" style="display:none;">                <div class="sidebar-filter-card">
-                  <div class="filter-header">
-                        <span>⚡ Bộ Lọc Chọn Lọc</span>
+            <aside id="filterSidebarAside" style="display:none;">
+                <div class="sidebar-filter-card">
+                    <div class="filter-header">
+                        <span>⚡ Bộ Lọc Tiêu Chí</span>
                         <button class="reset-filter-btn" onclick="resetFilters()">Đặt lại</button>
                     </div>
 
-                    <!-- 1. Khoảng giá mong muốn (AVL Tree) -->
-                    <div>
-                        <div class="filter-section-title">
-                            <span>Khoảng Giá Mong Muốn</span>
-                            <span class="mini-tag-info">AVL Tree</span>
-                        </div>
-                        <div class="price-range-inputs">
-                            <input type="text" id="filterPriceMin" value="Từ: 0 đ" readonly>
-                            <input type="text" id="filterPriceMax" value="Đến: 300k" readonly>
-                        </div>
-                        <input type="range" class="price-slider-bar" id="priceRangeSlider" min="20000" max="650000" step="10000" value="350000">
-                        <div style="font-size:11px; color:#94a3b8; margin-top:4px;">
-                            Lọc nhị phân tự cân bằng O(log N + K)
-                        </div>
+                    <div style="font-size:11.5px; color:#64748b; margin-bottom:12px; background:#eff6ff; padding:8px 10px; border-radius:6px; border:1px solid #bfdbfe; line-height:1.4;">
+                        💡 <strong>Cách lọc:</strong> Tích dấu chọn vào tiêu chí bạn muốn lọc (chỉ lọc những tiêu chí có dấu tích).
                     </div>
 
-                    <!-- 2. Khoảng cách quanh UTC2 -->
-                    <div>
+                    <!-- 1. Khoảng giá mong muốn (AVL Tree) CÓ DẤU TÍCH -->
+                    <div class="filter-group-block" id="filterBlockPrice">
                         <div class="filter-section-title">
-                            <span>Khoảng cách quanh UTC2</span>
-                            <span id="distanceDisplayVal" style="color:var(--primary); font-weight:700;">5 km</span>
+                            <label class="filter-checkbox-label" for="chkFilterPrice">
+                                <input type="checkbox" id="chkFilterPrice" onchange="toggleFilterCriterion('price')">
+                                <span>Tích để lọc <strong>Khoảng Giá</strong></span>
+                            </label>
+                            <span class="mini-tag-info">AVL Tree</span>
                         </div>
-                        <div class="distance-slider-box">
-                            <input type="range" class="price-slider-bar" id="distanceRangeSlider" min="1" max="10" step="1" value="5">
-                            <div class="distance-labels-row">
-                                <span>Cổng trường (0.5km)</span>
-                                <span>KTX  (1.5km)</span>
+                        <div class="filter-criterion-body disabled-criterion" id="filterBodyPrice">
+                            <div class="price-range-inputs">
+                                <input type="text" id="filterPriceMin" value="Từ: 0 đ" readonly>
+                                <input type="text" id="filterPriceMax" value="Đến: 350k" readonly>
+                            </div>
+                            <input type="range" class="price-slider-bar" id="priceRangeSlider" min="20000" max="650000" step="10000" value="350000">
+                            <div style="font-size:11px; color:#94a3b8; margin-top:4px;">
+                                Lọc cây nhị phân tự cân bằng O(log N + K)
                             </div>
                         </div>
                     </div>
 
-                    <!-- 3. Danh mục mặt hàng -->
-                    <div>
+                    <!-- 2. Khoảng cách quanh UTC2 CÓ DẤU TÍCH -->
+                    <div class="filter-group-block" id="filterBlockDistance">
                         <div class="filter-section-title">
-                            <span>Danh mục mặt hàng</span>
+                            <label class="filter-checkbox-label" for="chkFilterDistance">
+                                <input type="checkbox" id="chkFilterDistance" onchange="toggleFilterCriterion('distance')">
+                                <span>Tích để lọc <strong>Khoảng Cách</strong></span>
+                            </label>
+                            <span id="distanceDisplayVal" style="color:var(--primary); font-weight:700;">5 km</span>
                         </div>
-                        <div class="category-filter-list">
-                            <label class="category-radio-item">
-                                <input type="radio" name="catFilter" value="ALL" checked onchange="filterCategory('ALL')">
-                                <span>Tất cả sản phẩm</span>
+                        <div class="filter-criterion-body disabled-criterion" id="filterBodyDistance">
+                            <div class="distance-slider-box">
+                                <input type="range" class="price-slider-bar" id="distanceRangeSlider" min="1" max="10" step="1" value="5">
+                                <div class="distance-labels-row">
+                                    <span>Cổng trường (0.5km)</span>
+                                    <span>KTX (1.5km)</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- 3. Danh mục mặt hàng CÓ DẤU TÍCH -->
+                    <div class="filter-group-block" id="filterBlockCategory">
+                        <div class="filter-section-title">
+                            <label class="filter-checkbox-label" for="chkFilterCategory">
+                                <input type="checkbox" id="chkFilterCategory" onchange="toggleFilterCriterion('category')">
+                                <span>Tích để lọc <strong>Danh Mục</strong></span>
                             </label>
-                            <label class="category-radio-item">
-                                <input type="radio" name="catFilter" value="GiaoTrinh" onchange="filterCategory('GiaoTrinh')">
-                                <span>📚 Giáo trình & Sách học</span>
+                        </div>
+                        <div class="filter-criterion-body disabled-criterion" id="filterBodyCategory">
+                            <div class="category-filter-list">
+                                <label class="category-radio-item">
+                                    <input type="radio" name="catFilter" value="ALL" checked onchange="filterCategory('ALL')">
+                                    <span>Tất cả sản phẩm</span>
+                                </label>
+                                <label class="category-radio-item">
+                                    <input type="radio" name="catFilter" value="GiaoTrinh" onchange="filterCategory('GiaoTrinh')">
+                                    <span>📚 Giáo trình & Sách học</span>
+                                </label>
+                                <label class="category-radio-item">
+                                    <input type="radio" name="catFilter" value="DoDienTu" onchange="filterCategory('DoDienTu')">
+                                    <span>💻 Thiết bị điện tử, Casio</span>
+                                </label>
+                                <label class="category-radio-item">
+                                    <input type="radio" name="catFilter" value="DoGiaDung" onchange="filterCategory('DoGiaDung')">
+                                    <span>🍳 Đồ dùng sinh viên, KTX</span>
+                                </label>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- 4. Uy tín người bán CÓ DẤU TÍCH -->
+                    <div class="filter-group-block" id="filterBlockReputation">
+                        <div class="filter-section-title">
+                            <label class="filter-checkbox-label" for="chkFilterReputation">
+                                <input type="checkbox" id="chkFilterReputation" onchange="toggleFilterCriterion('reputation')">
+                                <span>Tích để lọc <strong>Uy Tín Bán</strong></span>
                             </label>
-                            <label class="category-radio-item">
-                                <input type="radio" name="catFilter" value="DoDienTu" onchange="filterCategory('DoDienTu')">
-                                <span>💻 Thiết bị điện tử, Casio</span>
-                            </label>
-                            <label class="category-radio-item">
-                                <input type="radio" name="catFilter" value="DoGiaDung" onchange="filterCategory('DoGiaDung')">
-                                <span>🍳 Đồ dùng sinh viên, KTX</span>
-                            </label>
+                            <span id="reputationDisplayVal" style="color:#16a34a; font-weight:700;">≥ 90 đ</span>
+                        </div>
+                        <div class="filter-criterion-body disabled-criterion" id="filterBodyReputation">
+                            <div style="font-size:11.5px; color:#475569; margin-bottom:6px;">Chỉ hiện người bán có đánh giá uy tín cao:</div>
+                            <input type="range" class="price-slider-bar" id="reputationRangeSlider" min="80" max="98" step="1" value="90">
+                            <div class="distance-labels-row">
+                                <span>Khá (80đ)</span>
+                                <span>Xuất sắc (98đ)</span>
+                            </div>
                         </div>
                     </div>
 
                     <!-- Thông tin DSA Engine (gọn nhẹ) -->
                     <div style="background:#f8fafc; border:1px solid #e2e8f0; border-radius:10px; padding:12px; font-size:11.5px; color:#64748b;">
-                        <div style="font-weight:700; color:#334155; margin-bottom:4px;">Thông tin DSA Engine:</div>
-                        <div id="dsaEngineInfoText">AVL Tree lọc được 4 sp trong tầm giá [0 - 350.000 đ].</div>
+                        <div style="font-weight:700; color:#334155; margin-bottom:4px;">Trạng thái bộ lọc:</div>
+                        <div id="dsaEngineInfoText">Chưa tích tiêu chí nào (Hiển thị tất cả đồ).</div>
                     </div>
 
                     <!-- Nút áp dụng bộ lọc -->
