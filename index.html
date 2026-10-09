@@ -595,26 +595,46 @@
     </div>
 
     <!-- ==========================================
-         CỬA SỔ CHAT GIỮA TÀI KHOẢN A VÀ B (THỜI GIAN THỰC, KHÔNG CÓ BOT TỰ ĐỘNG)
+         CỬA SỔ CHAT: HỘP THƯ TẤT CẢ TÀI KHOẢN & CHI TIẾT HỘI THOẠI 1-1
          ========================================== -->
     <div class="chat-window-container" id="chatWindow">
-        <div class="chat-header">
-            <div>
-                <h4 id="chatHeaderName" style="font-size:14px; font-weight:700;">Hội thoại trực tiếp</h4>
-                <div class="chat-partner-sub" id="chatHeaderSubtitle">Bạn đang nhắn tin với Phúc Lâm</div>
+        <!-- VIEW 1: DANH SÁCH TẤT CẢ CÁC TÀI KHOẢN ĐÃ GỬI TIN NHẮN (HỘP THƯ ĐẾN) -->
+        <div id="chatConversationsView" class="chat-view-panel">
+            <div class="chat-header">
+                <div>
+                    <h4 style="font-size:14px; font-weight:700; margin:0;">💬 Hộp Thư Tin Nhắn</h4>
+                    <div class="chat-partner-sub" id="chatInboxSubtitle">Tất cả tài khoản liên hệ trao đổi đồ</div>
+                </div>
+                <button class="checkout-close-btn" style="position:static; width:28px; height:28px; background:rgba(255,255,255,0.2); color:#fff;" onclick="closeChatWindow()">✕</button>
             </div>
-            <button class="checkout-close-btn" style="position:static; width:28px; height:28px; background:rgba(255,255,255,0.2); color:#fff;" onclick="closeChatWindow()">✕</button>
+            <div class="chat-inbox-list" id="chatInboxList">
+                <!-- Danh sách tài khoản được render động bởi JavaScript -->
+            </div>
         </div>
 
-        <!-- Vùng hiển thị tin nhắn -->
-        <div class="chat-messages-area" id="chatMessagesArea">
-            <!-- Messages rendered dynamically -->
-        </div>
+        <!-- VIEW 2: CHI TIẾT CUỘC TRÒ CHUYỆN 1-1 VỚI NGƯỜI ĐƯỢC CHỌN -->
+        <div id="chatDetailView" class="chat-view-panel" style="display:none;">
+            <div class="chat-header">
+                <div style="display:flex; align-items:center; gap:8px;">
+                    <button class="chat-back-btn" onclick="backToChatInbox()" title="Quay lại danh sách các tài khoản">←</button>
+                    <div>
+                        <h4 id="chatHeaderName" style="font-size:14px; font-weight:700; margin:0;">Hội thoại trực tiếp</h4>
+                        <div class="chat-partner-sub" id="chatHeaderSubtitle">Bạn đang nhắn tin trực tiếp</div>
+                    </div>
+                </div>
+                <button class="checkout-close-btn" style="position:static; width:28px; height:28px; background:rgba(255,255,255,0.2); color:#fff;" onclick="closeChatWindow()">✕</button>
+            </div>
 
-        <!-- Khung nhập tin nhắn thủ công -->
-        <div class="chat-input-bar">
-            <input type="text" id="chatInputText" placeholder="Nhập tin nhắn trao đổi đồ..." onkeydown="if(event.key==='Enter') sendManualMessage()">
-            <button class="apply-filter-btn" style="background:#0284c7; width:auto; padding:6px 14px; margin-top:0;" onclick="sendManualMessage()">Gửi</button>
+            <!-- Vùng hiển thị tin nhắn -->
+            <div class="chat-messages-area" id="chatMessagesArea">
+                <!-- Messages rendered dynamically -->
+            </div>
+
+            <!-- Khung nhập tin nhắn thủ công -->
+            <div class="chat-input-bar">
+                <input type="text" id="chatInputText" placeholder="Nhập tin nhắn trao đổi đồ..." onkeydown="if(event.key==='Enter') sendManualMessage()">
+                <button class="apply-filter-btn" style="background:#0284c7; width:auto; padding:6px 14px; margin-top:0;" onclick="sendManualMessage()">Gửi</button>
+            </div>
         </div>
     </div>
 

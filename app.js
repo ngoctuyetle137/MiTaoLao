@@ -525,11 +525,10 @@ class AppController {
                 this.chatMessages.push(msg);
                 localStorage.setItem('unipass_shared_messages', JSON.stringify(this.chatMessages));
                 this.renderChatMessages();
+                this.renderChatInbox();
                 this.updateChatUnreadBadge();
 
                 if (msg.receiver === this.user.name) {
-                    this.currentChatPartner = msg.sender;
-                    this.renderChatMessages();
                     if (window.sound) window.sound.playNotification();
                     showToast(`💬 [TIN NHẮN MỚI] ${msg.sender}: "${msg.text}"`, 'success');
                 }
@@ -791,12 +790,12 @@ class AppController {
             return;
         }
 
-        const partnerName = this.getChatPartnerName();
-        const unread = this.chatMessages.filter(m => m.receiver === this.user.name && m.sender === partnerName).length;
+        const incoming = this.chatMessages.filter(m => m.receiver === this.user.name);
+        const count = incoming.length;
 
-        if (unread > 0) {
+        if (count > 0) {
             badge.style.display = 'inline-block';
-            badge.innerText = unread;
+            badge.innerText = count;
         } else {
             badge.style.display = 'none';
         }
@@ -1153,7 +1152,192 @@ class AppController {
         }
     }
 
+    // ==========================================
+    // RENDER HỘP THƯ TIN NHẮN: TẤT CẢ TÀI KHOẢN ĐÃ GỬI TIN NHẮN CHO NGƯỜI BÁN
+    // ==========================================
+    renderChatInbox() {
+        const listEl = document.getElementById('chatInboxList');
+        const subtitleEl = document.getElementById('chatInboxSubtitle');
+        if (!listEl) return;
+
+        if (!this.user) {
+            listEl.innerHTML = `
+                <div style="text-align:center; padding:40px 20px; color:#94a3b8;">
+                    <span style="font-size:36px; display:block; margin-bottom:10px;">🔒</span>
+                    <strong style="color:#0f172a; font-size:14px; display:block; margin-bottom:6px;">Vui lòng đăng nhập</strong>
+                    <p style="font-size:12.5px; margin:0;">Đăng nhập để xem danh sách các bạn đã gửi tin nhắn cho bạn.</p>
+                </div>
+            `;
+            return;
+        }
+
+        const myName = this.user.name;
+        const conversationsMap = new Map();
+
+        // 1. Quét qua lịch sử chatMessages để gom nhóm các tài khoản đã từng nhắn tin
+        this.chatMessages.forEach(msg => {
+            let partnerName = null;
+            let isIncoming = false;
+
+            if (msg.receiver === myName) {
+                partnerName = msg.sender;
+                isIncoming = true;
+            } else if (msg.sender === myName) {
+                partnerName = msg.receiver;
+                isIncoming = false;
+            }
+
+            if (partnerName && partnerName !== myName) {
+                if (!conversationsMap.has(partnerName)) {
+                    conversationsMap.set(partnerName, {
+                        partnerName: partnerName,
+                        lastMessage: msg,
+                        lastTimestamp: msg.id ? (parseInt(msg.id.replace(/\D/g, '')) || 0) : 0,
+                        productId: msg.productId || null,
+                        productTitle: msg.productTitle || null,
+                        orderId: msg.orderId || null,
+                        totalMessages: 0,
+                        incomingCount: 0
+                    });
+                }
+                const conv = conversationsMap.get(partnerName);
+                conv.totalMessages++;
+                if (isIncoming) conv.incomingCount++;
+                conv.lastMessage = msg;
+                if (msg.productId) conv.productId = msg.productId;
+                if (msg.productTitle) conv.productTitle = msg.productTitle;
+                if (msg.orderId) conv.orderId = msg.orderId;
+            }
+        });
+
+        // 2. Thêm các đối tác từ đơn cọc chưa hoàn thành (nếu chưa có trong conversationsMap)
+        if (this.depositOrders && this.depositOrders.length > 0) {
+            this.depositOrders.forEach(o => {
+                if (o.status !== 'completed' && o.status !== 'closed_penalized') {
+                    let partnerName = null;
+                    let roleText = '';
+                    if (o.seller === myName) {
+                        partnerName = o.buyer;
+                        roleText = 'Người mua đặt cọc';
+                    } else if (o.buyer === myName) {
+                        partnerName = o.seller;
+                        roleText = 'Người bán';
+                    }
+
+                    if (partnerName && partnerName !== myName) {
+                        if (!conversationsMap.has(partnerName)) {
+                            conversationsMap.set(partnerName, {
+                                partnerName: partnerName,
+                                lastMessage: {
+                                    text: `📦 Đơn cọc "${o.productTitle}" - Chờ trao đổi`,
+                                    time: 'Gần đây',
+                                    sender: partnerName
+                                },
+                                lastTimestamp: o.timestamp || Date.now(),
+                                productId: o.productId,
+                                productTitle: o.productTitle,
+                                orderId: o.id,
+                                totalMessages: 0,
+                                incomingCount: 1,
+                                roleTag: roleText
+                            });
+                        } else {
+                            const conv = conversationsMap.get(partnerName);
+                            if (!conv.productId) conv.productId = o.productId;
+                            if (!conv.productTitle) conv.productTitle = o.productTitle;
+                            if (!conv.orderId) conv.orderId = o.id;
+                            if (roleText) conv.roleTag = roleText;
+                        }
+                    }
+                }
+            });
+        }
+
+        const conversations = Array.from(conversationsMap.values());
+
+        if (subtitleEl) {
+            subtitleEl.innerText = `${conversations.length} tài khoản đã liên hệ với bạn`;
+        }
+
+        if (conversations.length === 0) {
+            // Gợi ý các bạn khác để nhắn tin thử
+            const otherUsers = this.registeredUsers.filter(u => u.name !== myName && u.role !== 'admin');
+            let suggestionsHtml = '';
+            if (otherUsers.length > 0) {
+                suggestionsHtml = `
+                    <div style="margin-top:16px; text-align:left;">
+                        <div style="font-size:11.5px; font-weight:700; color:#475569; margin-bottom:8px; text-transform:uppercase;">
+                            Gợi ý sinh viên trong trường để trao đổi đồ:
+                        </div>
+                        ${otherUsers.map(u => {
+                            const safeUName = u.name.replace(/'/g, "\\'");
+                            return `
+                                <div class="chat-inbox-item" onclick="openChatBetweenUsers('${safeUName}')" style="margin-bottom:6px;">
+                                    <div class="chat-inbox-avatar">${(u.avatarLetter || u.name.charAt(0)).toUpperCase()}</div>
+                                    <div class="chat-inbox-info">
+                                        <div class="chat-inbox-name">${u.name}</div>
+                                        <div class="chat-inbox-snippet" style="color:#0284c7;">Bấm để bắt đầu nhắn tin trao đổi đồ</div>
+                                    </div>
+                                    <span style="font-size:12px; color:#0284c7; font-weight:700;">Nhắn tin →</span>
+                                </div>
+                            `;
+                        }).join('')}
+                    </div>
+                `;
+            }
+
+            listEl.innerHTML = `
+                <div style="text-align:center; padding:30px 16px; color:#64748b;">
+                    <div style="font-size:40px; margin-bottom:10px;">📭</div>
+                    <strong style="color:#0f172a; font-size:14px; display:block; margin-bottom:6px;">Chưa có tài khoản nào gửi tin nhắn</strong>
+                    <p style="font-size:12px; line-height:1.5; margin:0 0 10px 0; color:#64748b;">
+                        Khi có sinh viên gửi tin nhắn hỏi mua đồ hoặc đặt cọc, danh sách tài khoản sẽ xuất hiện tại đây.
+                    </p>
+                    ${suggestionsHtml}
+                </div>
+            `;
+            return;
+        }
+
+        // Sắp xếp cuộc trò chuyện có tin nhắn mới nhất lên đầu
+        conversations.sort((a, b) => (b.lastTimestamp || 0) - (a.lastTimestamp || 0));
+
+        listEl.innerHTML = conversations.map(c => {
+            const initial = (c.partnerName.charAt(0) || 'U').toUpperCase();
+            const lastTxt = c.lastMessage ? (
+                c.lastMessage.sender === myName ? `Bạn: ${c.lastMessage.text}` : c.lastMessage.text
+            ) : 'Bắt đầu trò chuyện...';
+            const timeStr = c.lastMessage && c.lastMessage.time ? c.lastMessage.time : '';
+            const prodTag = c.productTitle ? `📦 ${c.productTitle}` : '';
+            const roleTagHtml = c.roleTag ? `<span style="background:#e0f2fe; color:#0369a1; font-size:10px; padding:2px 6px; border-radius:4px; font-weight:600; margin-left:6px;">${c.roleTag}</span>` : '';
+
+            const safePartner = c.partnerName.replace(/'/g, "\\'");
+            const safeProductTitle = c.productTitle ? c.productTitle.replace(/'/g, "\\'") : '';
+            const safeProductId = c.productId || '';
+            const safeOrderId = c.orderId || '';
+
+            return `
+                <div class="chat-inbox-item" onclick="openChatBetweenUsers('${safePartner}', { id: '${safeProductId}', title: '${safeProductTitle}' }, '${safeOrderId}')">
+                    <div class="chat-inbox-avatar">${initial}</div>
+                    <div class="chat-inbox-info">
+                        <div class="chat-inbox-top">
+                            <div class="chat-inbox-name">${c.partnerName} ${roleTagHtml}</div>
+                            <div class="chat-inbox-time">${timeStr}</div>
+                        </div>
+                        ${prodTag ? `<div class="chat-inbox-product">${prodTag}</div>` : ''}
+                        <div class="chat-inbox-snippet">${lastTxt}</div>
+                    </div>
+                </div>
+            `;
+        }).join('');
+    }
+
     renderChatMessages() {
+        const convView = document.getElementById('chatConversationsView');
+        if (convView && convView.style.display !== 'none') {
+            this.renderChatInbox();
+        }
+
         const area = document.getElementById('chatMessagesArea');
         const headerSub = document.getElementById('chatHeaderSubtitle');
         if (!area) return;
@@ -1943,23 +2127,54 @@ function logoutToAuthScreen() {
 // ==========================================
 // 5. CHAT GIỮA CÁC TÀI KHOẢN (THỦ CÔNG, KHÔNG CÓ BOT)
 // ==========================================
-function openChatBetweenUsers(targetPartnerName, product = null, orderId = null) {
+function openChatBetweenUsers(targetPartnerName = null, product = null, orderId = null) {
+    const chatBox = document.getElementById('chatWindow');
+    const convView = document.getElementById('chatConversationsView');
+    const detailView = document.getElementById('chatDetailView');
+    if (!chatBox) return;
+
+    chatBox.style.display = 'flex';
+
     if (targetPartnerName && targetPartnerName !== window.app.user.name) {
+        // Mở chi tiết 1-1 với tài khoản được chọn
         window.app.currentChatPartner = targetPartnerName;
         window.app.currentChatProduct = product || null;
         window.app.currentChatOrderId = orderId || null;
-    } else if (product) {
-        window.app.currentChatProduct = product;
-        if (orderId) window.app.currentChatOrderId = orderId;
+
+        if (convView) convView.style.display = 'none';
+        if (detailView) detailView.style.display = 'flex';
+
+        const partner = window.app.getChatPartnerName();
+        const chatHeader = document.getElementById('chatHeaderName');
+        if (chatHeader) chatHeader.innerText = `${partner}`;
+
+        const headerSub = document.getElementById('chatHeaderSubtitle');
+        if (headerSub) {
+            headerSub.innerText = `Bạn đang nhắn tin trực tiếp với ${partner}`;
+        }
+
+        window.app.renderChatMessages();
+        const input = document.getElementById('chatInputText');
+        if (input) setTimeout(() => input.focus(), 80);
+    } else {
+        // Mở danh sách tất cả các tài khoản đã gửi tin nhắn (Inbox)
+        if (convView) convView.style.display = 'flex';
+        if (detailView) detailView.style.display = 'none';
+
+        window.app.renderChatInbox();
     }
-    const partner = window.app.getChatPartnerName();
-    const chatHeader = document.getElementById('chatHeaderName');
-    if (chatHeader) chatHeader.innerText = `Trò chuyện: ${partner}`;
 
-    const chatBox = document.getElementById('chatWindow');
-    if (chatBox) chatBox.style.display = 'flex';
+    window.app.updateChatUnreadBadge();
+    if (window.sound) window.sound.playClick();
+}
 
-    window.app.renderChatMessages();
+function backToChatInbox() {
+    const convView = document.getElementById('chatConversationsView');
+    const detailView = document.getElementById('chatDetailView');
+    if (convView) convView.style.display = 'flex';
+    if (detailView) detailView.style.display = 'none';
+
+    window.app.renderChatInbox();
     window.app.updateChatUnreadBadge();
     if (window.sound) window.sound.playClick();
 }
