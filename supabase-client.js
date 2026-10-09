@@ -228,25 +228,35 @@
                 if (!data) return [];
 
                 // Format dữ liệu tương thích với giao diện app.js
-                return data.map(item => ({
-                    id: item.id,
-                    title: item.title,
-                    price: Number(item.price),
-                    originalPrice: item.original_price ? Number(item.original_price) : Number(item.price),
-                    category: item.category,
-                    courseCode: item.course_code || '',
-                    timemarkCode: item.timemark_code || 'UTC2 - PASS',
-                    seller: item.seller_name,
-                    sellerEmail: item.seller_email,
-                    sellerRep: Number(item.seller_rep) || 95,
-                    location: item.location,
-                    distanceKm: Number(item.distance_km) || 0.5,
-                    expiryDays: Number(item.expiry_days) || 7,
-                    imageUrl: item.image_url,
-                    timemarkProofUrl: item.timemark_proof_url || '',
-                    description: item.description,
-                    status: item.status || 'available'
-                }));
+                return data.map(item => {
+                    let clientStatus = 'approved';
+                    if (item.status === 'hidden') clientStatus = 'pending';
+                    else if (item.status === 'available') clientStatus = 'approved';
+                    else if (item.status === 'deleted') clientStatus = 'deleted';
+                    else if (item.status === 'deposited') clientStatus = 'deposited';
+                    else if (item.status === 'sold') clientStatus = 'sold';
+                    else clientStatus = item.status || 'approved';
+
+                    return {
+                        id: item.id,
+                        title: item.title,
+                        price: Number(item.price),
+                        originalPrice: item.original_price ? Number(item.original_price) : Number(item.price),
+                        category: item.category,
+                        courseCode: item.course_code || '',
+                        timemarkCode: item.timemark_code || 'UTC2 - PASS',
+                        seller: item.seller_name,
+                        sellerEmail: item.seller_email,
+                        sellerRep: Number(item.seller_rep) || 95,
+                        location: item.location,
+                        distanceKm: Number(item.distance_km) || 0.5,
+                        expiryDays: Number(item.expiry_days) || 7,
+                        imageUrl: item.image_url,
+                        timemarkProofUrl: item.timemark_proof_url || '',
+                        description: item.description,
+                        status: clientStatus
+                    };
+                });
             } catch (err) {
                 console.error('❌ [Supabase] Lỗi tải products:', err);
                 return null;
@@ -257,8 +267,16 @@
             const client = this.getClient();
             if (!client) return false;
             try {
+                // Ánh xạ trạng thái phù hợp với CHECK constraint trong PostgreSQL Supabase:
+                // ('available', 'deposited', 'sold', 'hidden', 'deleted')
+                let dbStatus = 'hidden'; // 'hidden' đại diện cho bài đang chờ Admin duyệt
+                if (product.status === 'approved' || product.status === 'available') dbStatus = 'available';
+                else if (product.status === 'pending') dbStatus = 'hidden';
+                else if (product.status === 'deposited') dbStatus = 'deposited';
+                else if (product.status === 'sold') dbStatus = 'sold';
+
                 const record = {
-                    id: product.id || ('P' + Date.now()),
+                    id: product.id || ('P_' + Date.now()),
                     title: product.title,
                     price: product.price,
                     original_price: product.originalPrice || product.price,
@@ -274,7 +292,7 @@
                     image_url: product.imageUrl,
                     timemark_proof_url: product.timemarkProofUrl || '',
                     description: product.description || '',
-                    status: product.status || 'pending'
+                    status: dbStatus
                 };
 
                 const { data, error } = await client
@@ -282,7 +300,7 @@
                     .insert([record]);
 
                 if (error) throw error;
-                console.log('✅ [Supabase] Đã thêm sản phẩm lên Cloud (Status:', record.status, '):', record.id);
+                console.log(`✅ [Supabase] Đã thêm sản phẩm lên Cloud (DB Status: ${record.status}, Client: ${product.status}):`, record.id);
                 return true;
             } catch (err) {
                 console.error('❌ [Supabase] Lỗi thêm sản phẩm:', err);
@@ -294,13 +312,19 @@
             const client = this.getClient();
             if (!client) return false;
             try {
+                // Ánh xạ trạng thái phù hợp với CHECK constraint PostgreSQL:
+                let dbStatus = status;
+                if (status === 'approved') dbStatus = 'available';
+                else if (status === 'pending' || status === 'rejected') dbStatus = 'hidden';
+                else if (status === 'deleted') dbStatus = 'deleted';
+
                 const { error } = await client
                     .from('products')
-                    .update({ status: status })
+                    .update({ status: dbStatus })
                     .eq('id', productId);
 
                 if (error) throw error;
-                console.log(`✅ [Supabase] Đã cập nhật trạng thái sản phẩm ${productId} -> ${status}`);
+                console.log(`✅ [Supabase] Đã cập nhật trạng thái sản phẩm ${productId} -> ${dbStatus} (Client: ${status})`);
                 return true;
             } catch (err) {
                 console.error('❌ [Supabase] Lỗi cập nhật trạng thái sản phẩm:', err);

@@ -242,8 +242,8 @@
         },
 
         // Phát lệnh duyệt bài đăng TimeMark lên trang chính
-        broadcastApprovePost: function (postId) {
-            return this.broadcast('POST_APPROVED', { postId: postId });
+        broadcastApprovePost: function (postId, post) {
+            return this.broadcast('POST_APPROVED', { postId: postId, post: post });
         },
 
         // Phát lệnh từ chối duyệt bài đăng TimeMark

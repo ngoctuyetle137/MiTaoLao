@@ -172,17 +172,6 @@ class AppController {
             try { this.products = JSON.parse(savedProducts); } catch (e) { this.products = [...INITIAL_PRODUCTS]; }
         } else {
             this.products = [...INITIAL_PRODUCTS];
-        }
-
-        // Đảm bảo tất cả bài đăng hợp lệ đều được duyệt và hiển thị trên trang chính
-        let hasPendingToApprove = false;
-        this.products.forEach(p => {
-            if (p.status === 'pending') {
-                p.status = 'approved';
-                hasPendingToApprove = true;
-            }
-        });
-        if (hasPendingToApprove || !savedProducts) {
             this.saveProducts();
         }
 
@@ -311,10 +300,16 @@ class AppController {
             // Tải sản phẩm từ Supabase
             const cloudProducts = await window.UniPassSupabase.getProducts();
             if (cloudProducts && Array.isArray(cloudProducts) && cloudProducts.length > 0) {
-                this.products = cloudProducts;
+                // Hợp nhất sản phẩm từ Cloud với sản phẩm cục bộ (để các bài vừa tạo chưa kịp lên Cloud không bị mất)
+                const cloudIds = new Set(cloudProducts.map(p => p.id));
+                const localOnly = this.products.filter(p => !cloudIds.has(p.id));
+                this.products = [...localOnly, ...cloudProducts];
+                this.saveProducts();
                 this.rebuildDSACache();
                 this.renderProducts();
-                console.log(`✅ [Supabase] Đã nạp ${cloudProducts.length} sản phẩm từ Cloud`);
+                this.renderAdminDashboard();
+                this.renderProfile();
+                console.log(`✅ [Supabase] Đã nạp ${cloudProducts.length} sản phẩm từ Cloud (Kèm ${localOnly.length} bài cục bộ)`);
             }
 
             // Tải tin nhắn từ Supabase
@@ -359,6 +354,12 @@ class AppController {
         if (table === 'products') {
             if (payload.eventType === 'INSERT') {
                 const newP = payload.new;
+                let clientStatus = 'approved';
+                if (newP.status === 'hidden') clientStatus = 'pending';
+                else if (newP.status === 'available') clientStatus = 'approved';
+                else if (newP.status === 'deleted') clientStatus = 'deleted';
+                else clientStatus = newP.status || 'approved';
+
                 if (!this.products.some(p => p.id === newP.id)) {
                     this.products.unshift({
                         id: newP.id,
@@ -375,24 +376,44 @@ class AppController {
                         distanceKm: Number(newP.distance_km) || 0.5,
                         expiryDays: Number(newP.expiry_days) || 7,
                         imageUrl: newP.image_url,
+                        timemarkProofUrl: newP.timemark_proof_url || '',
                         description: newP.description,
-                        status: newP.status || 'available'
+                        status: clientStatus
                     });
+                    this.saveProducts();
                     this.rebuildDSACache();
                     this.renderProducts();
+                    this.renderAdminDashboard();
+                    this.renderProfile();
                     if (window.sound) window.sound.playNotification();
-                    showToast(`📦 Có bài đăng pass đồ mới: "${newP.title}"!`, 'info');
+                    if (clientStatus === 'pending') {
+                        if (this.user && this.user.role === 'admin') {
+                            showToast(`🛡️ [BÀI ĐĂNG CHỜ DUYỆT] Có bài đăng mới "${newP.title}" kèm ảnh TimeMark đang chờ duyệt!`, 'warning');
+                        }
+                    } else {
+                        showToast(`📦 Có bài đăng pass đồ mới: "${newP.title}"!`, 'info');
+                    }
                 }
             } else if (payload.eventType === 'UPDATE') {
                 const updatedP = payload.new;
-                if (updatedP.status === 'deleted') {
+                let clientStatus = 'approved';
+                if (updatedP.status === 'hidden') clientStatus = 'pending';
+                else if (updatedP.status === 'available') clientStatus = 'approved';
+                else if (updatedP.status === 'deleted') clientStatus = 'deleted';
+                else clientStatus = updatedP.status || 'approved';
+
+                if (clientStatus === 'deleted') {
                     this.products = this.products.filter(p => p.id !== updatedP.id);
                 } else {
                     const idx = this.products.findIndex(p => p.id === updatedP.id);
                     if (idx !== -1) {
-                        this.products[idx].status = updatedP.status || 'approved';
+                        this.products[idx].status = clientStatus;
                         if (updatedP.title) this.products[idx].title = updatedP.title;
                         if (updatedP.price) this.products[idx].price = Number(updatedP.price);
+                        if (clientStatus === 'approved') {
+                            const approvedItem = this.products.splice(idx, 1)[0];
+                            this.products.unshift(approvedItem);
+                        }
                     } else {
                         this.products.unshift({
                             id: updatedP.id,
@@ -409,8 +430,9 @@ class AppController {
                             distanceKm: Number(updatedP.distance_km) || 0.5,
                             expiryDays: Number(updatedP.expiry_days) || 7,
                             imageUrl: updatedP.image_url,
+                            timemarkProofUrl: updatedP.timemark_proof_url || '',
                             description: updatedP.description,
-                            status: updatedP.status || 'approved'
+                            status: clientStatus
                         });
                     }
                 }
@@ -531,17 +553,23 @@ class AppController {
         // 1b. Nhận sự kiện bài đăng được Admin phê duyệt TimeMark
         window.UniPassOnlineSync.on('POST_APPROVED', (data) => {
             if (!data || !data.postId) return;
-            const post = this.products.find(p => p.id === data.postId);
+            let post = this.products.find(p => p.id === data.postId);
             if (post) {
                 post.status = 'approved';
-                localStorage.setItem('unipass_products', JSON.stringify(this.products));
-                this.rebuildDSACache();
-                this.renderProducts();
-                this.renderAdminDashboard();
-                this.renderProfile();
-                if (window.sound) window.sound.playSuccess();
-                showToast(`🎉 Bài đăng "${post.title}" vừa được Admin phê duyệt và xuất hiện trên trang chính!`, 'info');
+                post.approvedAt = Date.now();
+                // Đưa bài vừa duyệt lên đầu danh sách để hiển thị ngay trên trang chính
+                this.products = [post, ...this.products.filter(p => p.id !== data.postId)];
+            } else if (data.post) {
+                post = { ...data.post, status: 'approved', approvedAt: Date.now() };
+                this.products.unshift(post);
             }
+            localStorage.setItem('unipass_products', JSON.stringify(this.products));
+            this.rebuildDSACache();
+            this.renderProducts();
+            this.renderAdminDashboard();
+            this.renderProfile();
+            if (window.sound) window.sound.playSuccess();
+            showToast(`🎉 Bài đăng "${(post && post.title) || 'Mới'}" vừa được Admin phê duyệt và xuất hiện trên trang chính!`, 'info');
         });
 
         // 1c. Nhận sự kiện bài đăng bị Admin từ chối TimeMark
@@ -2391,6 +2419,9 @@ function adminApprovePost(postId) {
         }
     }
 
+    // Đưa bài được duyệt lên vị trí đầu danh sách sản phẩm để luôn xuất hiện trên cùng trang chính
+    window.app.products = [post, ...window.app.products.filter(p => p.id !== postId)];
+
     window.app.saveProducts();
     window.app.rebuildDSACache();
     window.app.renderProducts();
@@ -2402,7 +2433,7 @@ function adminApprovePost(postId) {
     }
 
     if (window.UniPassOnlineSync) {
-        window.UniPassOnlineSync.broadcastApprovePost(postId);
+        window.UniPassOnlineSync.broadcastApprovePost(postId, post);
     }
 
     if (window.sound) window.sound.playSuccess();
@@ -2423,7 +2454,7 @@ function adminApproveAllPendingPosts() {
             window.UniPassSupabase.updateProductStatus(p.id, 'approved');
         }
         if (window.UniPassOnlineSync) {
-            window.UniPassOnlineSync.broadcastApprovePost(p.id);
+            window.UniPassOnlineSync.broadcastApprovePost(p.id, p);
         }
     });
 
@@ -3573,10 +3604,9 @@ function handlePostSubmit(e) {
         imageUrl: finalImage,
         timemarkProofUrl: finalImage,
         description: description,
-        status: 'approved', // ✨ ĐƯỢC DUYỆT TỰ ĐỘNG ĐỂ HIỂN THỊ NGAY LẬP TỨC LÊN TRANG CHÍNH
+        status: 'pending', // ⏳ Bắt buộc chờ Admin kiểm duyệt TimeMark
         createdTimeStr: timeStr,
-        submittedAt: Date.now(),
-        approvedAt: Date.now()
+        submittedAt: Date.now()
     };
 
     const codeDisplay = document.getElementById('generatedTimeMarkCode');
@@ -3610,17 +3640,16 @@ function confirmPublishPostWithProof() {
     // Dùng ảnh xác thực TimeMark nếu tải lên, hoặc dùng ảnh sản phẩm
     const proofImg = pendingTimeMarkProofDataUrl || pendingNewPost.imageUrl;
     pendingNewPost.timemarkProofUrl = proofImg;
-    pendingNewPost.status = 'approved'; // ✨ ĐƯỢC DUYỆT THÀNH CÔNG VÀ HIỂN THỊ TRANG CHÍNH!
-    pendingNewPost.approvedAt = Date.now();
+    pendingNewPost.status = 'pending'; // ⏳ Bắt buộc chờ Admin kiểm duyệt TimeMark
 
     window.app.products.unshift(pendingNewPost);
     window.app.saveProducts();
     window.app.rebuildDSACache();
-    window.app.renderProducts(); // Hiển thị ngay lên trang chính!
-    window.app.renderProfile();  // Hiển thị trong Hồ sơ cá nhân
-    window.app.renderAdminDashboard(); // Cập nhật thống kê Admin
+    window.app.renderProducts(); // Không hiển thị lên trang chính vì status là 'pending'
+    window.app.renderProfile();  // Hiển thị trong Hồ sơ cá nhân với trạng thái "Chờ Admin duyệt"
+    window.app.renderAdminDashboard(); // Cập nhật ngay bảng duyệt bài của Admin
 
-    // Đồng bộ sản phẩm mới lên Supabase Cloud
+    // Đồng bộ sản phẩm mới lên Supabase Cloud (lưu dạng hidden để chờ duyệt)
     if (window.UniPassSupabase && window.UniPassSupabase.isConfigured()) {
         window.UniPassSupabase.addProduct(pendingNewPost);
     }
@@ -3646,11 +3675,11 @@ function confirmPublishPostWithProof() {
     if (descInput) descInput.value = '';
     if (urlInput) urlInput.value = '';
 
-    // Tự động chuyển về tab Săn Đồ (Home) nếu đang ở tab khác để người dùng thấy ngay bài đăng
-    switchNavTab('home');
+    // Chuyển sang Hồ sơ cá nhân để người dùng thấy bài của mình đang ở mục "Chờ Admin duyệt TimeMark"
+    switchNavTab('profile');
 
     if (window.sound) window.sound.playSuccess();
-    showToast(`🎉 Đã duyệt và đăng bài "${pendingNewPost.title}" thành công lên trang chính!`, 'success');
+    showToast(`✓ Đã gửi bài "${pendingNewPost.title}" thành công! Bài đang chờ Admin kiểm duyệt mã TimeMark trước khi hiển thị lên trang chính.`, 'success');
     pendingNewPost = null;
 }
 
