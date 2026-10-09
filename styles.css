@@ -751,12 +751,23 @@ body {
     display: grid;
     grid-template-columns: 290px 1fr;
     gap: 24px;
+    align-items: start;
 }
 
 @media (max-width: 960px) {
     .main-content-layout {
         grid-template-columns: 1fr;
     }
+}
+
+#filterSidebarAside {
+    min-width: 0;
+}
+
+.feed-main-section {
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
 }
 
 /* SIDEBAR: BỘ LỌC CHỌN LỌC */
@@ -769,6 +780,8 @@ body {
     display: flex;
     flex-direction: column;
     gap: 20px;
+    position: sticky;
+    top: 85px;
 }
 
 .filter-header {

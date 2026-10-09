@@ -250,7 +250,7 @@
              ========================================== -->
         <main class="main-content-layout" id="mainHomeView">
             <!-- CỘT BÊN TRÁI: BỘ LỌC CHỌN LỌC -->
-            <aside id="filterSidebarAside" style="display:none;">
+            <aside id="filterSidebarAside">
                 <div class="sidebar-filter-card">
                     <div class="filter-header">
                         <span>⚡ Bộ Lọc Tiêu Chí</span>
@@ -364,20 +364,18 @@
                 </div>
             </aside>
 
-            <!-- CỘT BÊN PHẢI: FEED SẢN PHẨM -->
-            <section>
+            <!-- CỘT BÊN PHẢI: FEED SẢN PHẨM NẰM SONG SONG BÊN CẠNH BỘ LỌC -->
+            <section class="feed-main-section">
                 <div class="feed-top-bar">
-    <div style="display:flex; align-items:center; gap:12px;">
-        <button type="button" id="btnToggleFilterMode" class="btn-outline-chat" style="padding:6px 14px; font-size:12.5px; font-weight:700;" onclick="toggleSidebarFilter()">
-             Bộ Lọc: Đang Tắt (Hiện tất cả đồ)
-        </button>
-        <div class="feed-count-text" id="feedCountDisplay">
-            Hiển thị <strong>5 món đồ</strong> sẵn sàng pass
-        </div>
-    </div>
+                    <div style="display:flex; align-items:center; gap:12px;">
+                        <button type="button" id="btnToggleFilterMode" class="btn-outline-chat" style="padding:6px 14px; font-size:12.5px; font-weight:700; background:#0284c7; color:#fff;" onclick="toggleSidebarFilter()">
+                            ⚡ Bộ Lọc: Đang Hiện (Bấm để Ẩn)
+                        </button>
+                        <div class="feed-count-text" id="feedCountDisplay">
+                            Hiển thị <strong>5 món đồ</strong> sẵn sàng pass
+                        </div>
+                    </div>
 
-    </div>
-    <!-- giữ nguyên phần sắp xếp bên phải -->
                     <div style="display:flex; align-items:center; gap:8px;">
                         <span style="font-size:12.5px; color:#64748b;">Sắp xếp:</span>
                         <select class="feed-sort-select" id="sortSelect" onchange="handleSortChange(this.value)">
@@ -389,7 +387,7 @@
                     </div>
                 </div>
 
-                <!-- Lưới Sản Phẩm -->
+                <!-- Lưới Sản Phẩm Nằm Ngay Cạnh Bộ Lọc -->
                 <div class="product-cards-grid" id="productGridContainer">
                     <!-- Cards rendered dynamically via JS -->
                 </div>

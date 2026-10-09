@@ -136,7 +136,7 @@ class AppController {
         };
         this.searchKeyword = '';
         this.sortBy = 'newest';
-        this.isFilterActive = false; // Mặc định tắt lọc để hiện tất cả đồ pass
+        this.isFilterActive = true; // Mặc định mở bộ lọc song song với danh sách sản phẩm
 
         // Khởi tạo các cấu trúc DSA in-memory
         this.trie = new window.UTC2_DSA.TrieWithHeap();
@@ -3788,20 +3788,20 @@ function toggleSidebarFilter() {
         aside.style.display = 'block';
         mainView.style.gridTemplateColumns = '290px 1fr';
         if (toggleBtn) {
-            toggleBtn.innerHTML = '⚡ Đang Bật Lọc (Bấm để Tắt)';
+            toggleBtn.innerHTML = '⚡ Bộ Lọc: Đang Hiện (Bấm để Ẩn)';
             toggleBtn.style.background = '#0284c7';
             toggleBtn.style.color = '#fff';
         }
-        showToast('Đã BẬT bộ lọc (Lọc AVL Tree)', 'info');
+        showToast('Đã hiển thị bộ lọc song song', 'info');
     } else {
         aside.style.display = 'none';
         mainView.style.gridTemplateColumns = '1fr';
         if (toggleBtn) {
-            toggleBtn.innerHTML = '🎛️ Bộ Lọc: Đang Tắt (Hiện tất cả đồ)';
+            toggleBtn.innerHTML = '🎛️ Bộ Lọc: Đang Ẩn (Bấm để Hiện)';
             toggleBtn.style.background = '#ffffff';
             toggleBtn.style.color = '#334155';
         }
-        showToast('Đã TẮT bộ lọc (Hiện tất cả đồ)', 'success');
+        showToast('Đã ẩn bộ lọc (Hiện toàn màn hình đồ)', 'info');
     }
 
     window.app.renderProducts();
