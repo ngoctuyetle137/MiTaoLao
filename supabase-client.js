@@ -345,7 +345,10 @@
                 return data.map(item => ({
                     id: item.id,
                     sender: item.sender_name,
+                    senderEmail: item.sender_email,
                     receiver: item.receiver_name,
+                    receiverEmail: item.receiver_email,
+                    productId: item.product_id,
                     text: item.text,
                     time: item.time_str || 'Vừa xong'
                 }));
@@ -380,6 +383,32 @@
                 return true;
             } catch (err) {
                 console.error('❌ [Supabase] Lỗi gửi chat:', err);
+                return false;
+            }
+        },
+
+        deleteChatMessagesForOrder: async function (productId, buyerName, sellerName) {
+            const client = this.getClient();
+            if (!client) return false;
+            try {
+                if (productId) {
+                    await client
+                        .from('chat_messages')
+                        .delete()
+                        .eq('product_id', productId);
+                }
+
+                if (buyerName && sellerName) {
+                    await client
+                        .from('chat_messages')
+                        .delete()
+                        .or(`and(sender_name.eq."${buyerName}",receiver_name.eq."${sellerName}"),and(sender_name.eq."${sellerName}",receiver_name.eq."${buyerName}")`);
+                }
+
+                console.log(`✅ [Supabase] Đã xóa lịch sử tin nhắn khi hoàn tất đơn hàng (${productId})`);
+                return true;
+            } catch (err) {
+                console.warn('⚠️ [Supabase] Lỗi khi xóa chat_messages:', err);
                 return false;
             }
         },

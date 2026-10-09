@@ -178,6 +178,7 @@ class AppController {
                     id: 'M1',
                     sender: 'Lê Thị Ngọc Tuyết',
                     receiver: 'Phúc Lâm',
+                    productId: 'P03',
                     text: 'Chào bạn Lâm, nồi cơm điện mini bạn còn pass không?',
                     time: '08:15'
                 },
@@ -185,6 +186,7 @@ class AppController {
                     id: 'M2',
                     sender: 'Phúc Lâm',
                     receiver: 'Lê Thị Ngọc Tuyết',
+                    productId: 'P03',
                     text: 'Chào Tuyết, nồi cơm vẫn còn nhé! Mình trọ gần cổng 1, có thể mang qua KTX Cỏ May cho bạn.',
                     time: '08:20'
                 }
@@ -197,6 +199,9 @@ class AppController {
         if (savedOrders) {
             try { this.depositOrders = JSON.parse(savedOrders); } catch (e) { this.depositOrders = []; }
         }
+
+        // Tự động dọn dẹp tin nhắn của các đơn hàng đã hoàn tất thành công từ trước
+        this.cleanupCompletedOrdersChats();
 
         // Tải hồ sơ khiếu nại giao dịch
         const savedDisputes = localStorage.getItem('unipass_admin_disputes');
@@ -319,6 +324,7 @@ class AppController {
                     timestamp: new Date(o.created_at).getTime()
                 }));
                 this.updateDepositBadge();
+                this.cleanupCompletedOrdersChats();
             }
 
             // Đăng ký nhận sự kiện Realtime qua WebSocket
@@ -374,6 +380,7 @@ class AppController {
                         id: newM.id,
                         sender: newM.sender_name,
                         receiver: newM.receiver_name,
+                        productId: newM.product_id,
                         text: newM.text,
                         time: newM.time_str
                     });
@@ -384,6 +391,13 @@ class AppController {
                         if (window.sound) window.sound.playNotification();
                         showToast(`💬 Tin nhắn mới từ ${newM.sender_name}: "${newM.text}"`, 'success');
                     }
+                }
+            } else if (payload.eventType === 'DELETE') {
+                const oldM = payload.old;
+                if (oldM && oldM.id) {
+                    this.chatMessages = this.chatMessages.filter(m => m.id !== oldM.id);
+                    this.renderChatMessages();
+                    this.updateChatUnreadBadge();
                 }
             }
         } else if (table === 'orders') {
@@ -407,6 +421,16 @@ class AppController {
                         if (window.sound) window.sound.playSuccess();
                         showToast(`🤝 Sinh viên ${ord.buyer_name} vừa đặt cọc giữ chỗ món "${ord.product_title}"!`, 'success');
                     }
+                }
+            } else if (payload.eventType === 'UPDATE') {
+                const ord = payload.new;
+                const idx = this.depositOrders.findIndex(o => o.id === ord.id);
+                if (idx !== -1) {
+                    this.depositOrders[idx].status = ord.status;
+                }
+                if (ord.status === 'completed') {
+                    this.cleanupCompletedOrdersChats();
+                    this.renderChatMessages();
                 }
             }
         } else if (table === 'admin_warnings') {
@@ -547,10 +571,30 @@ class AppController {
                     showToast(`🎉 Người bán ${order.seller} đã xác nhận đơn hàng "${order.productTitle}"! Hai bạn hãy gặp nhau trao đổi đồ.`, 'success');
                 }
                 if (order.status === 'completed' && (order.buyer === this.user.name || order.seller === this.user.name)) {
+                    this.cleanupCompletedOrdersChats();
+                    this.renderChatMessages();
                     if (window.sound) window.sound.playSuccess();
-                    showToast(`🎉 Giao dịch đơn "${order.productTitle}" đã hoàn tất 100%! Bài đăng đã tự động gỡ.`, 'success');
+                    showToast(`🎉 Giao dịch đơn "${order.productTitle}" đã hoàn tất 100%! Bài đăng và lịch sử tin nhắn đã tự động dọn dẹp.`, 'success');
                 }
             }
+        });
+
+        // 4c. Nhận tín hiệu xóa tin nhắn sau khi đơn hàng hoàn thành từ máy khác
+        window.UniPassOnlineSync.on('CHAT_DELETED', (data) => {
+            if (!data) return;
+            console.log('📡 [Online Sync] Nhận tín hiệu tự động xóa tin nhắn khi hoàn tất đơn hàng:', data);
+            this.chatMessages = this.chatMessages.filter(m => {
+                if (data.productId && m.productId === data.productId) return false;
+                if (data.orderId && m.orderId === data.orderId) return false;
+                if ((m.sender === data.buyer && m.receiver === data.seller) || 
+                    (m.sender === data.seller && m.receiver === data.buyer)) {
+                    return false;
+                }
+                return true;
+            });
+            this.saveChats();
+            this.renderChatMessages();
+            this.updateChatUnreadBadge();
         });
 
         // 4c. Nhận khiếu nại giao dịch mới từ sinh viên gửi Admin
@@ -677,6 +721,31 @@ class AppController {
         localStorage.setItem('unipass_shared_messages', JSON.stringify(this.chatMessages));
         if (this.syncChannel) {
             this.syncChannel.postMessage({ type: 'CHAT_UPDATED', messages: this.chatMessages });
+        }
+    }
+
+    // Tự động dọn dẹp các tin nhắn của các đơn hàng đã hoàn tất thành công (Bảo vệ quyền riêng tư)
+    cleanupCompletedOrdersChats() {
+        if (!this.depositOrders || this.depositOrders.length === 0 || !this.chatMessages || this.chatMessages.length === 0) return;
+        const completedOrders = this.depositOrders.filter(o => o.status === 'completed');
+        if (completedOrders.length === 0) return;
+
+        const initialCount = this.chatMessages.length;
+        completedOrders.forEach(o => {
+            this.chatMessages = this.chatMessages.filter(m => {
+                if (o.productId && m.productId === o.productId) return false;
+                if (m.orderId && m.orderId === o.id) return false;
+                if ((m.sender === o.buyer && m.receiver === o.seller) || 
+                    (m.sender === o.seller && m.receiver === o.buyer)) {
+                    return false;
+                }
+                return true;
+            });
+        });
+
+        if (this.chatMessages.length !== initialCount) {
+            console.log(`🧹 [UniPassApp] Đã tự động dọn dẹp ${initialCount - this.chatMessages.length} tin nhắn của các đơn đã hoàn thành.`);
+            this.saveChats();
         }
     }
 
@@ -1033,12 +1102,21 @@ class AppController {
                         }
                     }
 
-                    // Nút Khiếu Nại lên Admin (Boom hàng, hàng lỗi) cho mọi đơn chưa completed
+                    // Nút Nhắn Tin Trao Đổi và Khiếu Nại lên Admin cho mọi đơn chưa completed
                     if (o.status !== 'completed' && o.status !== 'closed_penalized') {
                         actionButtonsHtml += `
+                            <button class="btn-outline-chat" style="font-size:11px; padding:5px 9px; width:auto; margin:0; color:#0284c7; border-color:#93c5fd;" onclick="openChatBetweenUsers('${counterpartName}', { id: '${o.productId}', title: '${o.productTitle}' }, '${o.id}')">
+                                💬 Nhắn Tin Hẹn Gặp
+                            </button>
                             <button class="btn-outline-chat" style="font-size:11px; padding:5px 9px; width:auto; margin:0; color:#dc2626; border-color:#fca5a5;" onclick="openOrderDisputeModal('${o.id}')">
                                 🚨 Báo Boom Hàng / Lỗi (Admin)
                             </button>
+                        `;
+                    } else if (o.status === 'completed') {
+                        actionButtonsHtml += `
+                            <span style="font-size:11px; color:#15803d; font-weight:700; background:#f0fdf4; padding:3px 8px; border-radius:4px; border:1px solid #bbf7d0;">
+                                🔒 Lịch sử tin nhắn đã tự động xóa bảo mật
+                            </span>
                         `;
                     }
 
@@ -1098,17 +1176,47 @@ class AppController {
             (m.sender === partnerName && m.receiver === this.user.name)
         );
 
+        // Kiểm tra xem giữa 2 bạn có đơn hàng nào đã hoàn thành hay không
+        const completedOrder = this.depositOrders.find(o => 
+            o.status === 'completed' &&
+            ((o.buyer === this.user.name && o.seller === partnerName) ||
+             (o.seller === this.user.name && o.buyer === partnerName))
+        );
+
         if (conversation.length === 0) {
-            area.innerHTML = `
-                <div style="text-align:center; color:#94a3b8; font-size:12.5px; margin-top:30px;">
-                    Chưa có tin nhắn nào giữa <strong>${this.user.name}</strong> và <strong>${partnerName}</strong>.<br>
-                    Hãy gõ tin nhắn bên dưới để bắt đầu trao đổi đồ!
-                </div>
-            `;
+            if (completedOrder) {
+                area.innerHTML = `
+                    <div style="text-align:center; padding:22px 14px; background:#f0fdf4; border:1.5px dashed #86efac; border-radius:12px; margin:20px 8px;">
+                        <span style="font-size:32px; display:block; margin-bottom:8px;">🤝🔒</span>
+                        <strong style="color:#15803d; font-size:13.5px; display:block; margin-bottom:4px;">Giao dịch "${completedOrder.productTitle}" đã hoàn tất thành công!</strong>
+                        <div style="font-size:12px; color:#475569; line-height:1.5;">
+                            Theo chính sách bảo vệ quyền riêng tư sinh viên UTC2, lịch sử tin nhắn cuộc trò chuyện đã <strong>tự động xóa hoàn toàn</strong> sau khi đơn hàng hoàn thành.
+                        </div>
+                    </div>
+                `;
+            } else {
+                area.innerHTML = `
+                    <div style="text-align:center; color:#94a3b8; font-size:12.5px; margin-top:30px;">
+                        Chưa có tin nhắn nào giữa <strong>${this.user.name}</strong> và <strong>${partnerName}</strong>.<br>
+                        Hãy gõ tin nhắn bên dưới để bắt đầu trao đổi đồ!
+                    </div>
+                `;
+            }
             return;
         }
 
-        area.innerHTML = conversation.map(m => {
+        // Hiển thị thanh thông tin sản phẩm đang trao đổi nếu có
+        let productNoticeHtml = '';
+        const currentProd = this.currentChatProduct || (conversation[conversation.length - 1].productTitle ? { title: conversation[conversation.length - 1].productTitle } : null);
+        if (currentProd && currentProd.title) {
+            productNoticeHtml = `
+                <div style="background:#eff6ff; border:1px solid #bfdbfe; border-radius:8px; padding:6px 10px; font-size:11.5px; color:#0284c7; margin-bottom:10px; text-align:center; font-weight:700;">
+                    📦 Đang trao đổi về: ${currentProd.title}
+                </div>
+            `;
+        }
+
+        area.innerHTML = productNoticeHtml + conversation.map(m => {
             const isMe = m.sender === this.user.name;
             return `
                 <div class="msg-bubble ${isMe ? 'sent' : 'received'}">
@@ -1835,9 +1943,14 @@ function logoutToAuthScreen() {
 // ==========================================
 // 5. CHAT GIỮA CÁC TÀI KHOẢN (THỦ CÔNG, KHÔNG CÓ BOT)
 // ==========================================
-function openChatBetweenUsers(targetPartnerName) {
+function openChatBetweenUsers(targetPartnerName, product = null, orderId = null) {
     if (targetPartnerName && targetPartnerName !== window.app.user.name) {
         window.app.currentChatPartner = targetPartnerName;
+        window.app.currentChatProduct = product || null;
+        window.app.currentChatOrderId = orderId || null;
+    } else if (product) {
+        window.app.currentChatProduct = product;
+        if (orderId) window.app.currentChatOrderId = orderId;
     }
     const partner = window.app.getChatPartnerName();
     const chatHeader = document.getElementById('chatHeaderName');
@@ -1866,12 +1979,18 @@ function sendManualMessage() {
     const now = new Date();
     const timeStr = `${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`;
 
+    const curProduct = window.app.currentChatProduct || null;
+    const curOrderId = window.app.currentChatOrderId || null;
+
     const newMsg = {
         id: 'MSG_' + Date.now(),
         sender: window.app.user.name,
         receiver: partnerName,
         text: text,
-        time: timeStr
+        time: timeStr,
+        productId: curProduct ? curProduct.id : null,
+        productTitle: curProduct ? curProduct.title : null,
+        orderId: curOrderId || null
     };
 
     window.app.chatMessages.push(newMsg);
@@ -1890,6 +2009,7 @@ function sendManualMessage() {
             sender: newMsg.sender,
             senderEmail: window.app.user.email,
             receiver: newMsg.receiver,
+            productId: newMsg.productId,
             text: newMsg.text,
             time: newMsg.time
         });
@@ -1901,7 +2021,7 @@ function sendManualMessage() {
 
 function openChatFromModal() {
     if (!currentCheckoutProduct) return;
-    openChatBetweenUsers(currentCheckoutProduct.seller);
+    openChatBetweenUsers(currentCheckoutProduct.seller, { id: currentCheckoutProduct.id, title: currentCheckoutProduct.title });
 }
 
 // ==========================================
@@ -2427,6 +2547,38 @@ function confirmTradeComplete(orderId, role) {
             }
         }
 
+        // TỰ ĐỘNG XÓA TIN NHẮN CUỘC TRÒ CHUYỆN LIÊN QUAN ĐẾN ĐƠN HÀNG (BẢO VỆ RIÊNG TƯ THEO doPasss.docx)
+        const buyerName = order.buyer;
+        const sellerName = order.seller;
+        const pId = order.productId;
+
+        window.app.chatMessages = window.app.chatMessages.filter(m => {
+            if (pId && m.productId === pId) return false;
+            if (m.orderId && m.orderId === order.id) return false;
+            if ((m.sender === buyerName && m.receiver === sellerName) || 
+                (m.sender === sellerName && m.receiver === buyerName)) {
+                return false;
+            }
+            return true;
+        });
+        window.app.saveChats();
+        window.app.renderChatMessages();
+
+        // Đồng bộ xóa tin nhắn trên Supabase Cloud
+        if (window.UniPassSupabase && window.UniPassSupabase.isConfigured()) {
+            window.UniPassSupabase.deleteChatMessagesForOrder(pId, buyerName, sellerName);
+        }
+
+        // Phát sóng xóa tin nhắn đa máy qua Realtime Sync
+        if (window.UniPassOnlineSync) {
+            window.UniPassOnlineSync.broadcastDeleteChat({
+                orderId: order.id,
+                productId: pId,
+                buyer: buyerName,
+                seller: sellerName
+            });
+        }
+
         window.app.saveOrders();
 
         if (window.UniPassSupabase && window.UniPassSupabase.isConfigured()) {
@@ -2437,7 +2589,7 @@ function confirmTradeComplete(orderId, role) {
         }
 
         if (window.sound) window.sound.playSuccess();
-        showToast(`🎉 Giao dịch thành công 100%! Cả hai bên đã xác nhận hoàn tất. Bài đăng "${order.productTitle}" đã được tự động gỡ khỏi hệ thống (+2 điểm uy tín)!`, 'success');
+        showToast(`🎉 Giao dịch thành công 100%! Cả hai bên đã xác nhận hoàn tất. Bài đăng "${order.productTitle}" và lịch sử chat đã được tự động dọn dẹp bảo mật (+2 điểm uy tín)!`, 'success');
     } else {
         // Chỉ mới 1 bên xác nhận
         order.status = 'pending_mutual';

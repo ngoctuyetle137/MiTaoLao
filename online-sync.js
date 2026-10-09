@@ -185,6 +185,9 @@
                 case 'POST_REJECTED':
                     this.emit('POST_REJECTED', payload);
                     break;
+                case 'CHAT_DELETED':
+                    this.emit('CHAT_DELETED', payload);
+                    break;
                 case 'ADMIN_WARNING':
                     this.emit('ADMIN_WARNING', payload.warning);
                     break;
@@ -261,6 +264,11 @@
         // Phát cập nhật đơn hàng (người bán xác nhận / 2 bên hoàn thành giao dịch)
         broadcastOrderUpdate: function (order) {
             return this.broadcast('ORDER_UPDATED', { order: order });
+        },
+
+        // Phát lệnh tự động xóa tin nhắn sau khi đơn hàng hoàn thành
+        broadcastDeleteChat: function (data) {
+            return this.broadcast('CHAT_DELETED', data);
         },
 
         // Phát hồ sơ khiếu nại giao dịch (Boom hàng, Hàng lỗi) gửi Admin
