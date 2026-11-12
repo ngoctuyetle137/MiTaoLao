@@ -455,10 +455,16 @@
                         </div>
                         <div class="filter-criterion-body disabled-criterion" id="filterBodyPrice">
                             <div class="price-range-inputs">
-                                <input type="text" id="filterPriceMin" value="Từ: 0 đ" readonly>
-                                <input type="text" id="filterPriceMax" value="Đến: 350k" readonly>
+                                <div style="flex:1;">
+                                    <label for="filterPriceMin" style="display:block; font-size:10.5px; color:#64748b; font-weight:600; margin-bottom:3px; text-align:left;">Giá từ (VNĐ)</label>
+                                    <input type="text" id="filterPriceMin" value="5000" placeholder="VD: 5000 hoặc 5k" inputmode="numeric">
+                                </div>
+                                <div style="flex:1;">
+                                    <label for="filterPriceMax" style="display:block; font-size:10.5px; color:#64748b; font-weight:600; margin-bottom:3px; text-align:left;">Đến (VNĐ)</label>
+                                    <input type="text" id="filterPriceMax" value="350000" placeholder="VD: 350000 hoặc 350k" inputmode="numeric">
+                                </div>
                             </div>
-                            <input type="range" class="price-slider-bar" id="priceRangeSlider" min="20000" max="650000" step="10000" value="350000">
+                            <input type="range" class="price-slider-bar" id="priceRangeSlider" min="5000" max="1000000" step="5000" value="350000">
                         </div>
                     </div>
 

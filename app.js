@@ -386,7 +386,7 @@ class AppController {
         this.notifications = [];
 
         this.filterMaxPrice = 350000;
-        this.filterMinPrice = 0;
+        this.filterMinPrice = 5000;
         this.filterMaxDistance = 5;
         this.filterCategoryKey = 'ALL';
         this.filterMinReputation = 90;
@@ -2669,9 +2669,13 @@ class AppController {
 
             // 1. Tiêu chí Giá (chỉ lọc khi ĐƯỢC TÍCH)
             if (enabled.price) {
-                const avlMatches = this.avl.rangeQuery(0, this.filterMaxPrice);
+                const minP = Math.max(0, Number(this.filterMinPrice) || 0);
+                const maxP = (this.filterMaxPrice !== null && this.filterMaxPrice !== undefined && Number.isFinite(Number(this.filterMaxPrice)))
+                    ? Number(this.filterMaxPrice)
+                    : Infinity;
+                const avlMatches = this.avl.rangeQuery(minP, maxP);
                 const avlIds = new Set(avlMatches.map(p => p.id));
-                items = items.filter(p => avlIds.has(p.id) || p.price <= this.filterMaxPrice);
+                items = items.filter(p => (avlIds.has(p.id) || (p.price >= minP && p.price <= maxP)) && p.price >= minP && p.price <= maxP);
             }
 
             // 2. Tiêu chí Danh mục (chỉ lọc khi ĐƯỢC TÍCH và không phải ALL)
@@ -2742,7 +2746,11 @@ class AppController {
             } else {
                 const enabled = this.filterCriteriaEnabled || {};
                 const activeCriteria = [];
-                if (enabled.price) activeCriteria.push(`Giá ≤ ${formatNumber(this.filterMaxPrice)}đ`);
+                if (enabled.price) {
+                    const minP = Math.max(0, Number(this.filterMinPrice) || 0);
+                    const maxP = Number(this.filterMaxPrice);
+                    activeCriteria.push(`Giá ${formatNumber(minP)}đ – ${Number.isFinite(maxP) ? formatNumber(maxP) + 'đ' : '∞'}`);
+                }
                 if (enabled.category && this.filterCategoryKey !== 'ALL') activeCriteria.push(`Danh mục: ${this.filterCategoryKey}`);
                 if (enabled.reputation) activeCriteria.push(`Uy tín ≥ ${this.filterMinReputation || 90}đ`);
 
@@ -6869,6 +6877,7 @@ function resetFilters() {
         category: false,
         reputation: false
     };
+    window.app.filterMinPrice = 5000;
     window.app.filterMaxPrice = 350000;
     window.app.filterCategoryKey = 'ALL';
     window.app.filterMinReputation = 90;
@@ -6882,9 +6891,11 @@ function resetFilters() {
     });
 
     const priceSlider = document.getElementById('priceRangeSlider');
+    const priceMinInput = document.getElementById('filterPriceMin');
     const priceMaxInput = document.getElementById('filterPriceMax');
     if (priceSlider) priceSlider.value = 350000;
-    if (priceMaxInput) priceMaxInput.value = 'Đến: 350k';
+    if (priceMinInput) priceMinInput.value = '5000';
+    if (priceMaxInput) priceMaxInput.value = '350000';
 
     const repSlider = document.getElementById('reputationRangeSlider');
     const repVal = document.getElementById('reputationDisplayVal');
@@ -6901,7 +6912,43 @@ function resetFilters() {
     showToast('Đã đặt lại toàn bộ bộ lọc và tiêu chí!', 'info');
 }
 
+function parseFilterPriceInput(rawStr, fallback) {
+    if (rawStr === null || rawStr === undefined) return fallback;
+    const str = String(rawStr).trim().toLowerCase();
+    if (!str) return fallback;
+    const trMatch = str.match(/^(\d+(?:[.,]\d+)?)\s*(tr|m)$/);
+    if (trMatch) {
+        return Math.max(0, Math.round(parseFloat(trMatch[1].replace(',', '.')) * 1000000));
+    }
+    const kMatch = str.match(/^(\d+(?:[.,]\d+)?)\s*k$/);
+    if (kMatch) {
+        return Math.max(0, Math.round(parseFloat(kMatch[1].replace(',', '.')) * 1000));
+    }
+    const digits = str.replace(/[^\d]/g, '');
+    if (!digits) return fallback;
+    return Math.max(0, parseInt(digits, 10));
+}
+
 function applyFilters() {
+    const priceMinInput = document.getElementById('filterPriceMin');
+    const priceMaxInput = document.getElementById('filterPriceMax');
+    const priceSlider = document.getElementById('priceRangeSlider');
+    if (priceMinInput) {
+        window.app.filterMinPrice = parseFilterPriceInput(priceMinInput.value, 5000);
+        priceMinInput.value = String(window.app.filterMinPrice);
+    }
+    if (priceMaxInput) {
+        window.app.filterMaxPrice = parseFilterPriceInput(priceMaxInput.value, 350000);
+        priceMaxInput.value = String(window.app.filterMaxPrice);
+        if (priceSlider) {
+            const sMax = parseInt(priceSlider.max, 10) || 1000000;
+            const sMin = parseInt(priceSlider.min, 10) || 5000;
+            priceSlider.value = Math.min(sMax, Math.max(sMin, window.app.filterMaxPrice));
+        }
+    }
+    if (window.app.filterCriteriaEnabled && window.app.filterCriteriaEnabled.price && window.app.filterMinPrice > window.app.filterMaxPrice) {
+        showToast('Giá tối thiểu đang lớn hơn giá tối đa, vui lòng kiểm tra lại khoảng giá!', 'warning');
+    }
     if (!window.app.isFilterActive) {
         const aside = document.getElementById('filterSidebarAside');
         const mainView = document.getElementById('mainHomeView');
@@ -8083,22 +8130,84 @@ window.adminDeletePostFromModal = adminDeletePostFromModal;
 // Khởi tạo listeners khi tải trang
 document.addEventListener('DOMContentLoaded', () => {
     const priceSlider = document.getElementById('priceRangeSlider');
+    const priceMinInput = document.getElementById('filterPriceMin');
     const priceMaxInput = document.getElementById('filterPriceMax');
+
+    const enablePriceCriterion = () => {
+        const chk = document.getElementById('chkFilterPrice');
+        const body = document.getElementById('filterBodyPrice');
+        if (chk && !chk.checked) {
+            chk.checked = true;
+            if (body) body.classList.remove('disabled-criterion');
+            if (!window.app.filterCriteriaEnabled) window.app.filterCriteriaEnabled = {};
+            window.app.filterCriteriaEnabled.price = true;
+        }
+    };
+
+    if (priceMinInput) {
+        priceMinInput.addEventListener('input', (e) => {
+            const raw = String(e.target.value || '').trim();
+            window.app.filterMinPrice = raw === '' ? 0 : parseFilterPriceInput(raw, 0);
+            enablePriceCriterion();
+            window.app.renderProducts();
+        });
+        priceMinInput.addEventListener('blur', (e) => {
+            const val = parseFilterPriceInput(e.target.value, 5000);
+            window.app.filterMinPrice = val;
+            e.target.value = String(val);
+            window.app.renderProducts();
+        });
+        priceMinInput.addEventListener('keydown', (e) => {
+            if (e.key === 'Enter') {
+                e.preventDefault();
+                applyFilters();
+            }
+        });
+    }
+
+    if (priceMaxInput) {
+        priceMaxInput.addEventListener('input', (e) => {
+            const raw = String(e.target.value || '').trim();
+            if (raw === '') {
+                window.app.filterMaxPrice = Infinity;
+            } else {
+                const val = parseFilterPriceInput(raw, 350000);
+                window.app.filterMaxPrice = val;
+                if (priceSlider) {
+                    const sMax = parseInt(priceSlider.max, 10) || 1000000;
+                    const sMin = parseInt(priceSlider.min, 10) || 5000;
+                    priceSlider.value = Math.min(sMax, Math.max(sMin, val));
+                }
+            }
+            enablePriceCriterion();
+            window.app.renderProducts();
+        });
+        priceMaxInput.addEventListener('blur', (e) => {
+            const val = parseFilterPriceInput(e.target.value, 350000);
+            window.app.filterMaxPrice = val;
+            e.target.value = String(val);
+            if (priceSlider) {
+                const sMax = parseInt(priceSlider.max, 10) || 1000000;
+                const sMin = parseInt(priceSlider.min, 10) || 5000;
+                priceSlider.value = Math.min(sMax, Math.max(sMin, val));
+            }
+            window.app.renderProducts();
+        });
+        priceMaxInput.addEventListener('keydown', (e) => {
+            if (e.key === 'Enter') {
+                e.preventDefault();
+                applyFilters();
+            }
+        });
+    }
+
     if (priceSlider) {
         priceSlider.addEventListener('input', (e) => {
             const val = parseInt(e.target.value);
             window.app.filterMaxPrice = val;
-            if (priceMaxInput) priceMaxInput.value = `Đến: ${Math.round(val / 1000)}k`;
+            if (priceMaxInput) priceMaxInput.value = String(val);
 
-            // Tự động tích chọn tiêu chí giá
-            const chk = document.getElementById('chkFilterPrice');
-            const body = document.getElementById('filterBodyPrice');
-            if (chk && !chk.checked) {
-                chk.checked = true;
-                if (body) body.classList.remove('disabled-criterion');
-                if (!window.app.filterCriteriaEnabled) window.app.filterCriteriaEnabled = {};
-                window.app.filterCriteriaEnabled.price = true;
-            }
+            enablePriceCriterion();
             window.app.renderProducts();
         });
     }
