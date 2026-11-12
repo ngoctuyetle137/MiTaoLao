@@ -375,6 +375,20 @@
             const client = this.getClient();
             if (!client) return false;
             try {
+                // 0. Đánh dấu hủy/xóa các đơn hàng đang cọc (chưa hoàn tất) gắn với bài viết này trước khi product_id bị ON DELETE SET NULL
+                try {
+                    await client
+                        .from('orders')
+                        .update({
+                            status: 'cancelled',
+                            notes: '[status:cancelled] [post_deleted] Đơn tự động hủy do bài đăng đã bị xóa'
+                        })
+                        .eq('product_id', productId)
+                        .neq('status', 'completed');
+                } catch (ordErr) {
+                    console.warn('⚠️ [Supabase] Cancel orphan orders notice:', ordErr.message);
+                }
+
                 // 1. Cập nhật status = 'deleted' (soft delete an toàn)
                 await client
                     .from('products')

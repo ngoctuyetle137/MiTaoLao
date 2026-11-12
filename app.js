@@ -440,6 +440,62 @@ class AppController {
         }
     }
 
+    removeOrdersForDeletedProduct(productId, productTitle = '') {
+        if (!Array.isArray(this.depositOrders) || this.depositOrders.length === 0) return false;
+        const targetId = productId ? String(productId) : '';
+        const targetTitle = productTitle ? productTitle.trim().toLowerCase() : '';
+        const prevLen = this.depositOrders.length;
+
+        this.depositOrders = this.depositOrders.filter(o => {
+            if (!o) return false;
+            if (o.status === 'completed') return true;
+            const oProdId = o.productId || o.product_id ? String(o.productId || o.product_id) : '';
+            const oTitle = o.productTitle ? o.productTitle.trim().toLowerCase() : '';
+            if (targetId && oProdId && oProdId === targetId) return false;
+            if (targetTitle && oTitle && oTitle === targetTitle) return false;
+            return true;
+        });
+
+        if (this.depositOrders.length !== prevLen) {
+            this.saveOrders();
+            this.updateDepositBadge();
+            this.renderProfile();
+            this.renderOrdersSection();
+            return true;
+        }
+        return false;
+    }
+
+    cleanupOrphanDepositOrders() {
+        if (!Array.isArray(this.depositOrders) || this.depositOrders.length === 0) return false;
+        const isCloudConfigured = Boolean(window.UniPassSupabase && window.UniPassSupabase.isConfigured());
+        if (isCloudConfigured && !this._hasCloudSyncedProducts) return false;
+
+        const activeProdIds = new Set((this.products || []).map(p => String(p.id)));
+        const activeProdTitles = new Set((this.products || []).map(p => (p.title || '').trim().toLowerCase()).filter(Boolean));
+        const prevLen = this.depositOrders.length;
+
+        this.depositOrders = this.depositOrders.filter(o => {
+            if (!o) return false;
+            if (o.status === 'cancelled' || (o.notes && o.notes.includes('[post_deleted]'))) return false;
+            if (o.status === 'completed') return true;
+            const oProdId = o.productId || o.product_id ? String(o.productId || o.product_id) : '';
+            if (oProdId && activeProdIds.has(oProdId)) return true;
+            // Nếu product_id bị ON DELETE SET NULL trên DB, kiểm tra thêm theo tiêu đề nếu bài vẫn còn tồn tại
+            if (!oProdId && o.productTitle && activeProdTitles.has(o.productTitle.trim().toLowerCase())) return true;
+            return false;
+        });
+
+        if (this.depositOrders.length !== prevLen) {
+            this.saveOrders();
+            this.updateDepositBadge();
+            this.renderProfile();
+            this.renderOrdersSection();
+            return true;
+        }
+        return false;
+    }
+
     init() {
         // Tải danh sách người dùng đã đăng ký từ localStorage (làm sạch, bảo vệ mật khẩu)
         const savedUsers = localStorage.getItem('unipass_registered_users');
@@ -808,6 +864,10 @@ class AppController {
                 const orderMap = new Map();
                 this.depositOrders.forEach(ord => { if (ord && ord.id) orderMap.set(ord.id, ord); });
                 mappedOrders.forEach(ord => {
+                    if (ord.status === 'cancelled' || (ord.notes && ord.notes.includes('[post_deleted]'))) {
+                        orderMap.delete(ord.id);
+                        return;
+                    }
                     const local = orderMap.get(ord.id);
                     const bDone = ord.buyerCompleted || (local ? local.buyerCompleted : false);
                     const sDone = ord.sellerCompleted || (local ? local.sellerCompleted : false);
@@ -823,6 +883,9 @@ class AppController {
                 this.depositOrders = Array.from(orderMap.values());
                 this.saveOrders();
             }
+
+            // Dọn các đơn đang đặt cọc mà bài viết đã bị xóa khỏi hệ thống
+            this.cleanupOrphanDepositOrders();
 
             // Đảm bảo LUÔN cập nhật trạng thái đã cọc / đã hoàn tất từ this.depositOrders sang this.products (kể cả khi cloudOrders rỗng hoặc offline)
             const completedProdIds = new Set(
@@ -942,6 +1005,7 @@ class AppController {
             const changed = buildSig(this.products) !== buildSig(nextProducts);
 
             this.products = nextProducts;
+            this._hasCloudSyncedProducts = true;
             if (changed || forceRender) {
                 this.saveProducts();
                 this.rebuildDSACache();
@@ -950,6 +1014,7 @@ class AppController {
                 this.renderProfile();
                 console.log(`✅ [Supabase] Đã đồng bộ chính xác ${this.products.length} sản phẩm từ Cloud.`);
             }
+            this.cleanupOrphanDepositOrders();
             return true;
         } catch (err) {
             console.warn('⚠️ [Supabase] Lỗi khi đồng bộ sản phẩm từ Cloud:', err);
@@ -1051,6 +1116,7 @@ class AppController {
                 if (clientStatus === 'deleted') {
                     this.recordDeletedProduct(updatedP.id);
                     this.products = this.products.filter(p => String(p.id) !== String(updatedP.id));
+                    this.removeOrdersForDeletedProduct(updatedP.id, updatedP.title);
                 } else {
                     const idx = this.products.findIndex(p => p.id === updatedP.id);
                     if (idx !== -1) {
@@ -1094,6 +1160,7 @@ class AppController {
                 if (targetId) {
                     this.recordDeletedProduct(targetId);
                     this.products = this.products.filter(p => String(p.id) !== String(targetId));
+                    this.removeOrdersForDeletedProduct(targetId);
                     this.saveProducts();
                     this.rebuildDSACache();
                     this.renderProducts();
@@ -1214,6 +1281,16 @@ class AppController {
                 const mSeller = (ord.notes && ord.notes.includes('[sellerCompleted:true]')) || (clientStatus === 'completed');
 
                 const idx = this.depositOrders.findIndex(o => o.id === ord.id);
+                if (clientStatus === 'cancelled' || (ord.notes && ord.notes.includes('[post_deleted]'))) {
+                    if (idx !== -1) {
+                        this.depositOrders.splice(idx, 1);
+                        this.saveOrders();
+                        this.renderProfile();
+                        this.updateDepositBadge();
+                        this.renderOrdersSection();
+                    }
+                    return;
+                }
                 if (idx !== -1) {
                     const prev = this.depositOrders[idx];
                     const bDone = mBuyer || prev.buyerCompleted;
@@ -1423,6 +1500,7 @@ class AppController {
         window.UniPassOnlineSync.on('DELETE_POST', (postId, isHistorical) => {
             if (!postId) return;
             this.recordDeletedProduct(postId);
+            this.removeOrdersForDeletedProduct(postId);
             const prevLen = this.products.length;
             this.products = this.products.filter(p => String(p.id) !== String(postId));
             if (this.products.length !== prevLen) {
@@ -2328,6 +2406,9 @@ class AppController {
                     type: 'post_expired',
                     relatedId: p.id
                 });
+
+                this.recordDeletedProduct(p.id);
+                this.removeOrdersForDeletedProduct(p.id, p.title);
 
                 if (window.UniPassSupabase && window.UniPassSupabase.isConfigured()) {
                     window.UniPassSupabase.deleteProduct(p.id);
@@ -3380,11 +3461,16 @@ class AppController {
                     const orderMap = new Map();
                     this.depositOrders.forEach(ord => { if (ord && ord.id) orderMap.set(ord.id, ord); });
                     mappedOrders.forEach(ord => {
+                        if (ord.status === 'cancelled' || (ord.notes && ord.notes.includes('[post_deleted]'))) {
+                            orderMap.delete(ord.id);
+                            return;
+                        }
                         const local = orderMap.get(ord.id);
                         orderMap.set(ord.id, { ...local, ...ord });
                     });
                     this.depositOrders = Array.from(orderMap.values());
                     this.saveOrders();
+                    this.cleanupOrphanDepositOrders();
 
                     // Xóa các sản phẩm đã hoàn tất giao dịch
                     const completedProdIds = new Set(
@@ -5281,6 +5367,7 @@ function adminDeletePost(postId) {
         window.app.saveProducts();
         window.app.rebuildDSACache();
         window.app.renderProducts();
+        window.app.removeOrdersForDeletedProduct(postId, deletedPost.title);
     }
     renderAdminPosts(); // Vẽ lại bảng
 
@@ -7418,10 +7505,13 @@ function confirmPublishPost() {
 function removePost(id) {
     if (confirm('Xác nhận xóa bài đăng này?')) {
         if (window.app) {
+            const targetPost = window.app.products.find(p => String(p.id) === String(id));
             window.app.recordDeletedProduct(id);
-            window.app.products = window.app.products.filter(p => p.id !== id);
+            window.app.products = window.app.products.filter(p => String(p.id) !== String(id));
             window.app.saveProducts();
+            window.app.rebuildDSACache();
             window.app.renderProducts();
+            window.app.removeOrdersForDeletedProduct(id, targetPost ? targetPost.title : '');
             window.app.renderProfile();
             window.app.renderAdminDashboard();
         }
@@ -7509,6 +7599,7 @@ function confirmCurrentPostDelete(targetId) {
     window.app.saveProducts();
     window.app.rebuildDSACache();
     window.app.renderProducts();
+    window.app.removeOrdersForDeletedProduct(postId, postTitle);
     window.app.renderProfile();
     window.app.renderAdminDashboard();
 
