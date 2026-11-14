@@ -9,7 +9,7 @@
  * 1. Trie + Max-Heap       : Tìm kiếm Autocomplete O(k) & Gợi ý từ khóa phổ biến
  * 2. AVL Tree              : Cây nhị phân tự cân bằng lọc giá theo khoảng O(log N + K)
  * 3. Segment Tree          : Phân đoạn giá cố định (0-50k, 50k-200k, 200k-500k, >500k)
- * 4. 2D KD-Tree            : Tìm láng giềng gần nhất (KNN) theo tọa độ UTC2 O(log N)
+ * 4. Graph + BFS           : Đồ thị sản phẩm & duyệt BFS gợi ý đồ tương đồng O(V + E)
  * 5. Message Queue (FIFO)  : Hàng đợi xử lý tin nhắn & thông báo thời gian thực O(1)
  * 6. Undo/Redo Stack (LIFO): Ngăn xếp lịch sử thao tác & hoàn tác bài đăng O(1)
  * 7. Hash Table            : Bảng băm Separate Chaining quản lý phiên đăng nhập O(1)
@@ -53,12 +53,6 @@ struct Product {
              << " | TimeMark: " << timemarkCode 
              << " | SV: " << seller << " (" << sellerRep << "d)" << endl;
     }
-};
-
-struct CampusPoint {
-    string name;
-    double x; // Toa do X tren ban do UTC2 (met)
-    double y; // Toa do Y tren ban do UTC2 (met)
 };
 
 // ============================================================================
@@ -291,79 +285,63 @@ public:
 };
 
 // ============================================================================
-// 4. 2D KD-TREE (TÌM LÁNG GIỀNG GẦN NHẤT CAMPUS UTC2 O(log N))
+// 4. GRAPH + BFS (ĐỀ XUẤT SẢN PHẨM TƯƠNG ĐỒNG)
 // ============================================================================
-struct KDNode {
-    CampusPoint point;
-    KDNode* left;
-    KDNode* right;
-
-    KDNode(const CampusPoint& pt) : point(pt), left(nullptr), right(nullptr) {}
-};
-
-class KDTree2D {
+class ProductGraph {
 private:
-    KDNode* root;
-
-    double distSquared(double x1, double y1, double x2, double y2) {
-        return (x1 - x2) * (x1 - x2) + (y1 - y2) * (y1 - y2);
-    }
-
-    KDNode* insertRec(KDNode* node, const CampusPoint& pt, int depth) {
-        if (!node) return new KDNode(pt);
-
-        int cd = depth % 2; // cd = 0 la truc X, cd = 1 la truc Y
-        if (cd == 0) {
-            if (pt.x < node->point.x) node->left = insertRec(node->left, pt, depth + 1);
-            else node->right = insertRec(node->right, pt, depth + 1);
-        } else {
-            if (pt.y < node->point.y) node->left = insertRec(node->left, pt, depth + 1);
-            else node->right = insertRec(node->right, pt, depth + 1);
-        }
-        return node;
-    }
-
-    void nearestRec(KDNode* node, double targetX, double targetY, int depth, KDNode*& bestNode, double& bestDist) {
-        if (!node) return;
-
-        double d = distSquared(node->point.x, node->point.y, targetX, targetY);
-        if (d < bestDist) {
-            bestDist = d;
-            bestNode = node;
-        }
-
-        int cd = depth % 2;
-        KDNode* nextBranch = nullptr;
-        KDNode* otherBranch = nullptr;
-
-        double delta = (cd == 0) ? (targetX - node->point.x) : (targetY - node->point.y);
-
-        if (delta < 0) {
-            nextBranch = node->left;
-            otherBranch = node->right;
-        } else {
-            nextBranch = node->right;
-            otherBranch = node->left;
-        }
-
-        nearestRec(nextBranch, targetX, targetY, depth + 1, bestNode, bestDist);
-        if (delta * delta < bestDist) {
-            nearestRec(otherBranch, targetX, targetY, depth + 1, bestNode, bestDist);
-        }
-    }
+    unordered_map<string, Product> products;
+    unordered_map<string, vector<pair<string, int>>> adjList; // <id, weight>
 
 public:
-    KDTree2D() : root(nullptr) {}
+    void addProduct(const Product& p) {
+        products[p.id] = p;
+        for (const auto& pair : products) {
+            const Product& other = pair.second;
+            if (other.id == p.id) continue;
 
-    void insert(const CampusPoint& pt) {
-        root = insertRec(root, pt, 0);
+            int weight = 0;
+            if (other.category == p.category) weight += 5;
+            if (!other.courseCode.empty() && other.courseCode == p.courseCode) weight += 10;
+            if (abs(other.price - p.price) <= 50000) weight += 3;
+
+            if (weight > 0) {
+                adjList[p.id].push_back({other.id, weight});
+                adjList[other.id].push_back({p.id, weight});
+            }
+        }
     }
 
-    CampusPoint findNearestNeighbor(double x, double y) {
-        KDNode* bestNode = nullptr;
-        double bestDist = 1e18;
-        nearestRec(root, x, y, 0, bestNode, bestDist);
-        return bestNode ? bestNode->point : CampusPoint{"Khong ro", 0, 0};
+    vector<Product> recommendSimilarBFS(const string& startId, int k = 3) {
+        vector<Product> recs;
+        if (products.find(startId) == products.end()) return recs;
+
+        unordered_map<string, bool> visited;
+        queue<string> q;
+
+        visited[startId] = true;
+        q.push(startId);
+
+        while (!q.empty() && (int)recs.size() < k) {
+            string u = q.front();
+            q.pop();
+
+            // Uu tien hang xom co trong so lon nhat
+            auto neighbors = adjList[u];
+            sort(neighbors.begin(), neighbors.end(), [](const pair<string, int>& a, const pair<string, int>& b) {
+                return a.second > b.second;
+            });
+
+            for (const auto& edge : neighbors) {
+                string v = edge.first;
+                if (!visited[v]) {
+                    visited[v] = true;
+                    recs.push_back(products[v]);
+                    q.push(v);
+                    if ((int)recs.size() >= k) break;
+                }
+            }
+        }
+        return recs;
     }
 };
 
@@ -541,7 +519,7 @@ public:
     TrieWithHeap trie;
     AVLTree avl;
     SegmentTreePrice segTree;
-    KDTree2D kdTree;
+    ProductGraph graph;
     MessageQueue chatQueue;
     UndoStack undoStack;
     AuthHashTable authTable;
@@ -564,18 +542,9 @@ public:
 
             avl.insert(p);
             segTree.insert(p);
+            graph.addProduct(p);
             newsFeed.insertHead(p);
         }
-
-        // Tọa độ các địa danh trong Campus UTC2 (met)
-        kdTree.insert({"Cong 1 Man Thien", 0, 0});
-        kdTree.insert({"Toa A1 - Hieu Bo", 150, 40});
-        kdTree.insert({"Toa A2 - Giang Duong", 220, 90});
-        kdTree.insert({"Khu E - Xuong Thuc Hanh", 350, 180});
-        kdTree.insert({"Thu Vien & Tu Hoc", 180, 120});
-        kdTree.insert({"KTX Co May UTC2", 500, 250});
-        kdTree.insert({"San Bong Da & TDTT", 420, 110});
-        kdTree.insert({"Can Tin Sinh Vien", 280, 70});
 
         // Phiên đăng nhập mẫu
         authTable.putSession({"SESSION_ADMIN_UTC2", "6651071091@st.utc2.edu.vn", "admin", 9999});
@@ -601,7 +570,7 @@ int main() {
         cout << "\n--- CHUC NANG KIEM THU THUAT TOAN (DSA TEST SUITE) ---" << endl;
         cout << "1. [Trie + Max-Heap] Tim kiem Autocomplete tu khoa O(k)" << endl;
         cout << "2. [AVL Tree] Loc gia theo khoang gia [Min, Max] O(log N + K)" << endl;
-        cout << "3. [2D KD-Tree] Tim diem pass do gan nhat theo toa do Campus UTC2" << endl;
+        cout << "3. [Graph + BFS] De xuat san pham tuong dong theo mon hoc / the loai" << endl;
         cout << "4. [Doubly Linked List] Xem bang tin Newsfeed & Thu nghiem xoa O(1)" << endl;
         cout << "5. [Hash Table] Kiem tra Session Token dang nhap O(1)" << endl;
         cout << "6. [Benchmark] Chay kiem thu hieu nang & toc do tat ca thuat toan" << endl;
@@ -651,13 +620,18 @@ int main() {
                 item.display();
             }
         } else if (choice == 3) {
-            cout << "\n[3. DEMO 2D KD-TREE LÁNG GIỀNG GẦN NHẤT]" << endl;
-            double x, y;
-            cout << "Nhap toa do sinh vien (X, Y met, vd: 200 100): ";
-            cin >> x >> y;
-            auto nearest = sys.kdTree.findNearestNeighbor(x, y);
-            cout << ">> Dia diem UTC2 gan ban nhat (O(log N)): " << nearest.name 
-                 << " tai toa do (" << nearest.x << ", " << nearest.y << ")" << endl;
+            cout << "\n[3. DEMO GRAPH + BFS RECOMMENDATION]" << endl;
+            cout << "Chon ma san pham goc de tim do tuong dong (P01, P02, P03, P04, P05, P06): ";
+            string pid;
+            cin >> pid;
+            auto start = chrono::high_resolution_clock::now();
+            auto res = sys.graph.recommendSimilarBFS(pid, 2);
+            auto end = chrono::high_resolution_clock::now();
+            auto elapsed = chrono::duration_cast<chrono::nanoseconds>(end - start).count();
+
+            cout << ">> Cac mon do tuong dong nhat tim duoc bang BFS (tim trong " << elapsed << " ns):" << endl;
+            if (res.empty()) cout << "   Khong tim thay mon tuong dong." << endl;
+            for (const auto& item : res) item.display();
         } else if (choice == 4) {
             cout << "\n[4. DEMO DOUBLY LINKED LIST - BANG TIN NEWSFEED]" << endl;
             cout << ">> Tong so mon do dang co tren Bang Tin: " << sys.newsFeed.size() << endl;
@@ -687,9 +661,9 @@ int main() {
                  << chrono::duration_cast<chrono::nanoseconds>(t2 - t1).count() << " ns" << endl;
 
             t1 = chrono::high_resolution_clock::now();
-            sys.kdTree.findNearestNeighbor(200, 100);
+            sys.graph.recommendSimilarBFS("P01", 2);
             t2 = chrono::high_resolution_clock::now();
-            cout << left << setw(35) << "3. 2D KD-Tree Nearest Neighbor" << setw(20) << "O(log N)" 
+            cout << left << setw(35) << "3. Graph + BFS Recommendation" << setw(20) << "O(V + E)" 
                  << chrono::duration_cast<chrono::nanoseconds>(t2 - t1).count() << " ns" << endl;
 
             t1 = chrono::high_resolution_clock::now();
