@@ -5,17 +5,15 @@
  * Đơn vị: Phân hiệu Trường Đại học Giao thông Vận tải tại TP.HCM (UTC2)
  * Dự án: Sàn Trao Đổi & Pass Đồ Sinh Viên UTC2Hand (doPasss.docx)
  *
- * DANH MỤC 9 CẤU TRÚC DỮ LIỆU & GIẢI THUẬT TRIỂN KHAI THEO ĐẶC TẢ:
+ * DANH MỤC CÁC CẤU TRÚC DỮ LIỆU & GIẢI THUẬT TRIỂN KHAI THEO ĐẶC TẢ:
  * 1. Trie + Max-Heap       : Tìm kiếm Autocomplete O(k) & Gợi ý từ khóa phổ biến
  * 2. AVL Tree              : Cây nhị phân tự cân bằng lọc giá theo khoảng O(log N + K)
  * 3. Segment Tree          : Phân đoạn giá cố định (0-50k, 50k-200k, 200k-500k, >500k)
- * 4. Graph + BFS           : Đồ thị sản phẩm & duyệt BFS gợi ý đồ tương đồng
- * 5. 2D KD-Tree            : Tìm láng giềng gần nhất (KNN) theo tọa độ UTC2 O(log N)
- * 6. Dijkstra Algorithm    : Tìm đường đi bộ ngắn nhất giữa các tòa nhà Campus UTC2
- * 7. Message Queue (FIFO)  : Hàng đợi xử lý tin nhắn & thông báo thời gian thực O(1)
- * 8. Undo/Redo Stack (LIFO): Ngăn xếp lịch sử thao tác & hoàn tác bài đăng O(1)
- * 9. Hash Table            : Bảng băm Separate Chaining quản lý phiên đăng nhập O(1)
- * 10. Doubly Linked List   : Danh sách liên kết kép Bảng tin Newsfeed O(1)
+ * 4. 2D KD-Tree            : Tìm láng giềng gần nhất (KNN) theo tọa độ UTC2 O(log N)
+ * 5. Message Queue (FIFO)  : Hàng đợi xử lý tin nhắn & thông báo thời gian thực O(1)
+ * 6. Undo/Redo Stack (LIFO): Ngăn xếp lịch sử thao tác & hoàn tác bài đăng O(1)
+ * 7. Hash Table            : Bảng băm Separate Chaining quản lý phiên đăng nhập O(1)
+ * 8. Doubly Linked List   : Danh sách liên kết kép Bảng tin Newsfeed O(1)
  * ============================================================================
  */
 
@@ -293,68 +291,7 @@ public:
 };
 
 // ============================================================================
-// 4. GRAPH + BFS (ĐỀ XUẤT SẢN PHẨM TƯƠNG ĐỒNG)
-// ============================================================================
-class ProductGraph {
-private:
-    unordered_map<string, Product> products;
-    unordered_map<string, vector<pair<string, int>>> adjList; // <id, weight>
-
-public:
-    void addProduct(const Product& p) {
-        products[p.id] = p;
-        for (const auto& pair : products) {
-            const Product& other = pair.second;
-            if (other.id == p.id) continue;
-
-            int weight = 0;
-            if (other.category == p.category) weight += 5;
-            if (!other.courseCode.empty() && other.courseCode == p.courseCode) weight += 10;
-            if (abs(other.price - p.price) <= 50000) weight += 3;
-
-            if (weight > 0) {
-                adjList[p.id].push_back({other.id, weight});
-                adjList[other.id].push_back({p.id, weight});
-            }
-        }
-    }
-
-    vector<Product> recommendSimilarBFS(const string& startId, int k = 3) {
-        vector<Product> recs;
-        if (products.find(startId) == products.end()) return recs;
-
-        unordered_map<string, bool> visited;
-        queue<string> q;
-
-        visited[startId] = true;
-        q.push(startId);
-
-        while (!q.empty() && (int)recs.size() < k) {
-            string u = q.front();
-            q.pop();
-
-            // Uu tien hang xom co trong so lon nhat
-            auto neighbors = adjList[u];
-            sort(neighbors.begin(), neighbors.end(), [](const pair<string, int>& a, const pair<string, int>& b) {
-                return a.second > b.second;
-            });
-
-            for (const auto& edge : neighbors) {
-                string v = edge.first;
-                if (!visited[v]) {
-                    visited[v] = true;
-                    recs.push_back(products[v]);
-                    q.push(v);
-                    if ((int)recs.size() >= k) break;
-                }
-            }
-        }
-        return recs;
-    }
-};
-
-// ============================================================================
-// 5. 2D KD-TREE (TÌM LÁNG GIỀNG GẦN NHẤT CAMPUS UTC2 O(log N))
+// 4. 2D KD-TREE (TÌM LÁNG GIỀNG GẦN NHẤT CAMPUS UTC2 O(log N))
 // ============================================================================
 struct KDNode {
     CampusPoint point;
@@ -431,64 +368,7 @@ public:
 };
 
 // ============================================================================
-// 6. THUẬT TOÁN DIJKSTRA (ĐƯỜNG ĐI NGẮN NHẤT TRONG CAMPUS UTC2)
-// ============================================================================
-class CampusDijkstra {
-private:
-    unordered_map<string, vector<pair<string, double>>> adj;
-
-public:
-    void addEdge(const string& u, const string& v, double weight) {
-        adj[u].push_back({v, weight});
-        adj[v].push_back({u, weight});
-    }
-
-    pair<double, vector<string>> findShortestPath(const string& start, const string& target) {
-        unordered_map<string, double> dist;
-        unordered_map<string, string> parent;
-        for (const auto& kv : adj) {
-            dist[kv.first] = 1e18;
-        }
-
-        priority_queue<pair<double, string>, vector<pair<double, string>>, greater<pair<double, string>>> pq;
-        dist[start] = 0;
-        pq.push({0, start});
-
-        while (!pq.empty()) {
-            double d = pq.top().first;
-            string u = pq.top().second;
-            pq.pop();
-
-            if (u == target) break;
-            if (d > dist[u]) continue;
-
-            for (const auto& edge : adj[u]) {
-                string v = edge.first;
-                double w = edge.second;
-                if (dist[u] + w < dist[v]) {
-                    dist[v] = dist[u] + w;
-                    parent[v] = u;
-                    pq.push({dist[v], v});
-                }
-            }
-        }
-
-        vector<string> path;
-        if (dist[target] >= 1e17) return { -1.0, path };
-
-        string curr = target;
-        while (curr != start && !curr.empty()) {
-            path.push_back(curr);
-            curr = parent[curr];
-        }
-        path.push_back(start);
-        reverse(path.begin(), path.end());
-        return { dist[target], path };
-    }
-};
-
-// ============================================================================
-// 7. MESSAGE QUEUE (FIFO) - XỬ LÝ GÓI TIN CHAT REALTIME
+// 5. MESSAGE QUEUE (FIFO) - XỬ LÝ GÓI TIN CHAT REALTIME
 // ============================================================================
 struct ChatPacket {
     string id;
@@ -518,7 +398,7 @@ public:
 };
 
 // ============================================================================
-// 8. UNDO/REDO STACK (LIFO) - HOÀN TÁC THAO TÁC BÀI ĐĂNG
+// 6. UNDO/REDO STACK (LIFO) - HOÀN TÁC THAO TÁC BÀI ĐĂNG
 // ============================================================================
 struct PostAction {
     string actionType; // "CREATE_POST", "DELETE_POST", "UPDATE_PRICE"
@@ -545,7 +425,7 @@ public:
 };
 
 // ============================================================================
-// 9. HASH TABLE (SEPARATE CHAINING) - QUẢN LÝ PHIÊN AUTHENTICATION O(1)
+// 7. HASH TABLE (SEPARATE CHAINING) - QUẢN LÝ PHIÊN AUTHENTICATION O(1)
 // ============================================================================
 struct SessionToken {
     string token;
@@ -590,7 +470,7 @@ public:
 };
 
 // ============================================================================
-// 10. DOUBLY LINKED LIST (BẢNG TIN NEWSFEED O(1) INSERT/DELETE HEAD)
+// 8. DOUBLY LINKED LIST (BẢNG TIN NEWSFEED O(1) INSERT/DELETE HEAD)
 // ============================================================================
 struct DLLNode {
     Product data;
@@ -661,9 +541,7 @@ public:
     TrieWithHeap trie;
     AVLTree avl;
     SegmentTreePrice segTree;
-    ProductGraph graph;
     KDTree2D kdTree;
-    CampusDijkstra dijkstra;
     MessageQueue chatQueue;
     UndoStack undoStack;
     AuthHashTable authTable;
@@ -686,7 +564,6 @@ public:
 
             avl.insert(p);
             segTree.insert(p);
-            graph.addProduct(p);
             newsFeed.insertHead(p);
         }
 
@@ -699,16 +576,6 @@ public:
         kdTree.insert({"KTX Co May UTC2", 500, 250});
         kdTree.insert({"San Bong Da & TDTT", 420, 110});
         kdTree.insert({"Can Tin Sinh Vien", 280, 70});
-
-        // Bản đồ đường đi bộ Dijkstra
-        dijkstra.addEdge("Cong 1 Man Thien", "Toa A1 - Hieu Bo", 150);
-        dijkstra.addEdge("Toa A1 - Hieu Bo", "Toa A2 - Giang Duong", 90);
-        dijkstra.addEdge("Toa A1 - Hieu Bo", "Thu Vien & Tu Hoc", 100);
-        dijkstra.addEdge("Toa A2 - Giang Duong", "Can Tin Sinh Vien", 70);
-        dijkstra.addEdge("Can Tin Sinh Vien", "San Bong Da & TDTT", 160);
-        dijkstra.addEdge("San Bong Da & TDTT", "KTX Co May UTC2", 180);
-        dijkstra.addEdge("Toa A2 - Giang Duong", "Khu E - Xuong Thuc Hanh", 190);
-        dijkstra.addEdge("Khu E - Xuong Thuc Hanh", "KTX Co May UTC2", 220);
 
         // Phiên đăng nhập mẫu
         authTable.putSession({"SESSION_ADMIN_UTC2", "6651071091@st.utc2.edu.vn", "admin", 9999});
@@ -734,14 +601,12 @@ int main() {
         cout << "\n--- CHUC NANG KIEM THU THUAT TOAN (DSA TEST SUITE) ---" << endl;
         cout << "1. [Trie + Max-Heap] Tim kiem Autocomplete tu khoa O(k)" << endl;
         cout << "2. [AVL Tree] Loc gia theo khoang gia [Min, Max] O(log N + K)" << endl;
-        cout << "3. [Graph + BFS] De xuat san pham tuong dong theo mon hoc / the loai" << endl;
-        cout << "4. [2D KD-Tree] Tim diem pass do gan nhat theo toa do Campus UTC2" << endl;
-        cout << "5. [Dijkstra] Tim lo trinh di bo ngan nhat giua 2 toa nha UTC2" << endl;
-        cout << "6. [Doubly Linked List] Xem bang tin Newsfeed & Thu nghiem xoa O(1)" << endl;
-        cout << "7. [Hash Table] Kiem tra Session Token dang nhap O(1)" << endl;
-        cout << "8. [Benchmark] Chay kiem thu hieu nang & toc do tat ca thuat toan" << endl;
+        cout << "3. [2D KD-Tree] Tim diem pass do gan nhat theo toa do Campus UTC2" << endl;
+        cout << "4. [Doubly Linked List] Xem bang tin Newsfeed & Thu nghiem xoa O(1)" << endl;
+        cout << "5. [Hash Table] Kiem tra Session Token dang nhap O(1)" << endl;
+        cout << "6. [Benchmark] Chay kiem thu hieu nang & toc do tat ca thuat toan" << endl;
         cout << "0. Thoat chuong trinh" << endl;
-        cout << "Moi ban chon (0-8): ";
+        cout << "Moi ban chon (0-6): ";
         if (!(cin >> choice)) {
             cin.clear();
             cin.ignore(1000, '\n');
@@ -786,46 +651,26 @@ int main() {
                 item.display();
             }
         } else if (choice == 3) {
-            cout << "\n[3. DEMO GRAPH + BFS RECOMMENDATION]" << endl;
-            cout << "Chon ma san pham goc de tim do tuong dong (P01, P02, P03, P04, P05, P06): ";
-            string pid;
-            cin >> pid;
-            auto res = sys.graph.recommendSimilarBFS(pid, 2);
-            cout << ">> Cac mon do tuong dong nhat tim duoc bang BFS:" << endl;
-            if (res.empty()) cout << "   Khong tim thay mon tuong dong." << endl;
-            for (const auto& item : res) item.display();
-        } else if (choice == 4) {
-            cout << "\n[4. DEMO 2D KD-TREE LÁNG GIỀNG GẦN NHẤT]" << endl;
+            cout << "\n[3. DEMO 2D KD-TREE LÁNG GIỀNG GẦN NHẤT]" << endl;
             double x, y;
             cout << "Nhap toa do sinh vien (X, Y met, vd: 200 100): ";
             cin >> x >> y;
             auto nearest = sys.kdTree.findNearestNeighbor(x, y);
             cout << ">> Dia diem UTC2 gan ban nhat (O(log N)): " << nearest.name 
                  << " tai toa do (" << nearest.x << ", " << nearest.y << ")" << endl;
-        } else if (choice == 5) {
-            cout << "\n[5. DEMO DIJKSTRA TÌM ĐƯỜNG ĐI CAMPUS UTC2]" << endl;
-            cout << "Diem bat dau (vd: 'Cong 1 Man Thien'): Cong 1 Man Thien" << endl;
-            cout << "Diem den (vd: 'KTX Co May UTC2'): KTX Co May UTC2" << endl;
-            auto pathResult = sys.dijkstra.findShortestPath("Cong 1 Man Thien", "KTX Co May UTC2");
-            cout << ">> Quang duong ngan nhat: " << pathResult.first << " met" << endl;
-            cout << ">> Lo trinh: ";
-            for (size_t i = 0; i < pathResult.second.size(); ++i) {
-                cout << pathResult.second[i] << (i + 1 < pathResult.second.size() ? " -> " : "");
-            }
-            cout << endl;
-        } else if (choice == 6) {
-            cout << "\n[6. DEMO DOUBLY LINKED LIST - BANG TIN NEWSFEED]" << endl;
+        } else if (choice == 4) {
+            cout << "\n[4. DEMO DOUBLY LINKED LIST - BANG TIN NEWSFEED]" << endl;
             cout << ">> Tong so mon do dang co tren Bang Tin: " << sys.newsFeed.size() << endl;
             sys.newsFeed.displayAll();
-        } else if (choice == 7) {
-            cout << "\n[7. DEMO HASH TABLE SEPARATE CHAINING (SESSION AUTH)]" << endl;
+        } else if (choice == 5) {
+            cout << "\n[5. DEMO HASH TABLE SEPARATE CHAINING (SESSION AUTH)]" << endl;
             SessionToken token;
             if (sys.authTable.getSession("SESSION_ADMIN_UTC2", token)) {
                 cout << ">> Xac thuc thanh cong O(1):" << endl;
                 cout << "   Email: " << token.email << " | Quyen: " << token.role << " | Xu: " << token.coins << endl;
             }
-        } else if (choice == 8) {
-            cout << "\n[8. BENCHMARK KIEM THU HIEU NANG TOAN BO CORE C++]" << endl;
+        } else if (choice == 6) {
+            cout << "\n[6. BENCHMARK KIEM THU HIEU NANG TOAN BO CORE C++]" << endl;
             cout << left << setw(35) << "Thuat Toan & Cau Truc" << setw(20) << "Do Phuc Tap" << "Toc do do duoc" << endl;
             cout << "-------------------------------------------------------------------------------" << endl;
             
@@ -848,16 +693,10 @@ int main() {
                  << chrono::duration_cast<chrono::nanoseconds>(t2 - t1).count() << " ns" << endl;
 
             t1 = chrono::high_resolution_clock::now();
-            sys.dijkstra.findShortestPath("Cong 1 Man Thien", "KTX Co May UTC2");
-            t2 = chrono::high_resolution_clock::now();
-            cout << left << setw(35) << "4. Campus Dijkstra Shortest Path" << setw(20) << "O((V+E)log V)" 
-                 << chrono::duration_cast<chrono::nanoseconds>(t2 - t1).count() << " ns" << endl;
-
-            t1 = chrono::high_resolution_clock::now();
             SessionToken s;
             sys.authTable.getSession("SESSION_ADMIN_UTC2", s);
             t2 = chrono::high_resolution_clock::now();
-            cout << left << setw(35) << "5. Hash Table Session Token" << setw(20) << "O(1)" 
+            cout << left << setw(35) << "4. Hash Table Session Token" << setw(20) << "O(1)" 
                  << chrono::duration_cast<chrono::nanoseconds>(t2 - t1).count() << " ns" << endl;
             cout << "-------------------------------------------------------------------------------" << endl;
             cout << ">> KET LUAN: He thong C++ dat chuan dap ung thoi gian thuc sieu toc (< 1ms)." << endl;
