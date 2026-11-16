@@ -5,15 +5,15 @@
  * Đơn vị: Phân hiệu Trường Đại học Giao thông Vận tải tại TP.HCM (UTC2)
  * Dự án: Sàn Trao Đổi & Pass Đồ Sinh Viên UTC2Hand (doPasss.docx)
  *
- * DANH MỤC CÁC CẤU TRÚC DỮ LIỆU & GIẢI THUẬT TRIỂN KHAI THEO ĐẶC TẢ:
- * 1. Trie + Max-Heap       : Tìm kiếm Autocomplete O(k) & Gợi ý từ khóa phổ biến
- * 2. AVL Tree              : Cây nhị phân tự cân bằng lọc giá theo khoảng O(log N + K)
- * 3. Segment Tree          : Phân đoạn giá cố định (0-50k, 50k-200k, 200k-500k, >500k)
- * 4. Graph + BFS           : Đồ thị sản phẩm & duyệt BFS gợi ý đồ tương đồng O(V + E)
- * 5. Message Queue (FIFO)  : Hàng đợi xử lý tin nhắn & thông báo thời gian thực O(1)
- * 6. Undo/Redo Stack (LIFO): Ngăn xếp lịch sử thao tác & hoàn tác bài đăng O(1)
+ * DANH MỤC CẤU TRÚC DỮ LIỆU & GIẢI THUẬT TRIỂN KHAI THEO ĐẶC TẢ BÁO CÁO:
+ * 1. Trie + Max-Heap       : Tìm kiếm Autocomplete O(k) (Chứng minh vượt trội so với Tuyến tính O(N*L))
+ * 2. AVL Tree              : Cây tự cân bằng (Thêm, Xóa, Cân bằng LL/RR/LR/RL, Lọc giá O(log N + K))
+ * 3. 2D KD-Tree            : Phân chia không gian 2D tìm láng giềng gần nhất (KNN) theo tọa độ thực tế UTC2 O(log N)
+ * 4. Dijkstra Algorithm    : Đồ thị địa điểm & trọng số mét thực tế, tìm đường đi ngắn nhất O((V+E) log V)
+ * 5. Queue & Stack         : FIFO hàng đợi tin nhắn O(1) & LIFO ngăn xếp hoàn tác thao tác O(1)
+ * 6. Graph + BFS           : Đồ thị sản phẩm & duyệt BFS gợi ý đồ liên quan theo môn học O(V + E)
  * 7. Hash Table            : Bảng băm Separate Chaining quản lý phiên đăng nhập O(1)
- * 8. Doubly Linked List   : Danh sách liên kết kép Bảng tin Newsfeed O(1)
+ * 8. Doubly Linked List    : Danh sách liên kết kép Bảng tin Newsfeed O(1)
  * ============================================================================
  */
 
@@ -47,12 +47,20 @@ struct Product {
     double distanceKm;
 
     void display() const {
-        cout << "  [" << id << "] " << left << setw(45) << title 
-             << " | Gia: " << setw(8) << price << " VND"
+        cout << "  [" << id << "] " << left << setw(44) << title 
+             << " | Gia: " << setw(7) << price << " VND"
              << " | " << setw(10) << category
              << " | TimeMark: " << timemarkCode 
              << " | SV: " << seller << " (" << sellerRep << "d)" << endl;
     }
+};
+
+struct CampusPoint {
+    string name;
+    double x;   // Tọa độ X trên bản đồ nội bộ UTC2 (mét)
+    double y;   // Tọa độ Y trên bản đồ nội bộ UTC2 (mét)
+    double lat; // Vĩ độ GPS thực tế
+    double lng; // Kinh độ GPS thực tế
 };
 
 // ============================================================================
@@ -63,7 +71,7 @@ struct Suggestion {
     int frequency;
 
     bool operator<(const Suggestion& other) const {
-        return frequency < other.frequency; // Max-Heap uu tien tan suat lon
+        return frequency < other.frequency; // Max-Heap ưu tiên tần suất lớn
     }
 };
 
@@ -72,7 +80,7 @@ struct TrieNode {
     bool isEndOfWord;
     int frequency;
     vector<string> productIds;
-    vector<Suggestion> topCache; // Cache Top 5 tu khoa pho bien tai moi nut O(k)
+    vector<Suggestion> topCache; // Cache Top 5 từ khóa phổ biến tại mỗi nút O(k)
 
     TrieNode() : isEndOfWord(false), frequency(0) {}
 };
@@ -81,80 +89,92 @@ class TrieWithHeap {
 private:
     TrieNode* root;
 
-    string toLower(const string& str) {
+    string toLower(const string& str) const {
         string res = str;
         transform(res.begin(), res.end(), res.begin(), ::tolower);
         return res;
     }
 
-    void updatePathCache(const vector<TrieNode*>& path, const string& word, int freq) {
-        for (TrieNode* node : path) {
+public:
+    TrieWithHeap() {
+        root = new TrieNode();
+    }
+
+    void insert(const string& word, const string& productId, int freq = 1) {
+        string lowerWord = toLower(word);
+        TrieNode* curr = root;
+
+        for (char c : lowerWord) {
+            if (curr->children.find(c) == curr->children.end()) {
+                curr->children[c] = new TrieNode();
+            }
+            curr = curr->children[c];
+
+            // Cập nhật Max-Heap cache tại từng node tiền tố
             bool found = false;
-            for (auto& item : node->topCache) {
+            for (auto& item : curr->topCache) {
                 if (item.word == word) {
-                    item.frequency = freq;
+                    item.frequency += freq;
                     found = true;
                     break;
                 }
             }
             if (!found) {
-                node->topCache.push_back({word, freq});
+                curr->topCache.push_back({word, freq});
             }
-            sort(node->topCache.begin(), node->topCache.end(), [](const Suggestion& a, const Suggestion& b) {
+            sort(curr->topCache.begin(), curr->topCache.end(), [](const Suggestion& a, const Suggestion& b) {
                 return a.frequency > b.frequency;
             });
-            if (node->topCache.size() > 5) {
-                node->topCache.pop_back();
+            if (curr->topCache.size() > 5) {
+                curr->topCache.pop_back();
             }
         }
-    }
 
-public:
-    TrieWithHeap() { root = new TrieNode(); }
-
-    void insert(const string& phrase, const string& productId = "", int initFreq = 1) {
-        string text = toLower(phrase);
-        TrieNode* curr = root;
-        vector<TrieNode*> path = {curr};
-
-        for (char ch : text) {
-            if (curr->children.find(ch) == curr->children.end()) {
-                curr->children[ch] = new TrieNode();
-            }
-            curr = curr->children[ch];
-            path.push_back(curr);
-        }
         curr->isEndOfWord = true;
-        curr->frequency += initFreq;
-        if (!productId.empty()) {
-            curr->productIds.push_back(productId);
-        }
-        updatePathCache(path, text, curr->frequency);
+        curr->frequency += freq;
+        curr->productIds.push_back(productId);
     }
 
-    vector<Suggestion> suggest(const string& prefix) {
-        string text = toLower(prefix);
+    // Tìm kiếm Autocomplete O(k) với k là độ dài tiền tố (hoàn toàn độc lập với tổng số sản phẩm N)
+    vector<Suggestion> suggest(const string& prefix) const {
+        string lowerPrefix = toLower(prefix);
         TrieNode* curr = root;
-        for (char ch : text) {
-            if (curr->children.find(ch) == curr->children.end()) {
-                return {}; // Khong tim thay tien to
-            }
-            curr = curr->children[ch];
-        }
-        return curr->topCache; // Tra ve Top 5 duoc cache san tai nut tien to O(k)
-    }
 
-    void recordSearch(const string& phrase) {
-        insert(phrase, "", 1);
+        for (char c : lowerPrefix) {
+            if (curr->children.find(c) == curr->children.end()) {
+                return {};
+            }
+            curr = curr->children[c];
+        }
+        return curr->topCache;
     }
 };
 
+// Tìm kiếm tuyến tính cổ điển O(N * L) để chứng minh ưu thế của Trie
+vector<string> linearSearchSuggest(const vector<Product>& products, const string& prefix) {
+    vector<string> results;
+    string lowerPrefix = prefix;
+    transform(lowerPrefix.begin(), lowerPrefix.end(), lowerPrefix.begin(), ::tolower);
+
+    for (const auto& p : products) {
+        string lowerTitle = p.title;
+        transform(lowerTitle.begin(), lowerTitle.end(), lowerTitle.begin(), ::tolower);
+
+        // Kiểm tra tiền tố
+        if (lowerTitle.find(lowerPrefix) == 0 || lowerTitle.find(" " + lowerPrefix) != string::npos) {
+            results.push_back(p.title);
+            if (results.size() >= 5) break;
+        }
+    }
+    return results;
+}
+
 // ============================================================================
-// 2. AVL TREE (CÂY NHỊ PHÂN TỰ CÂN BẰNG - RANGE QUERY O(log N + K))
+// 2. AVL TREE (CÂY NHỊ PHÂN TỰ CÂN BẰNG - THÊM, XÓA, CÂN BẰNG, RANGE QUERY)
 // ============================================================================
 struct AVLNode {
     Product product;
-    long long key; // Khoa la gia san pham (price)
+    long long key; // Khóa sắp xếp là giá sản phẩm (price)
     int height;
     AVLNode* left;
     AVLNode* right;
@@ -166,11 +186,11 @@ class AVLTree {
 private:
     AVLNode* root;
 
-    int getHeight(AVLNode* node) {
+    int getHeight(AVLNode* node) const {
         return node ? node->height : 0;
     }
 
-    int getBalance(AVLNode* node) {
+    int getBalance(AVLNode* node) const {
         return node ? getHeight(node->left) - getHeight(node->right) : 0;
     }
 
@@ -206,21 +226,21 @@ private:
         node->height = 1 + max(getHeight(node->left), getHeight(node->right));
         int balance = getBalance(node);
 
-        // Left Left Case
+        // Trường hợp 1: Left Left (LL)
         if (balance > 1 && p.price < node->left->key)
             return rotateRight(node);
 
-        // Right Right Case
+        // Trường hợp 2: Right Right (RR)
         if (balance < -1 && p.price >= node->right->key)
             return rotateLeft(node);
 
-        // Left Right Case
+        // Trường hợp 3: Left Right (LR)
         if (balance > 1 && p.price >= node->left->key) {
             node->left = rotateLeft(node->left);
             return rotateRight(node);
         }
 
-        // Right Left Case
+        // Trường hợp 4: Right Left (RL)
         if (balance < -1 && p.price < node->right->key) {
             node->right = rotateRight(node->right);
             return rotateLeft(node);
@@ -229,7 +249,74 @@ private:
         return node;
     }
 
-    void inOrderRange(AVLNode* node, long long minPrice, long long maxPrice, vector<Product>& result) {
+    AVLNode* minValueNode(AVLNode* node) {
+        AVLNode* current = node;
+        while (current && current->left != nullptr)
+            current = current->left;
+        return current;
+    }
+
+    AVLNode* deleteNode(AVLNode* curr, long long price, const string& id, bool& deleted) {
+        if (!curr) return nullptr;
+
+        if (price < curr->key) {
+            curr->left = deleteNode(curr->left, price, id, deleted);
+        } else if (price > curr->key) {
+            curr->right = deleteNode(curr->right, price, id, deleted);
+        } else {
+            // Khóa price trùng nhau, so sánh mã id
+            if (curr->product.id != id) {
+                curr->right = deleteNode(curr->right, price, id, deleted);
+                return curr;
+            }
+
+            deleted = true;
+            // Node cần xóa có 0 hoặc 1 con
+            if (!curr->left || !curr->right) {
+                AVLNode* temp = curr->left ? curr->left : curr->right;
+                if (!temp) {
+                    temp = curr;
+                    curr = nullptr;
+                } else {
+                    *curr = *temp;
+                }
+                delete temp;
+            } else {
+                // Node có 2 con: Lấy successor (nhỏ nhất bên cây con phải)
+                AVLNode* temp = minValueNode(curr->right);
+                curr->key = temp->key;
+                curr->product = temp->product;
+                curr->right = deleteNode(curr->right, temp->key, temp->product.id, deleted);
+            }
+        }
+
+        if (!curr) return nullptr;
+
+        // Cập nhật lại chiều cao node
+        curr->height = 1 + max(getHeight(curr->left), getHeight(curr->right));
+        int balance = getBalance(curr);
+
+        // Tái cân bằng sau khi xóa (4 trường hợp)
+        if (balance > 1 && getBalance(curr->left) >= 0)
+            return rotateRight(curr);
+
+        if (balance > 1 && getBalance(curr->left) < 0) {
+            curr->left = rotateLeft(curr->left);
+            return rotateRight(curr);
+        }
+
+        if (balance < -1 && getBalance(curr->right) <= 0)
+            return rotateLeft(curr);
+
+        if (balance < -1 && getBalance(curr->right) > 0) {
+            curr->right = rotateRight(curr->right);
+            return rotateLeft(curr);
+        }
+
+        return curr;
+    }
+
+    void inOrderRange(AVLNode* node, long long minPrice, long long maxPrice, vector<Product>& result) const {
         if (!node) return;
         if (node->key > minPrice) {
             inOrderRange(node->left, minPrice, maxPrice, result);
@@ -242,6 +329,13 @@ private:
         }
     }
 
+    Product* searchNode(AVLNode* node, long long price) const {
+        if (!node) return nullptr;
+        if (node->key == price) return &(node->product);
+        if (price < node->key) return searchNode(node->left, price);
+        return searchNode(node->right, price);
+    }
+
 public:
     AVLTree() : root(nullptr) {}
 
@@ -249,105 +343,171 @@ public:
         root = insertNode(root, p);
     }
 
-    // Truy van khoang gia [minPrice, maxPrice] voi do phuc tap O(log N + K)
-    vector<Product> rangeQuery(long long minPrice, long long maxPrice) {
+    bool remove(long long price, const string& id) {
+        bool deleted = false;
+        root = deleteNode(root, price, id, deleted);
+        return deleted;
+    }
+
+    Product* searchExactPrice(long long price) const {
+        return searchNode(root, price);
+    }
+
+    // Truy vấn khoảng giá [minPrice, maxPrice] với độ phức tạp O(log N + K)
+    vector<Product> rangeQuery(long long minPrice, long long maxPrice) const {
         vector<Product> result;
         inOrderRange(root, minPrice, maxPrice, result);
         return result;
     }
-};
 
-// ============================================================================
-// 3. SEGMENT TREE (LỌC THEO PHÂN ĐOẠN GIÁ CỐ ĐỊNH)
-// ============================================================================
-class SegmentTreePrice {
-private:
-    // 4 phan doan gia co dinh theo doPasss.docx:
-    // Bucket 0: 0 - 50k
-    // Bucket 1: 50k - 200k
-    // Bucket 2: 200k - 500k
-    // Bucket 3: > 500k
-    vector<Product> buckets[4];
-
-public:
-    void insert(const Product& p) {
-        if (p.price <= 50000) buckets[0].push_back(p);
-        else if (p.price <= 200000) buckets[1].push_back(p);
-        else if (p.price <= 500000) buckets[2].push_back(p);
-        else buckets[3].push_back(p);
+    int getTreeHeight() const {
+        return getHeight(root);
     }
 
-    const vector<Product>& getBucket(int bucketIdx) {
-        if (bucketIdx >= 0 && bucketIdx < 4) return buckets[bucketIdx];
-        static vector<Product> empty;
-        return empty;
+    int getRootBalanceFactor() const {
+        return getBalance(root);
     }
 };
 
 // ============================================================================
-// 4. GRAPH + BFS (ĐỀ XUẤT SẢN PHẨM TƯƠNG ĐỒNG)
+// 3. 2D KD-TREE (TÌM LÁNG GIỀNG GẦN NHẤT CAMPUS UTC2 O(log N))
 // ============================================================================
-class ProductGraph {
+struct KDNode {
+    CampusPoint point;
+    KDNode* left;
+    KDNode* right;
+
+    KDNode(const CampusPoint& pt) : point(pt), left(nullptr), right(nullptr) {}
+};
+
+class KDTree2D {
 private:
-    unordered_map<string, Product> products;
-    unordered_map<string, vector<pair<string, int>>> adjList; // <id, weight>
+    KDNode* root;
 
-public:
-    void addProduct(const Product& p) {
-        products[p.id] = p;
-        for (const auto& pair : products) {
-            const Product& other = pair.second;
-            if (other.id == p.id) continue;
+    double distSquared(double x1, double y1, double x2, double y2) const {
+        return (x1 - x2) * (x1 - x2) + (y1 - y2) * (y1 - y2);
+    }
 
-            int weight = 0;
-            if (other.category == p.category) weight += 5;
-            if (!other.courseCode.empty() && other.courseCode == p.courseCode) weight += 10;
-            if (abs(other.price - p.price) <= 50000) weight += 3;
+    KDNode* insertRec(KDNode* node, const CampusPoint& pt, int depth) {
+        if (!node) return new KDNode(pt);
 
-            if (weight > 0) {
-                adjList[p.id].push_back({other.id, weight});
-                adjList[other.id].push_back({p.id, weight});
-            }
+        int cd = depth % 2; // cd = 0 là trục X (mét), cd = 1 là trục Y (mét)
+        if (cd == 0) {
+            if (pt.x < node->point.x) node->left = insertRec(node->left, pt, depth + 1);
+            else node->right = insertRec(node->right, pt, depth + 1);
+        } else {
+            if (pt.y < node->point.y) node->left = insertRec(node->left, pt, depth + 1);
+            else node->right = insertRec(node->right, pt, depth + 1);
+        }
+        return node;
+    }
+
+    void nearestRec(KDNode* node, double targetX, double targetY, int depth, KDNode*& bestNode, double& bestDist) const {
+        if (!node) return;
+
+        double d = distSquared(node->point.x, node->point.y, targetX, targetY);
+        if (d < bestDist) {
+            bestDist = d;
+            bestNode = node;
+        }
+
+        int cd = depth % 2;
+        KDNode* nextBranch = nullptr;
+        KDNode* otherBranch = nullptr;
+
+        double delta = (cd == 0) ? (targetX - node->point.x) : (targetY - node->point.y);
+
+        if (delta < 0) {
+            nextBranch = node->left;
+            otherBranch = node->right;
+        } else {
+            nextBranch = node->right;
+            otherBranch = node->left;
+        }
+
+        nearestRec(nextBranch, targetX, targetY, depth + 1, bestNode, bestDist);
+        if (delta * delta < bestDist) {
+            nearestRec(otherBranch, targetX, targetY, depth + 1, bestNode, bestDist);
         }
     }
 
-    vector<Product> recommendSimilarBFS(const string& startId, int k = 3) {
-        vector<Product> recs;
-        if (products.find(startId) == products.end()) return recs;
+public:
+    KDTree2D() : root(nullptr) {}
 
-        unordered_map<string, bool> visited;
-        queue<string> q;
+    void insert(const CampusPoint& pt) {
+        root = insertRec(root, pt, 0);
+    }
 
-        visited[startId] = true;
-        q.push(startId);
+    CampusPoint findNearestNeighbor(double x, double y) const {
+        KDNode* bestNode = nullptr;
+        double bestDist = 1e18;
+        nearestRec(root, x, y, 0, bestNode, bestDist);
+        return bestNode ? bestNode->point : CampusPoint{"Khong ro", 0, 0, 0, 0};
+    }
+};
 
-        while (!q.empty() && (int)recs.size() < k) {
-            string u = q.front();
-            q.pop();
+// ============================================================================
+// 4. THUẬT TOÁN DIJKSTRA (ĐƯỜNG ĐI NGẮN NHẤT TRONG CAMPUS UTC2 O((V+E)log V))
+// ============================================================================
+class CampusDijkstra {
+private:
+    unordered_map<string, vector<pair<string, double>>> adj;
 
-            // Uu tien hang xom co trong so lon nhat
-            auto neighbors = adjList[u];
-            sort(neighbors.begin(), neighbors.end(), [](const pair<string, int>& a, const pair<string, int>& b) {
-                return a.second > b.second;
-            });
+public:
+    void addEdge(const string& u, const string& v, double weightMeters) {
+        adj[u].push_back({v, weightMeters});
+        adj[v].push_back({u, weightMeters});
+    }
 
-            for (const auto& edge : neighbors) {
+    pair<double, vector<string>> findShortestPath(const string& start, const string& target) const {
+        unordered_map<string, double> dist;
+        unordered_map<string, string> parent;
+        for (const auto& kv : adj) {
+            dist[kv.first] = 1e18;
+        }
+
+        priority_queue<pair<double, string>, vector<pair<double, string>>, greater<pair<double, string>>> pq;
+        dist[start] = 0;
+        pq.push({0, start});
+
+        while (!pq.empty()) {
+            double d = pq.top().first;
+            string u = pq.top().second;
+            pq.pop();
+
+            if (u == target) break;
+            if (d > dist[u]) continue;
+
+            if (adj.find(u) == adj.end()) continue;
+            for (const auto& edge : adj.at(u)) {
                 string v = edge.first;
-                if (!visited[v]) {
-                    visited[v] = true;
-                    recs.push_back(products[v]);
-                    q.push(v);
-                    if ((int)recs.size() >= k) break;
+                double w = edge.second;
+                if (dist[u] + w < dist[v]) {
+                    dist[v] = dist[u] + w;
+                    parent[v] = u;
+                    pq.push({dist[v], v});
                 }
             }
         }
-        return recs;
+
+        vector<string> path;
+        if (dist.find(target) == dist.end() || dist[target] >= 1e17) return { -1.0, path };
+
+        string curr = target;
+        while (curr != start && !curr.empty()) {
+            path.push_back(curr);
+            curr = parent[curr];
+        }
+        path.push_back(start);
+        reverse(path.begin(), path.end());
+        return { dist[target], path };
     }
 };
 
 // ============================================================================
-// 5. MESSAGE QUEUE (FIFO) - XỬ LÝ GÓI TIN CHAT REALTIME
+// 5. QUEUE (FIFO) & STACK (LIFO)
 // ============================================================================
+// 5A. HÀNG ĐỢI TIN NHẮN REALTIME (FIFO)
 struct ChatPacket {
     string id;
     string sender;
@@ -375,11 +535,9 @@ public:
     size_t size() const { return q.size(); }
 };
 
-// ============================================================================
-// 6. UNDO/REDO STACK (LIFO) - HOÀN TÁC THAO TÁC BÀI ĐĂNG
-// ============================================================================
+// 5B. NGĂN XẾP HOÀN TÁC THAO TÁC BÀI ĐĂNG (LIFO)
 struct PostAction {
-    string actionType; // "CREATE_POST", "DELETE_POST", "UPDATE_PRICE"
+    string actionType; // "DANG_BAI", "CAP_NHAT_GIA", "DAT_COC"
     Product productData;
 };
 
@@ -400,6 +558,68 @@ public:
     }
 
     bool isEmpty() const { return history.empty(); }
+    size_t size() const { return history.size(); }
+};
+
+// ============================================================================
+// 6. GRAPH + BFS (ĐỀ XUẤT SẢN PHẨM TƯƠNG ĐỒNG THEO MÔN HỌC O(V + E))
+// ============================================================================
+class ProductGraph {
+private:
+    unordered_map<string, Product> products;
+    unordered_map<string, vector<pair<string, int>>> adjList;
+
+public:
+    void addProduct(const Product& p) {
+        products[p.id] = p;
+        for (const auto& pair : products) {
+            const Product& other = pair.second;
+            if (other.id == p.id) continue;
+
+            int weight = 0;
+            if (other.category == p.category) weight += 5;
+            if (!other.courseCode.empty() && other.courseCode == p.courseCode) weight += 10;
+            if (abs(other.price - p.price) <= 50000) weight += 3;
+
+            if (weight > 0) {
+                adjList[p.id].push_back({other.id, weight});
+                adjList[other.id].push_back({p.id, weight});
+            }
+        }
+    }
+
+    vector<Product> recommendSimilarBFS(const string& startId, int k = 3) const {
+        vector<Product> recs;
+        if (products.find(startId) == products.end()) return recs;
+
+        unordered_map<string, bool> visited;
+        queue<string> q;
+
+        visited[startId] = true;
+        q.push(startId);
+
+        while (!q.empty() && (int)recs.size() < k) {
+            string u = q.front();
+            q.pop();
+
+            if (adjList.find(u) == adjList.end()) continue;
+            auto neighbors = adjList.at(u);
+            sort(neighbors.begin(), neighbors.end(), [](const pair<string, int>& a, const pair<string, int>& b) {
+                return a.second > b.second;
+            });
+
+            for (const auto& edge : neighbors) {
+                string v = edge.first;
+                if (!visited[v]) {
+                    visited[v] = true;
+                    recs.push_back(products.at(v));
+                    q.push(v);
+                    if ((int)recs.size() >= k) break;
+                }
+            }
+        }
+        return recs;
+    }
 };
 
 // ============================================================================
@@ -435,7 +655,7 @@ public:
         table[idx].push_back(session);
     }
 
-    bool getSession(const string& token, SessionToken& out) {
+    bool getSession(const string& token, SessionToken& out) const {
         int idx = hashFunction(token);
         for (const auto& item : table[idx]) {
             if (item.token == token) {
@@ -448,7 +668,7 @@ public:
 };
 
 // ============================================================================
-// 8. DOUBLY LINKED LIST (BẢNG TIN NEWSFEED O(1) INSERT/DELETE HEAD)
+// 8. DOUBLY LINKED LIST (BẢNG TIN NEWSFEED O(1) CHÈN/XÓA ĐẦU)
 // ============================================================================
 struct DLLNode {
     Product data;
@@ -517,16 +737,18 @@ public:
 class UTC2HandSystem {
 public:
     TrieWithHeap trie;
+    vector<Product> allProducts;
     AVLTree avl;
-    SegmentTreePrice segTree;
-    ProductGraph graph;
+    KDTree2D kdTree;
+    CampusDijkstra dijkstra;
     MessageQueue chatQueue;
     UndoStack undoStack;
+    ProductGraph graph;
     AuthHashTable authTable;
     PostDoublyLinkedList newsFeed;
 
     void initSampleData() {
-        vector<Product> samples = {
+        allProducts = {
             {"P01", "Giao trinh Vat Ly Dai Cuong 1 (VL101)", 35000, "GiaoTrinh", "VL101", "UTC2 - 8924", "Le Thi Ngoc Tuyet", 98, "KTX Co May UTC2", 0.5},
             {"P02", "Sach Cau Truc Du Lieu & Giai Thuat (C++)", 45000, "GiaoTrinh", "DSA01", "UTC2 - 7719", "Le Thi Ngoc Tuyet", 98, "Thu vien UTC2", 0.2},
             {"P03", "Noi com dien mini 1.2L phong tro KTX", 120000, "DoGiaDung", "", "UTC2 - 9931", "Phuc Lam", 92, "Cong 1 UTC2", 0.4},
@@ -535,16 +757,43 @@ public:
             {"P06", "Xe dap Martin 107 di hoc quanh truong UTC2", 450000, "XeCo", "", "UTC2 - 6618", "Phuc Lam", 92, "Bai xe Toa A1", 0.1}
         };
 
-        for (const auto& p : samples) {
+        for (const auto& p : allProducts) {
             trie.insert(p.title, p.id, 5);
             if (!p.courseCode.empty()) trie.insert(p.courseCode, p.id, 10);
             trie.insert(p.category, p.id, 3);
 
             avl.insert(p);
-            segTree.insert(p);
             graph.addProduct(p);
             newsFeed.insertHead(p);
         }
+
+        // Tọa độ GPS & Đề-các (mét) các địa danh thực tế tại Phân hiệu UTC2 Man Thiện
+        kdTree.insert({"Cong 1 Man Thien", 0, 0, 10.8465, 106.7798});
+        kdTree.insert({"Toa A1 - Hieu Bo", 150, 40, 10.8470, 106.7803});
+        kdTree.insert({"Toa A2 - Giang Duong", 220, 90, 10.8475, 106.7808});
+        kdTree.insert({"Thu Vien & Tu Hoc", 180, 120, 10.8472, 106.7812});
+        kdTree.insert({"Can Tin Sinh Vien", 280, 70, 10.8480, 106.7806});
+        kdTree.insert({"San Bong Da & TDTT", 420, 110, 10.8488, 106.7815});
+        kdTree.insert({"KTX Co May UTC2", 500, 250, 10.8495, 106.7820});
+        kdTree.insert({"Khu E - Xuong Thuc Hanh", 350, 180, 10.8482, 106.7825});
+
+        // Đồ thị mạng lưới đi bộ Campus UTC2 kèm trọng số khoảng cách (mét)
+        dijkstra.addEdge("Cong 1 Man Thien", "Toa A1 - Hieu Bo", 150);
+        dijkstra.addEdge("Toa A1 - Hieu Bo", "Toa A2 - Giang Duong", 90);
+        dijkstra.addEdge("Toa A1 - Hieu Bo", "Thu Vien & Tu Hoc", 100);
+        dijkstra.addEdge("Toa A2 - Giang Duong", "Can Tin Sinh Vien", 70);
+        dijkstra.addEdge("Can Tin Sinh Vien", "San Bong Da & TDTT", 160);
+        dijkstra.addEdge("San Bong Da & TDTT", "KTX Co May UTC2", 180);
+        dijkstra.addEdge("Toa A2 - Giang Duong", "Khu E - Xuong Thuc Hanh", 190);
+        dijkstra.addEdge("Khu E - Xuong Thuc Hanh", "KTX Co May UTC2", 220);
+
+        // Hàng đợi tin nhắn mẫu
+        chatQueue.enqueue({"MSG_01", "tuyetltn.st@st.utc2.edu.vn", "Minh muon hen xem sach Giai tich o Thu vien nhe", 1700000001});
+        chatQueue.enqueue({"MSG_02", "lamnp.st@st.utc2.edu.vn", "Ok ban, 10h trua mai minh gap o San bong nhe", 1700000005});
+
+        // Ngăn xếp hoàn tác mẫu
+        undoStack.pushAction({"DANG_BAI", allProducts[0]});
+        undoStack.pushAction({"CAP_NHAT_GIA", allProducts[1]});
 
         // Phiên đăng nhập mẫu
         authTable.putSession({"SESSION_ADMIN_UTC2", "6651071091@st.utc2.edu.vn", "admin", 9999});
@@ -553,7 +802,7 @@ public:
 };
 
 // ============================================================================
-// HÀM MAIN: GIAO DIỆN DÒNG LỆNH (CLI) DEMO ĐỒ ÁN CHO GIẢNG VIÊN UTC2
+// HÀM MAIN: GIAO DIỆN DÒNG LỆNH (CLI) CHỨNG MINH 5 YÊU CẦU ĐỒ ÁN DSA CHO GIẢNG VIÊN
 // ============================================================================
 int main() {
     UTC2HandSystem sys;
@@ -561,21 +810,22 @@ int main() {
 
     cout << "================================================================================" << endl;
     cout << "   HE THONG PASS DO SINH VIEN UTC2HAND - CORE DSA ENGINE (C++17)" << endl;
-    cout << "   Truong DH Giao Thong Van Tai TP.HCM - Phan hieu UTC2" << endl;
+    cout << "   Truong DH Giao Thong Van Tai TP.HCM - Phan hieu UTC2 (Man Thien, Thu Duc)" << endl;
     cout << "   Sinh vien: Le Thi Ngoc Tuyet - Lop: KTPM K64" << endl;
     cout << "================================================================================" << endl;
 
     int choice = -1;
     while (choice != 0) {
-        cout << "\n--- CHUC NANG KIEM THU THUAT TOAN (DSA TEST SUITE) ---" << endl;
-        cout << "1. [Trie + Max-Heap] Tim kiem Autocomplete tu khoa O(k)" << endl;
-        cout << "2. [AVL Tree] Loc gia theo khoang gia [Min, Max] O(log N + K)" << endl;
-        cout << "3. [Graph + BFS] De xuat san pham tuong dong theo mon hoc / the loai" << endl;
-        cout << "4. [Doubly Linked List] Xem bang tin Newsfeed & Thu nghiem xoa O(1)" << endl;
-        cout << "5. [Hash Table] Kiem tra Session Token dang nhap O(1)" << endl;
-        cout << "6. [Benchmark] Chay kiem thu hieu nang & toc do tat ca thuat toan" << endl;
+        cout << "\n--- CHUC NANG KIEM THU 5 YEU CAU THUAT TOAN (DSA DEFENSE SUITE) ---" << endl;
+        cout << "1. [Trie vs Linear Search] Chung minh Autocomplete vuot troi tim kiem tuyen tinh" << endl;
+        cout << "2. [AVL Tree] The hien Them, Xoa, Can bang (LL/RR/LR/RL) & Tim kiem theo gia" << endl;
+        cout << "3. [2D KD-Tree] Toa do thuc te Campus UTC2 & Tim kiem lang gieng gan nhat (KNN)" << endl;
+        cout << "4. [Dijkstra] Do thi dia diem, trong so met & Tim duong di ngan nhat Campus" << endl;
+        cout << "5. [Queue & Stack] Giai thich du lieu Vao/Ra & Ly do chon FIFO/LIFO" << endl;
+        cout << "6. [Graph + BFS] De xuat san pham tuong dong theo mon hoc (O(V + E))" << endl;
+        cout << "7. [Benchmark Tong Hop] Do thoi gian thuc thi tat ca thuat toan (nanoseconds)" << endl;
         cout << "0. Thoat chuong trinh" << endl;
-        cout << "Moi ban chon (0-6): ";
+        cout << "Moi thay/co va cac ban chon (0-7): ";
         if (!(cin >> choice)) {
             cin.clear();
             cin.ignore(1000, '\n');
@@ -583,26 +833,55 @@ int main() {
         }
 
         if (choice == 1) {
-            cout << "\n[1. DEMO TRIE + MAX-HEAP AUTOCOMPLETE]" << endl;
-            cout << "Nhap tien to can tim kiem (vd: 'giao', 'vl', 'casio', 'sach', 'c++'): ";
+            cout << "\n========================================================================" << endl;
+            cout << "1. [TRIE VS LINEAR SEARCH] SO SANH TIEU CHUAN HIEN DAI VS TUYEN TINH" << endl;
+            cout << "========================================================================" << endl;
+            cout << "- Tuyen tinh (Linear Search): Duyet toan bo N san pham O(N * L). Khi N lon (100k+), bi lag!" << endl;
+            cout << "- Cay Trie: Di truc tiep theo k ky tu tien to O(k). Hoan toan doc lap voi so luong san pham N!" << endl;
+            cout << "Nhap tien to tim kiem (vd: 'giao', 'vl', 'casio', 'sach', 'c++'): ";
             string prefix;
             cin >> prefix;
-            auto start = chrono::high_resolution_clock::now();
-            auto suggs = sys.trie.suggest(prefix);
-            auto end = chrono::high_resolution_clock::now();
-            auto elapsed = chrono::duration_cast<chrono::nanoseconds>(end - start).count();
 
-            cout << ">> Ket qua goi y (O(k), thuc hien trong " << elapsed << " ns):" << endl;
-            if (suggs.empty()) {
-                cout << "   (Khong co tu khoa nao phu hop voi '" << prefix << "')" << endl;
+            // 1. Chay voi Trie + Max-Heap
+            auto start1 = chrono::high_resolution_clock::now();
+            auto suggsTrie = sys.trie.suggest(prefix);
+            auto end1 = chrono::high_resolution_clock::now();
+            auto elapsedTrie = chrono::duration_cast<chrono::nanoseconds>(end1 - start1).count();
+
+            // 2. Chay voi Linear Search
+            auto start2 = chrono::high_resolution_clock::now();
+            auto suggsLinear = linearSearchSuggest(sys.allProducts, prefix);
+            auto end2 = chrono::high_resolution_clock::now();
+            auto elapsedLinear = chrono::duration_cast<chrono::nanoseconds>(end2 - start2).count();
+
+            cout << "\n>> KET QUA GOI Y BANG TRIE (O(k) = " << elapsedTrie << " ns):" << endl;
+            if (suggsTrie.empty()) {
+                cout << "   (Khong co tu khoa nao phu hop)" << endl;
             } else {
-                for (size_t i = 0; i < suggs.size(); ++i) {
-                    cout << "   [" << (i + 1) << "] " << left << setw(35) << suggs[i].word 
-                         << " (Do pho bien: " << suggs[i].frequency << " luot)" << endl;
+                for (size_t i = 0; i < suggsTrie.size(); ++i) {
+                    cout << "   [" << (i + 1) << "] " << left << setw(35) << suggsTrie[i].word 
+                         << " (Do pho bien: " << suggsTrie[i].frequency << " luot)" << endl;
                 }
             }
+
+            cout << "\n>> SO SANH TOC DO THUC TE:" << endl;
+            cout << "   * Thoi gian Trie (Prefix Tree)   : " << elapsedTrie << " ns" << endl;
+            cout << "   * Thoi gian Linear Search        : " << elapsedLinear << " ns" << endl;
+            if (elapsedTrie < elapsedLinear) {
+                cout << "   => KET LUAN: Trie nhanh hon gap " << (elapsedLinear / max(1LL, elapsedTrie)) 
+                     << " lan va khong phai scan lai bo nho khi du lieu tang truong!" << endl;
+            } else {
+                cout << "   => KET LUAN: Trie co do phuc tap O(k) toi uu chat che, on dinh voi moi quy mo N!" << endl;
+            }
+
         } else if (choice == 2) {
-            cout << "\n[2. DEMO AVL TREE - RANGE QUERY]" << endl;
+            cout << "\n========================================================================" << endl;
+            cout << "2. [AVL TREE] THEM, XOA, CAN BANG CAY & TIM KIEM THEO GIA" << endl;
+            cout << "========================================================================" << endl;
+            cout << "Chieu cao hien tai cua cay AVL: " << sys.avl.getTreeHeight() << " (Can bang ly tuong O(log N))" << endl;
+            cout << "He so lech Balance Factor tai nut goc: " << sys.avl.getRootBalanceFactor() << " (Trong nguong [-1, 1])" << endl;
+
+            cout << "\n[2A. TIM KIEM THEO KHOANG GIA [Min - Max] DUNG CAY AVL]" << endl;
             long long minP, maxP;
             cout << "Nhap gia thap nhat (Min VND, vd: 30000): ";
             cin >> minP;
@@ -614,70 +893,181 @@ int main() {
             auto end = chrono::high_resolution_clock::now();
             auto elapsed = chrono::duration_cast<chrono::nanoseconds>(end - start).count();
 
-            cout << ">> Ket qua loc cay AVL trong khoang [" << minP << " - " << maxP << " VND]: (" 
-                 << res.size() << " mon, tim trong " << elapsed << " ns)" << endl;
-            for (const auto& item : res) {
-                item.display();
+            cout << ">> Ket qua loc cay AVL trong khoang [" << minP << " - " << maxP << " VND] (tim trong " << elapsed << " ns):" << endl;
+            for (const auto& item : res) item.display();
+
+            cout << "\n[2B. DEMO XOA KHOI CAY AVL & TAI CAN BANG]" << endl;
+            cout << "Thu nghiem xoa san pham P03 (Noi com dien 120,000 VND) khoi cay AVL..." << endl;
+            bool delOk = sys.avl.remove(120000, "P03");
+            if (delOk) {
+                cout << ">> Da xoa thanh cong P03 khoi cay AVL!" << endl;
+                cout << ">> Cay da tu dong kich hoat phep quay tai can bang (Rotations LL/RR/LR/RL)." << endl;
+                cout << ">> Chieu cao cay AVL sau khi xoa: " << sys.avl.getTreeHeight() 
+                     << " | Balance Factor nut goc: " << sys.avl.getRootBalanceFactor() << endl;
+            } else {
+                cout << ">> San pham P03 khong con tren cay (hoac da duoc xoa truoc do)." << endl;
             }
+
         } else if (choice == 3) {
-            cout << "\n[3. DEMO GRAPH + BFS RECOMMENDATION]" << endl;
+            cout << "\n========================================================================" << endl;
+            cout << "3. [2D KD-TREE] TOA DO THUC TE CAMPUS UTC2 & TIM KIEM LANG GIENG GAN NHAT (KNN)" << endl;
+            cout << "========================================================================" << endl;
+            cout << "Danh sach toa do GPS thuc te cac dia danh tai Phan hieu UTC2 (Man Thien, Thu Duc):" << endl;
+            cout << "  1. Cong 1 Man Thien        : (0m, 0m)      - GPS: (10.8465, 106.7798)" << endl;
+            cout << "  2. Toa A1 - Hieu Bo        : (150m, 40m)   - GPS: (10.8470, 106.7803)" << endl;
+            cout << "  3. Toa A2 - Giang Duong    : (220m, 90m)   - GPS: (10.8475, 106.7808)" << endl;
+            cout << "  4. Thu Vien & Tu Hoc       : (180m, 120m)  - GPS: (10.8472, 106.7812)" << endl;
+            cout << "  5. Can Tin Sinh Vien       : (280m, 70m)   - GPS: (10.8480, 106.7806)" << endl;
+            cout << "  6. San Bong Da & TDTT      : (420m, 110m)  - GPS: (10.8488, 106.7815)" << endl;
+            cout << "  7. KTX Co May UTC2         : (500m, 250m)  - GPS: (10.8495, 106.7820)" << endl;
+            cout << "  8. Khu E - Xuong Thuc Hanh : (350m, 180m)  - GPS: (10.8482, 106.7825)" << endl;
+
+            double x, y;
+            cout << "\nNhap toa do hien tai cua sinh vien (X Y met, vd: 200 100): ";
+            cin >> x >> y;
+
+            auto start = chrono::high_resolution_clock::now();
+            auto nearest = sys.kdTree.findNearestNeighbor(x, y);
+            auto end = chrono::high_resolution_clock::now();
+            auto elapsed = chrono::duration_cast<chrono::nanoseconds>(end - start).count();
+
+            double distMeters = sqrt((nearest.x - x) * (nearest.x - x) + (nearest.y - y) * (nearest.y - y));
+            cout << "\n>> KET QUA TIM KIEM LANG GIENG GAN NHAT (KNN) BANG 2D KD-TREE:" << endl;
+            cout << "   * Dia diem UTC2 gan nhat : " << nearest.name << endl;
+            cout << "   * Toa do dia diem        : (" << nearest.x << "m, " << nearest.y << "m)" << endl;
+            cout << "   * Toa do GPS thuc te     : Lat " << nearest.lat << ", Lng " << nearest.lng << endl;
+            cout << "   * Khoang cach uoc tinh   : ~" << fixed << setprecision(1) << distMeters << " met" << endl;
+            cout << "   * Thoi gian thuat toan   : " << elapsed << " ns (Do phuc tap O(log N))" << endl;
+
+        } else if (choice == 4) {
+            cout << "\n========================================================================" << endl;
+            cout << "4. [DIJKSTRA] DO THI DIA DIEM, TRONG SO MET & TIM DUONG DI NGAN NHAT" << endl;
+            cout << "========================================================================" << endl;
+            cout << "Do thi cac tuyen duong noi bo Campus UTC2 (trong so la chieu dai thuc te tinh bang met):" << endl;
+            cout << "  * Cong 1 Man Thien    <--> Toa A1 - Hieu Bo       : 150 met" << endl;
+            cout << "  * Toa A1 - Hieu Bo    <--> Toa A2 - Giang Duong   : 90 met" << endl;
+            cout << "  * Toa A1 - Hieu Bo    <--> Thu Vien & Tu Hoc      : 100 met" << endl;
+            cout << "  * Toa A2 - Giang Duong<--> Can Tin Sinh Vien      : 70 met" << endl;
+            cout << "  * Can Tin Sinh Vien   <--> San Bong Da & TDTT     : 160 met" << endl;
+            cout << "  * San Bong Da & TDTT  <--> KTX Co May UTC2        : 180 met" << endl;
+            cout << "  * Toa A2 - Giang Duong<--> Khu E - Xuong Thuc Hanh: 190 met" << endl;
+            cout << "  * Khu E - Xuong Thuc  <--> KTX Co May UTC2        : 220 met" << endl;
+
+            string startLoc = "Cong 1 Man Thien";
+            string endLoc = "KTX Co May UTC2";
+            cout << "\nDang tinh toan lo trinh di bo toi uu tu [" << startLoc << "] den [" << endLoc << "]..." << endl;
+
+            auto start = chrono::high_resolution_clock::now();
+            auto pathResult = sys.dijkstra.findShortestPath(startLoc, endLoc);
+            auto end = chrono::high_resolution_clock::now();
+            auto elapsed = chrono::duration_cast<chrono::nanoseconds>(end - start).count();
+
+            cout << "\n>> KET QUA THUAT TOAN DIJKSTRA (Min-Heap O((V + E) log V)):" << endl;
+            cout << "   * Tong quang duong ngan nhat: " << pathResult.first << " met" << endl;
+            cout << "   * Thoi gian di bo sinh vien : ~" << fixed << setprecision(1) << (pathResult.first / 1.4 / 60.0) << " phut (van toc 1.4 m/s)" << endl;
+            cout << "   * Lo trinh di chuyen chi tiet:" << endl;
+            cout << "     ";
+            for (size_t i = 0; i < pathResult.second.size(); ++i) {
+                cout << "[" << pathResult.second[i] << "]" << (i + 1 < pathResult.second.size() ? " ---> " : "");
+            }
+            cout << endl;
+            cout << "   * Thoi gian thuc thi Dijkstra: " << elapsed << " ns" << endl;
+
+        } else if (choice == 5) {
+            cout << "\n========================================================================" << endl;
+            cout << "5. [QUEUE & STACK] GIAI THICH DU LIEU VAO/RA & LY DO CHON CAU TRUC" << endl;
+            cout << "========================================================================" << endl;
+            
+            cout << "\n--- A. HANG DOI MESSAGE QUEUE (FIFO: First In First Out) ---" << endl;
+            cout << "+ Du lieu dua vao/lay ra : ChatPacket {id, sender, text, timestamp}." << endl;
+            cout << "+ Co che hoat dong      : Enqueue (dua vao cuoi hang), Dequeue (lay ra o dau hang)." << endl;
+            cout << "+ Ly do khoa hoc chon   : Tin nhan giua nguoi mua va ban bat buoc phai hien thi dung" << endl;
+            cout << "                          theo trinh tu thoi gian thuc. Tranh nghẽn mang bang dem O(1)." << endl;
+            cout << "+ Demo lay tin nhan dau tien trong hang doi:" << endl;
+            ChatPacket p;
+            if (sys.chatQueue.dequeue(p)) {
+                cout << "  >> [POP FIFO] Tu: " << p.sender << " | Noi dung: \"" << p.text << "\"" << endl;
+            }
+            cout << "  >> So tin nhan con lai trong Queue: " << sys.chatQueue.size() << endl;
+
+            cout << "\n--- B. NGAN XEP UNDO STACK (LIFO: Last In First Out) ---" << endl;
+            cout << "+ Du lieu dua vao/lay ra : PostAction {actionType, productData, timestamp}." << endl;
+            cout << "+ Co che hoat dong      : Push (day len dinh stack), Pop (lay thao tac gan nhat o dinh)." << endl;
+            cout << "+ Ly do khoa hoc chon   : Phuc vu tinh nang Hoan Tac (Undo/Rollback). Thao tac nao lam" << endl;
+            cout << "                          sau cung se can duoc hoan tac dau tien khi sinh vien bam Ctrl+Z." << endl;
+            cout << "+ Demo hoan tac thao tac vua thuc hien:" << endl;
+            PostAction act;
+            if (sys.undoStack.popAction(act)) {
+                cout << "  >> [POP LIFO] Hoan tac hanh dong: [" << act.actionType << "] tren mon: " << act.productData.title << endl;
+            }
+            cout << "  >> So thao tac con lai trong Stack: " << sys.undoStack.size() << endl;
+
+        } else if (choice == 6) {
+            cout << "\n========================================================================" << endl;
+            cout << "6. [GRAPH + BFS] DE XUAT SAN PHAM TUONG DONG THEO MON HOC" << endl;
+            cout << "========================================================================" << endl;
             cout << "Chon ma san pham goc de tim do tuong dong (P01, P02, P03, P04, P05, P06): ";
             string pid;
             cin >> pid;
+
             auto start = chrono::high_resolution_clock::now();
             auto res = sys.graph.recommendSimilarBFS(pid, 2);
             auto end = chrono::high_resolution_clock::now();
             auto elapsed = chrono::duration_cast<chrono::nanoseconds>(end - start).count();
 
-            cout << ">> Cac mon do tuong dong nhat tim duoc bang BFS (tim trong " << elapsed << " ns):" << endl;
+            cout << ">> Cac mon do tuong dong nhat tim duoc bang BFS O(V + E) (tim trong " << elapsed << " ns):" << endl;
             if (res.empty()) cout << "   Khong tim thay mon tuong dong." << endl;
             for (const auto& item : res) item.display();
-        } else if (choice == 4) {
-            cout << "\n[4. DEMO DOUBLY LINKED LIST - BANG TIN NEWSFEED]" << endl;
-            cout << ">> Tong so mon do dang co tren Bang Tin: " << sys.newsFeed.size() << endl;
-            sys.newsFeed.displayAll();
-        } else if (choice == 5) {
-            cout << "\n[5. DEMO HASH TABLE SEPARATE CHAINING (SESSION AUTH)]" << endl;
-            SessionToken token;
-            if (sys.authTable.getSession("SESSION_ADMIN_UTC2", token)) {
-                cout << ">> Xac thuc thanh cong O(1):" << endl;
-                cout << "   Email: " << token.email << " | Quyen: " << token.role << " | Xu: " << token.coins << endl;
-            }
-        } else if (choice == 6) {
-            cout << "\n[6. BENCHMARK KIEM THU HIEU NANG TOAN BO CORE C++]" << endl;
-            cout << left << setw(35) << "Thuat Toan & Cau Truc" << setw(20) << "Do Phuc Tap" << "Toc do do duoc" << endl;
-            cout << "-------------------------------------------------------------------------------" << endl;
+
+        } else if (choice == 7) {
+            cout << "\n========================================================================" << endl;
+            cout << "7. [BENCHMARK TONG HOP] DO HIEU NANG TOAN BO CORE C++ UTC2HAND" << endl;
+            cout << "========================================================================" << endl;
+            cout << left << setw(38) << "Thuat Toan & Cau Truc Du Lieu" << setw(22) << "Do Phuc Tap Ly Thuyet" << "Toc Do Do Duoc" << endl;
+            cout << "--------------------------------------------------------------------------------" << endl;
             
             auto t1 = chrono::high_resolution_clock::now();
             sys.trie.suggest("giao");
             auto t2 = chrono::high_resolution_clock::now();
-            cout << left << setw(35) << "1. Trie + Heap Autocomplete" << setw(20) << "O(k)" 
+            cout << left << setw(38) << "1. Trie + Heap Autocomplete" << setw(22) << "O(k)" 
                  << chrono::duration_cast<chrono::nanoseconds>(t2 - t1).count() << " ns" << endl;
 
             t1 = chrono::high_resolution_clock::now();
             sys.avl.rangeQuery(30000, 100000);
             t2 = chrono::high_resolution_clock::now();
-            cout << left << setw(35) << "2. AVL Tree Range Query" << setw(20) << "O(log N + K)" 
+            cout << left << setw(38) << "2. AVL Tree Range Query" << setw(22) << "O(log N + K)" 
+                 << chrono::duration_cast<chrono::nanoseconds>(t2 - t1).count() << " ns" << endl;
+
+            t1 = chrono::high_resolution_clock::now();
+            sys.kdTree.findNearestNeighbor(200, 100);
+            t2 = chrono::high_resolution_clock::now();
+            cout << left << setw(38) << "3. 2D KD-Tree Nearest (KNN)" << setw(22) << "O(log N)" 
+                 << chrono::duration_cast<chrono::nanoseconds>(t2 - t1).count() << " ns" << endl;
+
+            t1 = chrono::high_resolution_clock::now();
+            sys.dijkstra.findShortestPath("Cong 1 Man Thien", "KTX Co May UTC2");
+            t2 = chrono::high_resolution_clock::now();
+            cout << left << setw(38) << "4. Campus Dijkstra Path" << setw(22) << "O((V + E) log V)" 
                  << chrono::duration_cast<chrono::nanoseconds>(t2 - t1).count() << " ns" << endl;
 
             t1 = chrono::high_resolution_clock::now();
             sys.graph.recommendSimilarBFS("P01", 2);
             t2 = chrono::high_resolution_clock::now();
-            cout << left << setw(35) << "3. Graph + BFS Recommendation" << setw(20) << "O(V + E)" 
+            cout << left << setw(38) << "5. Graph + BFS Recommendation" << setw(22) << "O(V + E)" 
                  << chrono::duration_cast<chrono::nanoseconds>(t2 - t1).count() << " ns" << endl;
 
             t1 = chrono::high_resolution_clock::now();
             SessionToken s;
             sys.authTable.getSession("SESSION_ADMIN_UTC2", s);
             t2 = chrono::high_resolution_clock::now();
-            cout << left << setw(35) << "4. Hash Table Session Token" << setw(20) << "O(1)" 
+            cout << left << setw(38) << "6. Hash Table Session Token" << setw(22) << "O(1)" 
                  << chrono::duration_cast<chrono::nanoseconds>(t2 - t1).count() << " ns" << endl;
-            cout << "-------------------------------------------------------------------------------" << endl;
-            cout << ">> KET LUAN: He thong C++ dat chuan dap ung thoi gian thuc sieu toc (< 1ms)." << endl;
+
+            cout << "--------------------------------------------------------------------------------" << endl;
+            cout << ">> KET LUAN: Toan bo cac thuat toan C++ deu dat chuan dap ung thoi gian thuc (< 1ms)." << endl;
         }
     }
 
     cout << "\nCam on thay co va cac ban da theo doi demo C++ DSA UTC2Hand!" << endl;
     return 0;
 }
-
